@@ -541,18 +541,23 @@ async function buildPlan(selDays) {
   const gymDaysStr = selDays.join(', ');
   const modeStr = n.mode === 'lose' ? 'fat loss' : n.mode === 'gain' ? 'muscle gain (lean bulk)' : 'body recomposition';
 
-  const systemPrompt = `You are an elite strength & conditioning coach. You design evidence-based periodized programs using Renaissance Periodization volume landmarks and progressive overload principles. You respond ONLY with a single valid JSON object. No markdown, no code blocks, no explanation. Raw JSON only.`;
+  const systemPrompt = `You are an elite strength coach. Respond ONLY with a single valid JSON object. No markdown, no code blocks, no explanation. Raw JSON only. Keep ALL strings as short as possible.`;
 
   const exPerSession = u.tier === 'beginner' ? '3-4' : u.tier === 'intermediate' ? '4-5' : '5-6';
-  const userPrompt = `User: ${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}lbs→${u.goal}lbs, ${u.activity} activity, ${u.tier} tier, goal: ${modeStr}.
-Equipment: ${equipStr}. Injuries: ${injuryStr}.
-Gym days: ${gymDaysStr} (${selDays.length}x/week), ${u.duration} sessions, ${splitLabel} split, ${u.weeks} weeks.
-Calories: ${n.calories}, Protein: ${n.protein}g, Carbs: ${n.carbs}g, Fat: ${n.fat}g.
+  const userPrompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
+Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks}wk.
 
-Return ONLY this JSON (no markdown):
-{"planName":"...","tagline":"...","philosophy":"2 sentences max","schedule":[{"day":"Monday","type":"workout","badge":"Push Day","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
+Return ONLY this JSON structure:
+{"planName":"short name","tagline":"short","philosophy":"1 sentence","schedule":[{"day":"Monday","type":"workout","badge":"Push","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
 
-Rules: All 7 days Mon-Sun. Gym days=${gymDaysStr}, rest days=everything else. ${exPerSession} exercises per workout. Equipment=${equipStr}. Avoid=${injuryStr}. Keep philosophy under 100 words. Keep exercise names concise.`;
+CRITICAL RULES:
+- All 7 days Mon-Sun must be included
+- Gym days: ${gymDaysStr}. All other days are rest.
+- ${exPerSession} exercises per workout
+- Exercise names: 2-3 words max (e.g. "Bench Press" not "Barbell Flat Bench Press")
+- muscles: single word (e.g. "Chest" not "Chest, Front Delts")
+- philosophy: 1 short sentence only
+- Equipment: ${equipStr}. Avoid: ${injuryStr}`;
 
   // Try up to 2 attempts in case of truncated response
   let parsed;
@@ -583,6 +588,11 @@ Rules: All 7 days Mon-Sun. Gym days=${gymDaysStr}, rest days=everything else. ${
     } catch(e) {
       if (attempt === 1) throw new Error('JSON parse failed: ' + e.message + ' | Raw: ' + raw.substring(0, 200));
     }
+  }
+
+  // Validate the parsed plan has required fields
+  if (!parsed || !parsed.schedule || !Array.isArray(parsed.schedule) || parsed.schedule.length < 7) {
+    throw new Error('AI returned an incomplete plan. Please try again — this is usually a one-time issue.');
   }
 
   // Enrich exercises with DB data (sets/reps/rest overridden by AI, but pull muscle images etc.)
