@@ -972,13 +972,16 @@ function _getFreshExercises(workoutName, tier) {
 }
 
 function initDashboard() {
-  if (!generatedPlan) {
-    // Show error on dashboard so it's not blank
+  if (!generatedPlan || !generatedPlan.weekly_schedule || !Array.isArray(generatedPlan.weekly_schedule)) {
+    // Plan data is missing or corrupt — clear and show onboarding
+    localStorage.removeItem('fs_plan');
+    localStorage.removeItem('fs_user');
+    localStorage.removeItem('fs_entered');
     const dash = document.getElementById('screen-dash');
     if (dash) {
       const errDiv = document.createElement('div');
       errDiv.style.cssText = 'padding:40px;color:#fff;font-size:1rem;text-align:center';
-      errDiv.innerHTML = '<h2 style="margin-bottom:16px">⚠️ No plan found</h2><p style="color:#aaa;margin-bottom:20px">Your plan data was not found. Please go back and generate your plan again.</p><button onclick="location.reload()" style="padding:12px 24px;background:#4ADE80;border:none;border-radius:8px;font-weight:700;cursor:pointer">Reload Page</button>';
+      errDiv.innerHTML = '<h2 style="margin-bottom:16px">⚠️ Plan needs to be regenerated</h2><p style="color:#aaa;margin-bottom:20px">Your saved plan is outdated. Please create a new plan.</p><button onclick="localStorage.clear();location.reload()" style="padding:12px 24px;background:#4ADE80;border:none;border-radius:8px;font-weight:700;cursor:pointer">Start Fresh</button>';
       dash.appendChild(errDiv);
     }
     return;
@@ -1009,14 +1012,6 @@ function initDashboard() {
     fat:  USER.nutrition.fat
   };
   TOTAL_WEEKS = USER.weeks || 16;
-
-  // Guard: if plan is missing weekly_schedule, it's corrupted or stale — clear and restart
-  if (!generatedPlan.weekly_schedule || !Array.isArray(generatedPlan.weekly_schedule)) {
-    localStorage.removeItem('fs_plan');
-    localStorage.removeItem('fs_user');
-    location.reload();
-    return;
-  }
 
   // Build DAY_WORKOUTS from plan
   GYM_DAYS = [];
@@ -1267,27 +1262,36 @@ function _showAdaptiveInsight() {
 
 // ── INIT (called from index.html after all modules load) ──
 function _bootApp() {
-  setTier('beginner', document.querySelector('.tier-btn[data-tier="beginner"]'));
-  initDayPicker();
+  try {
+    setTier('beginner', document.querySelector('.tier-btn[data-tier="beginner"]'));
+    initDayPicker();
 
-  // Attach workout nav listeners reliably (more robust than onclick on iOS)
-  const prev = document.getElementById('wo-prev-btn');
-  const next = document.getElementById('wo-next-btn');
-  if (prev) prev.addEventListener('click', function(e) { e.stopPropagation(); prevExercise(); });
-  if (next) next.addEventListener('click', function(e) { e.stopPropagation(); nextExercise(); });
+    // Attach workout nav listeners reliably (more robust than onclick on iOS)
+    const prev = document.getElementById('wo-prev-btn');
+    const next = document.getElementById('wo-next-btn');
+    if (prev) prev.addEventListener('click', function(e) { e.stopPropagation(); prevExercise(); });
+    if (next) next.addEventListener('click', function(e) { e.stopPropagation(); nextExercise(); });
 
-  // Auto-skip to dashboard if user already has a saved plan
-  const savedPlan = lsGet('fs_plan');
-  const savedUser = lsGet('fs_user');
-  const hasNewFields = savedUser && savedUser.heightCm && savedUser.activity && savedUser.equipment;
-  if (savedPlan && savedUser && hasNewFields) {
-    generatedPlan = savedPlan;
-    USER = savedUser;
-    goToDash();
-  } else if (savedPlan || savedUser) {
+    // Auto-skip to dashboard if user already has a saved plan
+    const savedPlan = lsGet('fs_plan');
+    const savedUser = lsGet('fs_user');
+    const hasNewFields = savedUser && savedUser.heightCm && savedUser.activity && savedUser.equipment;
+    if (savedPlan && savedPlan.weekly_schedule && savedUser && hasNewFields) {
+      generatedPlan = savedPlan;
+      USER = savedUser;
+      goToDash();
+    } else {
+      // Clear any stale/incomplete data and show onboarding
+      localStorage.removeItem('fs_plan');
+      localStorage.removeItem('fs_user');
+      localStorage.removeItem('fs_entered');
+    }
+  } catch(e) {
+    console.error('Boot error, clearing data:', e);
     localStorage.removeItem('fs_plan');
     localStorage.removeItem('fs_user');
     localStorage.removeItem('fs_entered');
+    location.reload();
   }
 }
 
