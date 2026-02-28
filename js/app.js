@@ -1230,27 +1230,20 @@ function _showAdaptiveInsight() {
   card.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.1rem">🧠</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;color:var(--green)">AI INSIGHT</span><span style="font-size:0.62rem;font-weight:700;letter-spacing:1.5px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:2px 7px;color:var(--green)">${phLabel2} · WK ${CURRENT_WEEK}</span><button onclick="this.parentElement.parentElement.remove();lsSet('fs_adaptive_insight',null)" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem">✕</button></div><p style="font-size:0.82rem;color:var(--off);line-height:1.5;margin:0">${msg}</p><div style="margin-top:10px;display:flex;gap:8px"><button onclick="_generateWeeklyProgressReport(0,0,0)" style="padding:5px 12px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:6px;color:var(--green);font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH REPORT</button><button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:5px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button></div>`;
 }
 
-// ── INIT ──
-setTier('beginner', document.querySelector('.tier-btn[data-tier="beginner"]'));
-initDayPicker();
+// ── INIT (called from index.html after all modules load) ──
+function _bootApp() {
+  setTier('beginner', document.querySelector('.tier-btn[data-tier="beginner"]'));
+  initDayPicker();
 
-// Attach workout nav listeners reliably (more robust than onclick on iOS)
-document.addEventListener('DOMContentLoaded', function() {});
-(function attachWoListeners() {
+  // Attach workout nav listeners reliably (more robust than onclick on iOS)
   const prev = document.getElementById('wo-prev-btn');
   const next = document.getElementById('wo-next-btn');
-  const fin  = null; // removed
   if (prev) prev.addEventListener('click', function(e) { e.stopPropagation(); prevExercise(); });
   if (next) next.addEventListener('click', function(e) { e.stopPropagation(); nextExercise(); });
-  if (fin)  fin.addEventListener('click',  function(e) { e.stopPropagation(); finishWorkout(); });
-})();
 
-// Auto-skip to dashboard if user already has a saved plan
-(function autoLogin() {
+  // Auto-skip to dashboard if user already has a saved plan
   const savedPlan = lsGet('fs_plan');
   const savedUser = lsGet('fs_user');
-  // Require new fields (height, activity, equipment) added in updated onboarding.
-  // If missing, clear stale data and show fresh onboarding.
   const hasNewFields = savedUser && savedUser.heightCm && savedUser.activity && savedUser.equipment;
   if (savedPlan && savedUser && hasNewFields) {
     generatedPlan = savedPlan;
@@ -1261,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', function() {});
     localStorage.removeItem('fs_user');
     localStorage.removeItem('fs_entered');
   }
-})();
+}
 
 
 // ── MOBILE BOTTOM NAV ──
