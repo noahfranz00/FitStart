@@ -554,18 +554,35 @@ Return ONLY this JSON (no markdown):
 
 Rules: All 7 days Mon-Sun. Gym days=${gymDaysStr}, rest days=everything else. ${exPerSession} exercises per workout. Equipment=${equipStr}. Avoid=${injuryStr}. Keep philosophy under 100 words. Keep exercise names concise.`;
 
-  const raw = await callClaude(
-    [{ role: 'user', content: userPrompt }],
-    { system: systemPrompt, max_tokens: 8000 }
-  );
-
-  // Parse JSON response
+  // Try up to 2 attempts in case of truncated response
   let parsed;
-  try {
-    const clean = raw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
-    parsed = JSON.parse(clean);
-  } catch(e) {
-    throw new Error('JSON parse failed: ' + e.message + ' | Raw: ' + raw.substring(0, 200));
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const raw = await callClaude(
+      [{ role: 'user', content: attempt === 0 ? userPrompt : userPrompt + '\n\nIMPORTANT: Keep exercise names SHORT (2-3 words max). Keep philosophy under 50 words. Minimize all string lengths to fit within token limits.' }],
+      { system: systemPrompt, max_tokens: 8000, timeout: 90000 }
+    );
+
+    try {
+      let clean = raw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
+      // Attempt direct parse first
+      try { parsed = JSON.parse(clean); break; } catch(_) {}
+      // Try to repair truncated JSON by closing open brackets/braces
+      let repaired = clean;
+      // Remove trailing incomplete key-value pair (e.g. ,"muscles":"Che )
+      repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
+      repaired = repaired.replace(/,\s*"[^"]*":\s*$/, '');
+      repaired = repaired.replace(/,\s*"[^"]*$/, '');
+      repaired = repaired.replace(/,\s*$/, '');
+      // Count and close unclosed brackets
+      const opens = (repaired.match(/\[/g)||[]).length - (repaired.match(/\]/g)||[]).length;
+      const braces = (repaired.match(/\{/g)||[]).length - (repaired.match(/\}/g)||[]).length;
+      for (let i = 0; i < opens; i++) repaired += ']';
+      for (let i = 0; i < braces; i++) repaired += '}';
+      parsed = JSON.parse(repaired);
+      break;
+    } catch(e) {
+      if (attempt === 1) throw new Error('JSON parse failed: ' + e.message + ' | Raw: ' + raw.substring(0, 200));
+    }
   }
 
   // Enrich exercises with DB data (sets/reps/rest overridden by AI, but pull muscle images etc.)
@@ -763,7 +780,7 @@ async function callClaude(messages, opts = {}) {
   };
   if (opts.system) body.system = opts.system;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
+  const timeout = setTimeout(() => controller.abort(), opts.timeout || 60000);
   try {
     const response = await fetch(AI_PROXY, {
       method: 'POST',
