@@ -1010,6 +1010,14 @@ function initDashboard() {
   };
   TOTAL_WEEKS = USER.weeks || 16;
 
+  // Guard: if plan is missing weekly_schedule, it's corrupted or stale — clear and restart
+  if (!generatedPlan.weekly_schedule || !Array.isArray(generatedPlan.weekly_schedule)) {
+    localStorage.removeItem('fs_plan');
+    localStorage.removeItem('fs_user');
+    location.reload();
+    return;
+  }
+
   // Build DAY_WORKOUTS from plan
   GYM_DAYS = [];
   DAY_WORKOUTS = {};
