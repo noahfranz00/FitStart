@@ -12,10 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="description" content="AI-powered fitness plans, workout tracking, and nutrition logging.">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;700;800&family=DM+Mono:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./css/styles.css">
-    <script src="./js/coach.js" defer></script>
-    <script src="./js/logger.js" defer></script>
-    <script src="./js/scoring.js" defer></script>
+<link rel="stylesheet" href="styles.css">
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -1076,6 +1073,10 @@ self.addEventListener('fetch', e => {
 <script src="scoring.js"></script>
 <script src="logger.js"></script>
 <script src="coach.js"></script>
+<script>
+  // Boot the app after all modules are loaded
+  _bootApp();
+</script>
 
 </body>
 </html>
