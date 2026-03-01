@@ -384,20 +384,47 @@ document.addEventListener('click', function(){ closeExRowMenu(); });
 
 // ── MACROS ──
 function refreshDashMacros() {
-  const t = getAllEntries(TODAY_IDX).reduce((a,e)=>({cal:a.cal+e.cal,pro:a.pro+e.pro}),{cal:0,pro:0});
-  const calRem = TARGETS.cal - t.cal, proRem = TARGETS.pro - t.pro;
+  const t = getAllEntries(TODAY_IDX).reduce((a,e)=>({cal:a.cal+e.cal,pro:a.pro+e.pro,carb:a.carb+(e.carb||0),fat:a.fat+(e.fat||0)}),{cal:0,pro:0,carb:0,fat:0});
+  
+  // Calories
+  const calOver = t.cal > TARGETS.cal;
   const calEl = document.getElementById('d-cal'); if (!calEl) return;
-  calEl.textContent = (calRem<0?'+':'')+Math.abs(calRem).toLocaleString();
-  calEl.className = 'sc-val'+(calRem<0?' over':'');
-  document.getElementById('d-cal-sub').textContent = 'of '+TARGETS.cal.toLocaleString()+' target';
-  const proEl = document.getElementById('d-pro');
-  proEl.textContent = (proRem<0?'+':'')+Math.abs(proRem)+'g';
-  proEl.className = 'sc-val'+(proRem<0?' over':'');
-  document.getElementById('d-pro-sub').textContent = 'of '+TARGETS.pro+'g target';
+  calEl.textContent = t.cal.toLocaleString();
+  calEl.className = 'sc-val'+(calOver?' over':'');
+  document.getElementById('d-cal-sub').textContent = 'of '+TARGETS.cal.toLocaleString();
   document.getElementById('d-cal-bar').style.width = Math.min(t.cal/TARGETS.cal*100,100)+'%';
+  document.getElementById('d-cal-bar').className = 'prog-fill'+(calOver?' over':'');
+  
+  // Protein
+  const proOver = t.pro > TARGETS.pro;
+  const proEl = document.getElementById('d-pro');
+  proEl.textContent = t.pro+'g';
+  proEl.className = 'sc-val'+(proOver?' over':'');
+  document.getElementById('d-pro-sub').textContent = 'of '+TARGETS.pro+'g';
   document.getElementById('d-pro-bar').style.width = Math.min(t.pro/TARGETS.pro*100,100)+'%';
-  document.getElementById('d-cal-bar').className = 'prog-fill'+(calRem<0?' over':'');
-  document.getElementById('d-pro-bar').className = 'prog-fill'+(proRem<0?' over':'');
+  document.getElementById('d-pro-bar').className = 'prog-fill'+(proOver?' over':'');
+  
+  // Carbs
+  const carbOver = t.carb > TARGETS.carb;
+  const carbEl = document.getElementById('d-carb');
+  if (carbEl) {
+    carbEl.textContent = t.carb+'g';
+    carbEl.className = 'sc-val'+(carbOver?' over':'');
+    document.getElementById('d-carb-sub').textContent = 'of '+TARGETS.carb+'g';
+    document.getElementById('d-carb-bar').style.width = Math.min(t.carb/TARGETS.carb*100,100)+'%';
+    document.getElementById('d-carb-bar').className = 'prog-fill'+(carbOver?' over':'');
+  }
+  
+  // Fat
+  const fatOver = t.fat > TARGETS.fat;
+  const fatEl = document.getElementById('d-fat');
+  if (fatEl) {
+    fatEl.textContent = t.fat+'g';
+    fatEl.className = 'sc-val'+(fatOver?' over':'');
+    document.getElementById('d-fat-sub').textContent = 'of '+TARGETS.fat+'g';
+    document.getElementById('d-fat-bar').style.width = Math.min(t.fat/TARGETS.fat*100,100)+'%';
+    document.getElementById('d-fat-bar').className = 'prog-fill'+(fatOver?' over':'');
+  }
 }
 
 // ── WEEK ──
@@ -564,11 +591,9 @@ function renderMealCategories() {
       <div class="meal-cat-header">
         <div class="meal-cat-left" style="gap:10px;flex:1">
           <div><div class="meal-cat-name">${cat.label}</div>${totalCal>0?`<div class="meal-cat-cals">${totalCal} cal</div>`:''}</div>
-          <button class="btn-cat-add" onclick="openFoodModal('${cat.id}')">+ ADD</button>
-          <button class="btn-cat-scan" onclick="openBarcodeScanner('${cat.id}')" title="Scan barcode" style="font-size:0.72rem"><svg viewBox="0 0 32 20" width="18" height="12" fill="currentColor"><rect x="0" y="0" width="2" height="20"/><rect x="4" y="0" width="1" height="20"/><rect x="7" y="0" width="3" height="20"/><rect x="12" y="0" width="1" height="20"/><rect x="15" y="0" width="2" height="20"/><rect x="19" y="0" width="1" height="20"/><rect x="22" y="0" width="3" height="20"/><rect x="27" y="0" width="1" height="20"/><rect x="30" y="0" width="2" height="20"/></svg></button>
         </div>
       </div>
-      ${entryRows ? `<div class="meal-cat-entries">${entryRows}${totalRow}</div>` : ''}
+      ${entryRows ? `<div class="meal-cat-entries">${entryRows}${totalRow}</div>` : '<div style="padding:8px 12px;font-size:0.75rem;color:var(--dim)">No items logged. Use AI Coach to log food.</div>'}
     </div>`;
   }).join('');
 }
@@ -1302,9 +1327,9 @@ function renderMacros() {
   const allEntries = getAllEntries(nutDay);
   const t = allEntries.reduce((a,e)=>({cal:a.cal+e.cal,pro:a.pro+e.pro,carb:a.carb+e.carb,fat:a.fat+e.fat}),{cal:0,pro:0,carb:0,fat:0});
   [['cal',TARGETS.cal,'','n-cal','n-cal-bar'],['pro',TARGETS.pro,'g','n-pro','n-pro-bar'],['carb',TARGETS.carb,'g','n-carb','n-carb-bar'],['fat',TARGETS.fat,'g','n-fat','n-fat-bar']].forEach(([k,tgt,u,vid,bid])=>{
-    const rem = tgt-t[k], over = rem<0, pct = Math.min(t[k]/tgt*100,100);
+    const over = t[k] > tgt, pct = Math.min(t[k]/tgt*100,100);
     const el = document.getElementById(vid), bar = document.getElementById(bid);
-    el.textContent = (over?'+':'')+Math.abs(rem)+u;
+    el.textContent = (k==='cal' ? t[k].toLocaleString() : t[k]) + u;
     el.className = 'mb-val'+(over?' over':'');
     bar.style.width = pct+'%';
     bar.className = 'mb-fill'+(over?' over':'');
