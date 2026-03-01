@@ -1944,20 +1944,30 @@ function renderSetsTable(idx, ex) {
   if (isDeloadWeek(CURRENT_WEEK)) baseSets = Math.max(2, Math.round(baseSets * 0.6));
   const numSets = woExtraSets[idx] || baseSets;
   tbody.innerHTML = '';
+
+  // Look up previous session for THIS exercise by NAME (not index)
+  let prevSets = [];
+  try {
+    const exlogs = getExLogs();
+    const sessions = exlogs[ex.name] || [];
+    const today = todayDateStr();
+    const prevSession = sessions.find(s => s.date !== today);
+    if (prevSession && prevSession.sets) prevSets = prevSession.sets;
+  } catch(e) {}
+
   for (let s=0; s<numSets; s++) {
-    const prev = getPrevSet(woDay, idx, s);
     const isSaved = woSets[idx] && woSets[idx][s];
     const isDone = isSaved && woSets[idx][s].done;
     // Only show saved values if the set was actually completed THIS session
     const valW = isDone && (woSets[idx][s].weight != null) ? String(woSets[idx][s].weight) : '';
     const valR = isDone && (woSets[idx][s].reps != null) ? String(woSets[idx][s].reps) : '';
-    const prevW = prev ? prev.weight : null;
-    const prevR = prev ? prev.reps : null;
-    const prevHint = (prevW && prevR) ? '<div style="font-size:0.62rem;color:var(--dim);margin-top:2px;font-family:\'DM Mono\',monospace">Last: ' + prevW + ' × ' + prevR + '</div>' : '';
+    // Previous data from the SAME exercise name
+    const prev = prevSets[s] || null;
+    const prevHint = (prev && prev.weight && prev.reps) ? '<div style="font-size:0.7rem;color:var(--off);margin-top:3px;font-family:\'DM Mono\',monospace">Last: ' + prev.weight + 'lbs × ' + prev.reps + '</div>' : '';
     const tr = document.createElement('tr');
     tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div>' + prevHint + '</td>'+
-      '<td class="set-cell-weight"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="decimal" placeholder="lbs" value="'+escapeAttr(valW)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
-      '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="number" inputmode="numeric" placeholder="reps" value="'+escapeAttr(valR)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
+      '<td class="set-cell-weight"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="decimal" value="'+escapeAttr(valW)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
+      '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="number" inputmode="numeric" value="'+escapeAttr(valR)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
       '<td><button class="set-check '+(isDone?'done':'')+'" id="sd-'+idx+'-'+s+'" '+(isDone?'disabled':'')+' onclick="completeSet('+idx+','+s+','+ex.rest+')" title="Mark done">✓</button></td>'+
       '<td><button class="set-del-btn" onclick="deleteSet('+idx+','+s+')" title="Delete set">✕</button></td>';
     tbody.appendChild(tr);
