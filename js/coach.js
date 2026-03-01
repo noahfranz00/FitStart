@@ -240,9 +240,9 @@ Bread/Pancakes:
   Dave's Killer Bread (1 slice): 120cal 5P 22C 1.5F | Ezekiel (1 slice): 80cal 4P 15C 0.5F
 
 Jerky & Meat Snacks (per 1oz/28g unless noted):
-  Old Trapper Peppered Beef Jerky (1oz): 70cal 12P 3C 1F
-  Old Trapper Original Beef Jerky (1oz): 70cal 11P 4C 1F
-  Old Trapper Teriyaki Beef Jerky (1oz): 70cal 11P 5C 1F
+  Old Trapper Peppered Beef Jerky (1oz): 70cal 11P 6C 0F
+  Old Trapper Original Beef Jerky (1oz): 70cal 11P 6C 0F
+  Old Trapper Teriyaki Beef Jerky (1oz): 70cal 11P 7C 0F
   Jack Link's Original Beef Jerky (1oz): 80cal 12P 5C 1F
   Jack Link's Teriyaki Beef Jerky (1oz): 80cal 11P 7C 1F
   Jack Link's Peppered Beef Jerky (1oz): 80cal 12P 5C 1F
@@ -298,9 +298,9 @@ Example: Just Bare Chicken Nuggets are 150cal/13P/10C/6F per 3oz serving. If use
   Cal: 150 × 2.33 = 350 | Pro: 13 × 2.33 = 30 | Carb: 10 × 2.33 = 23 | Fat: 6 × 2.33 = 14
   Log: 350cal 30P 23C 14F
 
-Example: Old Trapper Peppered Jerky is 70cal/12P/3C/1F per 1oz. If user says "2.68oz":
-  2.68 × 70 = 188cal | 2.68 × 12 = 32P | 2.68 × 3 = 8C | 2.68 × 1 = 3F
-  Log: 188cal 32P 8C 3F
+Example: Old Trapper Peppered Jerky is 70cal/11P/6C/0F per 1oz. If user says "2.68oz":
+  2.68 × 70 = 188cal | 2.68 × 11 = 29P | 2.68 × 6 = 16C | 2.68 × 0 = 0F
+  Log: 188cal 29P 16C 0F
 
 NEVER estimate or round the serving count to a whole number. Always use the exact multiplier.
 
