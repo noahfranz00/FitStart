@@ -179,6 +179,11 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
     '</div>' +
     '</div>';
 
+  document.body.appendChild(overlay);
+  document.getElementById('wo-summary-done-btn').onclick = function() { overlay.remove(); };
+  document.getElementById('wo-share-btn').onclick = function() { _shareWorkoutCard(); };
+}
+
 function _shareWorkoutCard() {
   var card = document.getElementById('wo-share-card');
   if (!card) return;
