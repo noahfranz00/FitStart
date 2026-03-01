@@ -24,7 +24,7 @@ body::before {
 
 /* ── NAV ── */
 nav { display:flex; justify-content:space-between; align-items:center; padding:20px 48px; border-bottom:1px solid var(--border); background:rgba(10,10,10,0.92); backdrop-filter:blur(10px); position:sticky; top:0; z-index:200; width:100%; box-sizing:border-box; }
-.logo { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; letter-spacing:2px; display:flex; align-items:center; gap:10px; background:var(--gold-grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.logo { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; letter-spacing:2px; display:flex; align-items:center; gap:10px; color:#D4A520; }
 .logo-icon { width:32px; height:32px; border-radius:8px; object-fit:contain; flex-shrink:0; }
 .logo-dot { color:var(--gold); transition:color 0.4s; }
 .nav-right { display:flex; align-items:center; gap:14px; }
@@ -44,7 +44,7 @@ nav { display:flex; justify-content:space-between; align-items:center; padding:2
 .hero-eyebrow { display:flex; align-items:center; gap:12px; font-size:0.72rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--dim); margin-bottom:20px; }
 .eyebrow-line { width:32px; height:1px; background:var(--dim); }
 #ob-headline { font-family:'Bebas Neue',sans-serif; font-size:clamp(3.5rem,8vw,6rem); line-height:0.92; letter-spacing:1px; margin-bottom:20px; }
-.line-accent { color:var(--tier-color); transition:color 0.4s; display:block; }
+.line-accent { background:var(--gold-grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; transition:color 0.4s; display:block; }
 .hero-sub { font-size:1rem; color:var(--off); max-width:540px; line-height:1.7; font-weight:400; margin-bottom:32px; }
 .tier-selector { display:flex; gap:10px; flex-wrap:wrap; }
 .tier-btn { flex:1; min-width:160px; padding:16px 20px; background:var(--card); border:1px solid var(--border); border-radius:14px; cursor:pointer; text-align:left; transition:all 0.25s; color:var(--white); }
@@ -93,7 +93,7 @@ nav { display:flex; justify-content:space-between; align-items:center; padding:2
 .tl-btn:hover { border-color:var(--border2); color:var(--off); }
 .tl-btn.active { border-color:var(--tier-color); background:var(--tier-dim); color:var(--tier-color); font-weight:500; }
 
-.btn-generate { width:100%; margin-top:24px; padding:16px; background:var(--tier-color); color:var(--black); border:none; border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:2px; cursor:pointer; transition:all 0.2s; }
+.btn-generate { width:100%; margin-top:24px; padding:16px; background:var(--gold-grad); color:var(--black); border:none; border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:2px; cursor:pointer; transition:all 0.2s; font-weight:700; }
 .btn-generate:hover { opacity:0.9; transform:translateY(-1px); }
 .btn-generate:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
 .price-note { text-align:center; font-size:0.72rem; color:var(--dim); margin-top:10px; font-family:'DM Mono',monospace; }
@@ -280,11 +280,11 @@ body.advanced .btn-start-trial { background:var(--red); }
 .card-label { font-size:0.62rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--dim); margin-bottom:10px; }
 .today-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px; }
 .stat-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; }
-.sc-val { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:1px; color:var(--gold); line-height:1; margin-bottom:3px; transition:color 0.3s; }
+.sc-val { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:1px; background:var(--gold-grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; margin-bottom:3px; transition:color 0.3s; }
 .sc-val.over { color:var(--red); }
 .sc-sub { font-family:'DM Mono',monospace; font-size:0.75rem; color:var(--off); }
 .prog-bar { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; margin-top:10px; }
-.prog-fill { height:100%; border-radius:2px; background:var(--gold); transition:width 0.4s ease, background 0.3s; }
+.prog-fill { height:100%; border-radius:2px; background:var(--gold-grad); transition:width 0.4s ease, background 0.3s; }
 .prog-fill.over { background:var(--red); }
 .workout-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:24px; margin-bottom:16px; overflow:visible; }
 .wc-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; }
