@@ -276,12 +276,12 @@ body.advanced .btn-start-trial { background:var(--red); }
 .page-sub { font-family:'Inter',sans-serif; font-size:0.82rem; color:var(--off); margin-top:5px; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:24px; }
 .card-label { font-size:0.62rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--dim); margin-bottom:10px; }
-.today-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
-.stat-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px; }
-.sc-val { font-family:'Bebas Neue',sans-serif; font-size:2.2rem; letter-spacing:1px; color:var(--green); line-height:1; margin-bottom:3px; transition:color 0.3s; }
+.today-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; }
+.sc-val { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:1px; color:var(--green); line-height:1; margin-bottom:3px; transition:color 0.3s; }
 .sc-val.over { color:var(--red); }
 .sc-sub { font-family:'DM Mono',monospace; font-size:0.75rem; color:var(--off); }
-.prog-bar { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; margin-top:10px; overflow:hidden; }
+.prog-bar { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; margin-top:10px; }
 .prog-fill { height:100%; border-radius:2px; background:var(--green); transition:width 0.4s ease, background 0.3s; }
 .prog-fill.over { background:var(--red); }
 .workout-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:24px; margin-bottom:16px; overflow:visible; }
@@ -771,9 +771,10 @@ body.advanced .btn-start-trial { background:var(--red); }
   .sb-badge { display:none; }
 
   /* Today */
-  .today-grid { grid-template-columns:1fr 1fr; gap:10px; }
-  .sc-val { font-size:1.7rem; }
-  .sc-sub { font-size:0.72rem; }
+  .today-grid { grid-template-columns:1fr 1fr; gap:8px; }
+  .stat-card { padding:12px; }
+  .sc-val { font-size:1.4rem; }
+  .sc-sub { font-size:0.65rem; }
   .workout-card { padding:14px; }
   .wc-header { flex-direction:column; gap:10px; align-items:flex-start; }
   .wc-name { font-size:1.1rem; }
