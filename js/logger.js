@@ -251,10 +251,10 @@ function renderDashExPickerList() {
     var safeName = name.replace(/'/g,"\\'");
     var isSelected = _dashExPickerMode === 'build' && _buildPickerSelected.some(function(e){ return e.name === name; });
     var dotColor = MUSCLE_COLORS[data.category] || 'var(--dim)';
-    return '<div class="aes-item" onclick="selectDashEx(\''+safeName+'\')" style="'+(isSelected?'border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.05)':'')+'">'+
+    return '<div class="aes-item" onclick="selectDashEx(\''+safeName+'\')" style="'+(isSelected?'border-color:rgba(212,165,32,0.3);background:rgba(212,165,32,0.05)':'')+'">'+
       '<div class="aes-muscle-dot" style="background:'+dotColor+'"></div>'+
       '<div><div class="aes-item-name">'+name+'</div><div class="aes-item-cat">'+(data.muscles||'').toUpperCase()+'</div></div>'+
-      '<button class="aes-item-add" style="'+(isSelected?'background:var(--green);color:var(--black)':'')+'">'+(isSelected?'✓':'+')+'</button></div>';
+      '<button class="aes-item-add" style="'+(isSelected?'background:var(--gold);color:var(--black)':'')+'">'+(isSelected?'✓':'+')+'</button></div>';
   }).join('');
   if (!filtered.length) list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--dim);font-size:0.83rem">No exercises found</div>';
 }
@@ -295,9 +295,9 @@ function _updateBuildTray() {
     if (beginBtn) beginBtn.style.display = 'none';
   } else {
     sel.innerHTML = _buildPickerSelected.map(function(e, i){
-      return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--green-dim);border:1px solid rgba(74,222,128,0.2);border-radius:6px;padding:3px 8px;font-size:0.7rem;color:var(--green);font-family:\'Bebas Neue\',sans-serif;letter-spacing:0.5px">'
+      return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:6px;padding:3px 8px;font-size:0.7rem;color:var(--gold);font-family:\'Bebas Neue\',sans-serif;letter-spacing:0.5px">'
         + e.name + ' ' + e.sets + '×' + e.reps
-        + '<button onclick="_removeBuildEx('+i+')" style="background:none;border:none;color:var(--green);cursor:pointer;padding:0;margin-left:2px;font-size:0.75rem;opacity:0.7">✕</button></span>';
+        + '<button onclick="_removeBuildEx('+i+')" style="background:none;border:none;color:var(--gold);cursor:pointer;padding:0;margin-left:2px;font-size:0.75rem;opacity:0.7">✕</button></span>';
     }).join('');
     if (beginBtn) beginBtn.style.display = 'block';
   }
@@ -438,7 +438,7 @@ function renderWeek() {
     const workout = DAY_WORKOUTS[i];
     let cls = 'wday';
     if (isToday) cls += ' is-today'; else if (isDone) cls += ' is-done';
-    const svgCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5" width="22" height="22"><polyline points="20 6 9 17 4 12"/></svg>';
+    const svgCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="#D4A520" stroke-width="2.5" width="22" height="22"><polyline points="20 6 9 17 4 12"/></svg>';
     const svgDumbbell = '<svg viewBox="0 0 28 14" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="12" style="opacity:0.6;color:var(--tier-color)"><rect x="11" y="5" width="6" height="4" rx="1" fill="currentColor"/><rect x="7" y="3" width="4" height="8" rx="1" fill="currentColor"/><rect x="17" y="3" width="4" height="8" rx="1" fill="currentColor"/><rect x="3" y="4" width="4" height="6" rx="1.5" fill="currentColor"/><rect x="21" y="4" width="4" height="6" rx="1.5" fill="currentColor"/></svg>';
     const svgRestBlank = '<svg viewBox="0 0 24 24" fill="none" width="20" height="20" style="opacity:0.18"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M8 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
     const icon = isDone ? svgCheck : isGym ? svgDumbbell : svgRestBlank;
@@ -588,7 +588,7 @@ function renderMealCategories() {
         <button class="mer-del" onclick="deleteCatMeal('${cat.id}',${i})">✕</button>
       </div>`
     ).join('');
-    const totalRow = entries.length ? `<div class="meal-cat-total"><span>${totalPro}g protein</span><span>${totalCarb}g carbs</span><span>${totalFat}g fat</span><span style="color:var(--green)">${totalCal} cal</span></div>` : '';
+    const totalRow = entries.length ? `<div class="meal-cat-total"><span>${totalPro}g protein</span><span>${totalCarb}g carbs</span><span>${totalFat}g fat</span><span style="color:var(--gold)">${totalCal} cal</span></div>` : '';
     return `<div class="meal-cat-card">
       <div class="meal-cat-header">
         <div class="meal-cat-left" style="gap:10px;flex:1">
@@ -684,12 +684,12 @@ function renderCustomFoodsInModal() {
   const resultsEl = document.getElementById('food-modal-results');
   if (!customs.length) {
     resultsEl.innerHTML = `<div class="food-modal-empty">No custom foods saved yet.<br><br>
-      <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--green-dim);border:1px solid rgba(74,222,128,0.2);border-radius:10px;color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">+ CREATE CUSTOM FOOD</button>
+      <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:10px;color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">+ CREATE CUSTOM FOOD</button>
     </div>`;
     return;
   }
   resultsEl.innerHTML = `<div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end">
-    <button onclick="openManualFoodEntry()" style="padding:8px 14px;background:var(--green-dim);border:1px solid rgba(74,222,128,0.2);border-radius:8px;color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer">+ NEW CUSTOM FOOD</button>
+    <button onclick="openManualFoodEntry()" style="padding:8px 14px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:8px;color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer">+ NEW CUSTOM FOOD</button>
   </div>` +
   customs.map((item, i) =>
     `<div class="food-modal-item" onclick="openServingModal(${i}, 'custom')">
@@ -922,7 +922,7 @@ function renderFoodResults(results, resultsEl) {
   }
   resultsEl.innerHTML = results.slice(0, 30).map((item, i) => {
     const srcBadge = item._source === 'usda_branded'
-      ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(74,222,128,0.1);color:var(--green);border:1px solid rgba(74,222,128,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
+      ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(212,165,32,0.1);color:var(--gold);border:1px solid rgba(212,165,32,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
       : item._source === 'usda_foundation'
       ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(96,165,250,0.1);color:var(--blue);border:1px solid rgba(96,165,250,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
       : '';
@@ -1049,8 +1049,8 @@ async function searchFoodModal() {
       + '<div style="font-size:1.2rem;margin-bottom:8px">\uD83D\uDD0D</div>'
       + 'No results for "<strong>' + rawQuery + '</strong>".<br><br>'
       + 'Try a shorter term like <em>chicken breast</em> or <em>white rice</em>, or add it manually.<br><br>'
-      + '<button onclick="searchFoodModal()" style="padding:10px 20px;background:var(--card);border:1px solid var(--border2);border-radius:10px;color:var(--green);font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">\u21BA RETRY</button>'
-      + ' <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--green-dim);border:1px solid rgba(74,222,128,0.2);border-radius:10px;color:var(--green);font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">+ ADD CUSTOM</button>'
+      + '<button onclick="searchFoodModal()" style="padding:10px 20px;background:var(--card);border:1px solid var(--border2);border-radius:10px;color:var(--gold);font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">\u21BA RETRY</button>'
+      + ' <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:10px;color:var(--gold);font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">+ ADD CUSTOM</button>'
       + '</div>';
   }
 }
@@ -1093,7 +1093,7 @@ function openServingModal(idx, source) {
   
   quickEl.innerHTML = servings.map((s,i) => 
     `<button onclick="setServingQuick(${s.grams})" style="padding:6px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:var(--off);font-family:'Inter',sans-serif;font-size:0.78rem;cursor:pointer;transition:all 0.15s" 
-    onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" 
+    onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" 
     onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--off)'">${s.label}</button>`
   ).join('');
   
@@ -1238,7 +1238,7 @@ function submitBarcode() {
   const code = document.getElementById('barcode-input').value.trim();
   if (!code) return;
   const status = document.getElementById('barcode-lookup-status');
-  if (status) { status.textContent = 'Looking up...'; status.style.color = 'var(--green)'; }
+  if (status) { status.textContent = 'Looking up...'; status.style.color = 'var(--gold)'; }
   closeBarcodeModal();
   lookupBarcode(code);
 }
@@ -1447,7 +1447,7 @@ function renderWeightHistory() {
     const svgEl = document.getElementById('weight-chart');
     const W = svgEl.parentElement.offsetWidth || 300;
     const pts = sorted.map((e, i) => [i, parseFloat(e.lbs)]);
-    drawSVGLine('weight-chart', pts, '#4ADE80', 'rgba(74,222,128,0.08)', W, 140, 34, 8, 8, 20);
+    drawSVGLine('weight-chart', pts, '#D4A520', 'rgba(212,165,32,0.08)', W, 140, 34, 8, 8, 20);
     // X labels
     const labelsEl = document.getElementById('weight-chart-labels');
     if (labelsEl && sorted.length > 1) {
@@ -1461,7 +1461,7 @@ function renderWeightHistory() {
   if (deltaBadge) {
     const arrow = diff < 0 ? '↓' : diff > 0 ? '↑' : '→';
     const good = (mode==='lose' && diff<0) || (mode==='gain' && diff>0);
-    const color = good ? '#4ADE80' : diff===0 ? 'var(--dim)' : '#f87171';
+    const color = good ? '#D4A520' : diff===0 ? 'var(--dim)' : '#f87171';
     deltaBadge.innerHTML = `<span style="color:${color}">${arrow} ${Math.abs(diff).toFixed(1)} lbs</span> <span style="color:var(--dim);font-size:0.72rem">from start</span>`;
   }
 
@@ -1481,7 +1481,7 @@ function renderWeightHistory() {
     histEl.innerHTML = rev.slice(0,10).map((e,i) => {
       const prev = rev[i+1];
       const change = prev ? (e.lbs - prev.lbs) : 0;
-      const changeStr = change === 0 ? '' : `<span style="font-size:0.72rem;color:${change<0?'#4ADE80':'#f87171'}">${change>0?'+':''}${change.toFixed(1)}</span>`;
+      const changeStr = change === 0 ? '' : `<span style="font-size:0.72rem;color:${change<0?'#D4A520':'#f87171'}">${change>0?'+':''}${change.toFixed(1)}</span>`;
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
         <div style="font-size:0.82rem;color:var(--off)">${e.date}</div>
         <div style="display:flex;align-items:center;gap:10px">
@@ -1555,7 +1555,7 @@ function renderNutritionChart() {
   }
 
   svgEl.innerHTML = `${grid}${targetLine}
-    <polyline points="${calPoly}" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline points="${calPoly}" fill="none" stroke="#D4A520" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline points="${proPoly}" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="none"/>`;
 
   // X labels (every 2 days)
@@ -1624,10 +1624,10 @@ function renderFreqChart() {
     const isThisWeek = i === 7;
     return `
       <rect x="${x.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(bh,2).toFixed(1)}"
-        rx="3" fill="${isThisWeek ? 'var(--green)' : 'rgba(74,222,128,0.35)'}"/>
+        rx="3" fill="${isThisWeek ? 'var(--gold)' : 'rgba(212,165,32,0.35)'}"/>
       <text x="${(x + bw/2).toFixed(1)}" y="${H}" font-size="8" fill="rgba(255,255,255,0.4)"
         text-anchor="middle" font-family="DM Mono,monospace">${lbl}</text>
-      ${count > 0 ? `<text x="${(x + bw/2).toFixed(1)}" y="${(by - 3).toFixed(1)}" font-size="9" fill="${isThisWeek ? 'var(--green)' : 'rgba(255,255,255,0.5)'}" text-anchor="middle" font-family="DM Mono,monospace">${count}</text>` : ''}
+      ${count > 0 ? `<text x="${(x + bw/2).toFixed(1)}" y="${(by - 3).toFixed(1)}" font-size="9" fill="${isThisWeek ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}" text-anchor="middle" font-family="DM Mono,monospace">${count}</text>` : ''}
     `;
   }).join('');
 }
@@ -1687,16 +1687,16 @@ function renderProgram() {
     const wDeload = isDeloadWeek(w);
     const phaseTag = wDeload
       ? '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(251,146,60,0.1);color:var(--orange);padding:2px 7px;border-radius:4px;border:1px solid rgba(251,146,60,0.2)">⚡ DELOAD</span>'
-      : '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(74,222,128,0.07);color:var(--green);padding:2px 7px;border-radius:4px;border:1px solid rgba(74,222,128,0.15)">'+wPhase.name+'</span>';
+      : '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(212,165,32,0.07);color:var(--gold);padding:2px 7px;border-radius:4px;border:1px solid rgba(212,165,32,0.15)">'+wPhase.name+'</span>';
     const badge = isDone
-      ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--green-dim);color:var(--green);padding:3px 9px;border-radius:5px">✓ Done</span>'
+      ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--gold-dim);color:var(--gold);padding:3px 9px;border-radius:5px">✓ Done</span>'
       : isCurrent
       ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--orange-dim);color:var(--orange);padding:3px 9px;border-radius:5px">In Progress</span>'
       : '';
     const rowId = 'wrow-'+w;
     const days = GYM_DAYS.map(i=>{
       const wo = DAY_WORKOUTS[i];
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:9px"><div style="font-size:0.83rem;color:var(--off)">${DAYS_FULL[i]} · ${wo?wo.name:'Workout'}</div><div style="font-size:0.7rem;font-family:'DM Mono',monospace;color:${isDone?'var(--green)':'var(--dim)'}">${isDone?'✓ Complete':'Upcoming'}</div></div>`;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--dark);border:1px solid var(--border);border-radius:9px"><div style="font-size:0.83rem;color:var(--off)">${DAYS_FULL[i]} · ${wo?wo.name:'Workout'}</div><div style="font-size:0.7rem;font-family:'DM Mono',monospace;color:${isDone?'var(--gold)':'var(--dim)'}">${isDone?'✓ Complete':'Upcoming'}</div></div>`;
     }).join('');
     card.innerHTML = `<div class="log-toggle-header" onclick="toggleWeekRow('${rowId}')" style="padding:16px 20px">
       <div style="display:flex;align-items:center;gap:10px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;color:${isCurrent?'var(--white)':'var(--dim)'}">WEEK ${w}</div>${phaseTag}${badge}</div>
@@ -1716,12 +1716,12 @@ function renderSettingsGymDays() {
     const active = GYM_DAYS.includes(i);
     const el = document.createElement('div');
     el.textContent = d; el.dataset.idx = i; if(active) el.dataset.active='1';
-    el.style.cssText = `padding:10px 16px;border-radius:8px;border:1px solid ${active?'var(--green)':'var(--border)'};background:${active?'var(--green-dim)':'var(--dark)'};color:${active?'var(--green)':'var(--dim)'};font-family:'DM Mono',monospace;font-size:0.8rem;cursor:pointer;transition:all 0.2s`;
+    el.style.cssText = `padding:10px 16px;border-radius:8px;border:1px solid ${active?'var(--gold)':'var(--border)'};background:${active?'var(--gold-dim)':'var(--dark)'};color:${active?'var(--gold)':'var(--dim)'};font-family:'DM Mono',monospace;font-size:0.8rem;cursor:pointer;transition:all 0.2s`;
     el.onclick = function(){
       const now = !this.dataset.active; this.dataset.active=now?'1':'';
-      this.style.borderColor=now?'var(--green)':'var(--border)';
-      this.style.background=now?'var(--green-dim)':'var(--dark)';
-      this.style.color=now?'var(--green)':'var(--dim)';
+      this.style.borderColor=now?'var(--gold)':'var(--border)';
+      this.style.background=now?'var(--gold-dim)':'var(--dark)';
+      this.style.color=now?'var(--gold)':'var(--dim)';
     };
     container.appendChild(el);
   });
@@ -1761,8 +1761,8 @@ function saveSettings() {
   refreshDashMacros(); renderMacros(); saveToStorage();
 
   const btn = document.getElementById('save-btn'), orig = btn.textContent;
-  btn.textContent='✓ SAVED'; btn.style.background='var(--green-dim)'; btn.style.color='var(--green)'; btn.style.border='1px solid rgba(74,222,128,0.3)';
-  setTimeout(()=>{ btn.textContent=orig; btn.style.background='var(--green)'; btn.style.color='var(--black)'; btn.style.border='none'; }, 1800);
+  btn.textContent='✓ SAVED'; btn.style.background='var(--gold-dim)'; btn.style.color='var(--gold)'; btn.style.border='1px solid rgba(212,165,32,0.3)';
+  setTimeout(()=>{ btn.textContent=orig; btn.style.background='var(--gold)'; btn.style.color='var(--black)'; btn.style.border='none'; }, 1800);
 }
 
 // ═══════════════════════════════════════════
@@ -1896,7 +1896,7 @@ function loadExercise(idx) {
     } else {
       const ph = getTrainingPhase(CURRENT_WEEK);
       phBadgeEl.textContent = `${ph.name} PHASE · ${ph.intensityLabel}`;
-      phBadgeEl.style.cssText = 'display:block;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:8px 14px;font-size:0.75rem;color:var(--green);margin-bottom:10px';
+      phBadgeEl.style.cssText = 'display:block;background:rgba(212,165,32,0.07);border:1px solid rgba(212,165,32,0.2);border-radius:8px;padding:8px 14px;font-size:0.75rem;color:var(--gold);margin-bottom:10px';
     }
   }
   document.getElementById('wo-muscles-tag').textContent = `Muscles: ${ex.muscles || db.muscles}`;
@@ -2086,7 +2086,7 @@ function completeSet(exIdx, setIdx, restSecs) {
     woPRs.push({ exercise: exName, weight: weight, reps: reps, set: setIdx + 1 });
     var row = btn.closest('tr');
     if (row) {
-      row.style.background = 'rgba(74,222,128,0.12)';
+      row.style.background = 'rgba(212,165,32,0.12)';
       row.style.transition = 'background 0.3s';
       setTimeout(function(){ row.style.background = ''; }, 2000);
     }
@@ -2128,7 +2128,7 @@ function renderDemoPlaceholder(el, name, muscles) {
   const cues = EXERCISE_CUES[name] || EXERCISE_CUES.default;
   const phases = [
     { label:'START POSITION', color:'#60a5fa', cues:cues.start },
-    { label:'MID MOVEMENT',   color:'#4ADE80', cues:cues.mid },
+    { label:'MID MOVEMENT',   color:'#D4A520', cues:cues.mid },
     { label:'END / LOCKOUT',  color:'#f472b6', cues:cues.end },
   ];
   el.innerHTML = phases.map((p,pi) => `
@@ -2181,10 +2181,10 @@ function _renderImageFrame(framesEl, imageUrl, name, muscles) {
     </div>
     <div style="flex:1;display:flex;flex-direction:column;background:var(--dark);border-radius:14px;overflow:hidden;border:1px solid var(--border)">
       <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:1px;color:#4ADE80">FORM CUES</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:1px;color:#D4A520">FORM CUES</div>
       </div>
       <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1">
-        ${cues.start.concat(cues.mid).slice(0,4).map(c=>`<div style="display:flex;align-items:flex-start;gap:8px"><div style="width:4px;height:4px;border-radius:50%;background:#4ADE80;margin-top:6px;flex-shrink:0"></div><div style="font-size:0.79rem;color:var(--off);line-height:1.45">${c}</div></div>`).join('')}
+        ${cues.start.concat(cues.mid).slice(0,4).map(c=>`<div style="display:flex;align-items:flex-start;gap:8px"><div style="width:4px;height:4px;border-radius:50%;background:#D4A520;margin-top:6px;flex-shrink:0"></div><div style="font-size:0.79rem;color:var(--off);line-height:1.45">${c}</div></div>`).join('')}
       </div>
     </div>`;
 }
@@ -2495,7 +2495,7 @@ function _renderAIPreviewList() {
           <div style="font-size:0.75rem;color:var(--dim);margin-top:2px">${ex.muscles}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;color:var(--green)">${ex.sets} × ${ex.reps}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;color:var(--gold)">${ex.sets} × ${ex.reps}</div>
           <div style="font-size:0.7rem;color:var(--dim)">REST ${ex.rest}s</div>
         </div>
       </div>
@@ -2543,7 +2543,7 @@ function _aiEditSetsReps(idx) {
         <input type="number" id="_ai-edit-rest-${idx}" value="${ex.rest}" min="0" step="15"
           style="width:100%;padding:7px 4px;background:var(--dark);border:1px solid var(--border2);border-radius:7px;color:var(--white);text-align:center;font-family:'DM Mono',monospace;font-size:0.9rem;outline:none">
       </div>
-      <button onclick="_aiSaveEdit(${idx})" style="padding:7px 14px;background:var(--green);border:none;border-radius:7px;color:var(--black);font-size:0.75rem;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;cursor:pointer;align-self:flex-end">SAVE</button>
+      <button onclick="_aiSaveEdit(${idx})" style="padding:7px 14px;background:var(--gold);border:none;border-radius:7px;color:var(--black);font-size:0.75rem;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;cursor:pointer;align-self:flex-end">SAVE</button>
     </div>`;
 }
 
@@ -2584,7 +2584,7 @@ function _aiSwapExercise(idx) {
         ${candidates.slice(0, 15).map(([name, db]) =>
           `<div onclick="_aiDoSwap(${idx},'${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
             <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-            <div style="font-size:0.68rem;color:var(--green)">${db.sets}×${db.reps}</div>
+            <div style="font-size:0.68rem;color:var(--gold)">${db.sets}×${db.reps}</div>
           </div>`
         ).join('')}
       </div>
@@ -2603,7 +2603,7 @@ function _aiFilterSwap(idx, query) {
   list.innerHTML = results.map(([name, db]) =>
     `<div onclick="_aiDoSwap(${idx},'${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
       <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-      <div style="font-size:0.68rem;color:var(--green)">${db.sets}×${db.reps}</div>
+      <div style="font-size:0.68rem;color:var(--gold)">${db.sets}×${db.reps}</div>
     </div>`
   ).join('') || '<div style="padding:12px;color:var(--dim);font-size:0.78rem;text-align:center">No matches</div>';
 }
@@ -2640,7 +2640,7 @@ function _aiAddExercise() {
         ${candidates.slice(0, 20).map(([name, db]) =>
           `<div onclick="_aiDoAdd('${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
             <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-            <div style="color:var(--green);font-size:1rem;font-weight:700">+</div>
+            <div style="color:var(--gold);font-size:1rem;font-weight:700">+</div>
           </div>`
         ).join('')}
       </div>
@@ -2660,7 +2660,7 @@ function _aiFilterAdd(query) {
   list.innerHTML = results.map(([name, db]) =>
     `<div onclick="_aiDoAdd('${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
       <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-      <div style="color:var(--green);font-size:1rem;font-weight:700">+</div>
+      <div style="color:var(--gold);font-size:1rem;font-weight:700">+</div>
     </div>`
   ).join('') || '<div style="padding:12px;color:var(--dim);font-size:0.78rem;text-align:center">No matches</div>';
 }
@@ -2698,7 +2698,7 @@ function showCustomBuilder() {
   const cats = [...new Set(Object.values(EXERCISE_DB).map(e => e.category))].sort();
   document.getElementById('custom-cat-filters').innerHTML =
     ['All', ...cats].map(c =>
-      `<button onclick="filterCustomExCat('${c}',this)" class="custom-cat-btn" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:${c==='All'?'var(--green)':'var(--card)'};color:${c==='All'?'var(--black)':'var(--off)'};font-size:0.72rem;cursor:pointer">${c}</button>`
+      `<button onclick="filterCustomExCat('${c}',this)" class="custom-cat-btn" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:${c==='All'?'var(--gold)':'var(--card)'};color:${c==='All'?'var(--black)':'var(--off)'};font-size:0.72rem;cursor:pointer">${c}</button>`
     ).join('');
 }
 
@@ -2708,7 +2708,7 @@ function filterCustomExCat(cat, btn) {
   document.querySelectorAll('.custom-cat-btn').forEach(b => {
     b.style.background = 'var(--card)'; b.style.color = 'var(--off)';
   });
-  btn.style.background = 'var(--green)'; btn.style.color = 'var(--black)';
+  btn.style.background = 'var(--gold)'; btn.style.color = 'var(--black)';
   renderCustomExList();
 }
 
@@ -2727,12 +2727,12 @@ function renderCustomExList() {
   if (!list) return;
   list.innerHTML = entries.map(([name, ex]) => {
     const selected = _customBuilderSelected.find(e => e.name === name);
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${selected?'var(--green-dim)':'var(--card)'};border:1px solid ${selected?'rgba(74,222,128,0.3)':'var(--border)'};border-radius:10px;cursor:pointer" onclick="toggleCustomEx('${name}')">
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${selected?'var(--gold-dim)':'var(--card)'};border:1px solid ${selected?'rgba(212,165,32,0.3)':'var(--border)'};border-radius:10px;cursor:pointer" onclick="toggleCustomEx('${name}')">
       <div>
         <div style="font-size:0.88rem;font-weight:600;color:var(--white)">${name}</div>
         <div style="font-size:0.72rem;color:var(--dim)">${ex.muscles} · ${ex.sets}×${ex.reps}</div>
       </div>
-      <div style="font-size:1.2rem;color:${selected?'var(--green)':'var(--dim)'}">
+      <div style="font-size:1.2rem;color:${selected?'var(--gold)':'var(--dim)'}">
         ${selected ? '✓' : '+'}
       </div>
     </div>`;
@@ -2853,9 +2853,9 @@ function renderTodayMiniLog() {
   el.innerHTML = last5.map(e =>
     `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 18px;border-bottom:1px solid rgba(255,255,255,0.04)">
       <div style="font-size:0.84rem;color:var(--off)">${e.name}</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:var(--green)">${e.cal} cal</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:var(--gold)">${e.cal} cal</div>
     </div>`
-  ).join('') + (entries.length > 5 ? `<div style="padding:8px 18px;font-size:0.75rem;color:var(--dim);text-align:center">+${entries.length-5} more · <a onclick="dashNav('nutrition',document.querySelector('.sb-btn:nth-child(4)'))" style="color:var(--green);cursor:pointer">View all in Nutrition</a></div>` : '');
+  ).join('') + (entries.length > 5 ? `<div style="padding:8px 18px;font-size:0.75rem;color:var(--dim);text-align:center">+${entries.length-5} more · <a onclick="dashNav('nutrition',document.querySelector('.sb-btn:nth-child(4)'))" style="color:var(--gold);cursor:pointer">View all in Nutrition</a></div>` : '');
 }
 
 function renderEcList() {
