@@ -311,7 +311,7 @@ const TODAY_IDX  = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
 
 const tierConfig = {
   beginner: {
-    color:'var(--green)', badge:'● Beginner', badgeClass:'',
+    color:'var(--gold)', badge:'● Beginner', badgeClass:'',
     sidebarLabel:'What You Get — Beginner',
     features:['Low-impact cardio & bodyweight exercises','No equipment required — home-friendly','Habit-building focus, short sessions','Macro guidance & calorie targets','Recovery and mobility basics']
   },
@@ -987,7 +987,7 @@ function initDashboard() {
     if (dash) {
       const errDiv = document.createElement('div');
       errDiv.style.cssText = 'padding:40px;color:#fff;font-size:1rem;text-align:center';
-      errDiv.innerHTML = '<h2 style="margin-bottom:16px">⚠️ Plan needs to be regenerated</h2><p style="color:#aaa;margin-bottom:20px">Your saved plan is outdated. Please create a new plan.</p><button onclick="localStorage.clear();location.reload()" style="padding:12px 24px;background:#4ADE80;border:none;border-radius:8px;font-weight:700;cursor:pointer">Start Fresh</button>';
+      errDiv.innerHTML = '<h2 style="margin-bottom:16px">⚠️ Plan needs to be regenerated</h2><p style="color:#aaa;margin-bottom:20px">Your saved plan is outdated. Please create a new plan.</p><button onclick="localStorage.clear();location.reload()" style="padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-weight:700;cursor:pointer">Start Fresh</button>';
       dash.appendChild(errDiv);
     }
     return;
@@ -1092,7 +1092,7 @@ function initDashboard() {
   } catch(e) {
     console.error('Dashboard render error:', e);
     const main = document.querySelector('#screen-dash .main-content');
-    if (main) main.innerHTML = '<div style="padding:40px;color:#fff"><h2 style="color:#F43F5E;margin-bottom:12px">Error Loading Dashboard</h2><pre style="background:#111;padding:16px;border-radius:8px;font-size:0.8rem;color:#aaa;white-space:pre-wrap">' + e.stack + '</pre><button onclick="localStorage.clear();location.reload()" style="margin-top:16px;padding:12px 24px;background:#4ADE80;border:none;border-radius:8px;font-weight:700;cursor:pointer">Clear Data & Restart</button></div>';
+    if (main) main.innerHTML = '<div style="padding:40px;color:#fff"><h2 style="color:#F43F5E;margin-bottom:12px">Error Loading Dashboard</h2><pre style="background:#111;padding:16px;border-radius:8px;font-size:0.8rem;color:#aaa;white-space:pre-wrap">' + e.stack + '</pre><button onclick="localStorage.clear();location.reload()" style="margin-top:16px;padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-weight:700;cursor:pointer">Clear Data & Restart</button></div>';
   }
 }
 
@@ -1257,13 +1257,13 @@ function _showAdaptiveInsight() {
   if (!card) {
     card = document.createElement('div');
     card.id = 'ai-insight-card';
-    card.style.cssText = 'background:linear-gradient(135deg,rgba(74,222,128,0.08),rgba(74,222,128,0.02));border:1px solid rgba(74,222,128,0.2);border-radius:14px;padding:16px;margin-bottom:16px;position:relative';
+    card.style.cssText = 'background:linear-gradient(135deg,rgba(212,165,32,0.08),rgba(212,165,32,0.02));border:1px solid rgba(212,165,32,0.2);border-radius:14px;padding:16px;margin-bottom:16px;position:relative';
     const todayView = document.getElementById('view-today');
     if (todayView) todayView.insertBefore(card, todayView.firstChild);
   }
   const phMod2 = getPhaseExerciseModifier(CURRENT_WEEK);
   const phLabel2 = isDeloadWeek(CURRENT_WEEK) ? '⚡ DELOAD' : phMod2.label;
-  card.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.1rem">🧠</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;color:var(--green)">AI INSIGHT</span><span style="font-size:0.62rem;font-weight:700;letter-spacing:1.5px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:2px 7px;color:var(--green)">${phLabel2} · WK ${CURRENT_WEEK}</span><button onclick="this.parentElement.parentElement.remove();lsSet('fs_adaptive_insight',null)" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem">✕</button></div><p style="font-size:0.82rem;color:var(--off);line-height:1.5;margin:0">${msg}</p><div style="margin-top:10px;display:flex;gap:8px"><button onclick="_generateWeeklyProgressReport(0,0,0)" style="padding:5px 12px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:6px;color:var(--green);font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH REPORT</button><button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:5px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button></div>`;
+  card.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.1rem">🧠</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;color:var(--gold)">AI INSIGHT</span><span style="font-size:0.62rem;font-weight:700;letter-spacing:1.5px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:4px;padding:2px 7px;color:var(--gold)">${phLabel2} · WK ${CURRENT_WEEK}</span><button onclick="this.parentElement.parentElement.remove();lsSet('fs_adaptive_insight',null)" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem">✕</button></div><p style="font-size:0.82rem;color:var(--off);line-height:1.5;margin:0">${msg}</p><div style="margin-top:10px;display:flex;gap:8px"><button onclick="_generateWeeklyProgressReport(0,0,0)" style="padding:5px 12px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:6px;color:var(--gold);font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH REPORT</button><button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:5px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button></div>`;
 }
 
 // ── INIT (called from index.html after all modules load) ──
@@ -1370,7 +1370,7 @@ function renderMyPlan(plan) {
         <div style="font-size:0.9rem;font-weight:600;color:${isRest?'var(--dim)':'var(--white)'}">${isRest ? 'Rest Day' : (d.badge || d.workout || 'Training')}</div>
         ${exNames ? `<div style="font-size:0.73rem;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${exNames}</div>` : ''}
       </div>
-      <div style="font-size:0.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:6px;white-space:nowrap;background:${isRest?'rgba(255,255,255,0.05)':'var(--green-dim)'};color:${isRest?'var(--dim)':'var(--green)'};border:1px solid ${isRest?'transparent':'rgba(74,222,128,0.2)'};">${isRest ? 'Rest' : 'Train'}</div>
+      <div style="font-size:0.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:6px;white-space:nowrap;background:${isRest?'rgba(255,255,255,0.05)':'var(--gold-dim)'};color:${isRest?'var(--dim)':'var(--gold)'};border:1px solid ${isRest?'transparent':'rgba(212,165,32,0.2)'};">${isRest ? 'Rest' : 'Train'}</div>
     </div>`;
   }).join('');
 
@@ -1386,7 +1386,7 @@ function renderMyPlan(plan) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
         <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Training Days</div>
-        <div style="font-size:2rem;font-weight:700;color:var(--green)">${gymCount}<span style="font-size:0.85rem;font-weight:400;color:var(--dim);margin-left:2px">/ week</span></div>
+        <div style="font-size:2rem;font-weight:700;color:var(--gold)">${gymCount}<span style="font-size:0.85rem;font-weight:400;color:var(--dim);margin-left:2px">/ week</span></div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
         <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Program Length</div>
