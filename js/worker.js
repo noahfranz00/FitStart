@@ -123,7 +123,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ ONBOARDING ══════════ -->
 <div id="screen-onboard" class="screen active">
 <nav>
-  <div class="logo"><span class="logo-icon">B</span>BLUEPRINT</div>
+  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAsAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAwYCBAUBBwj/xAAtEAACAQMEAQMCBQUAAAAAAAABAgMABBEFEiExQQYTIlFxFDJCgZEVI1Jh0f/EABgBAAMBAQAAAAAAAAAAAAAAAAABAgME/8QAHxEAAgICAgMBAAAAAAAAAAAAAAECEQMSIfATQXGx/9oADAMBAAIRAxEAPwD5gSjpVdKPGaARYjrTh02/kVWjsbp1YZBWFiCP4rKB+J+1Nd3p0s14Jp55be2KQRxlFZ3mkMSfCNARuPPPgZ+prHJk0aXfRcY2URpOpL+bTr0feB/+UHayOyOpVlOCpGCDTHHZ/gdSGn6Pcy3eqEZmuJPglkgHz/UQGAzufOF6HNYmr3EVzrF/PbktDLO7oTxlSxwf4qcWWU5V6HKKSIIaKpqsrcURWroMxUQ0ZDVccUVDx3QItKeDnqn2JdRa6trG1lNxrr2iGS7kbZFp9tsDYVul+BBeTxnAySSfPlIKkftTkPW4k06SzuND0uZJRELh/dnRpvaQKm8rIMgBQdvWecZrnzQcmqV979NINK+SN1rcekKtp6WuJIoYSHlvwuyS7dejg/liH6UPfbZJwOesoYrb1JdpBCsAZYpXgTgRSPGrugHgBmYY8deKDH6ltYHWbT/T+j2lwpzHMTNPsP8AkFkcrn7g1kSzyTzSTTyNJLIxd3c5ZmJyST5JNOEKldV+sG+KDhqmrVVDgdkURWrYgydHuIbTU7ee5T3IUbLKFBzwfBrTudR065lnBSSJZLeOP3FhUnerglsbvIGM5z+1YArtQ8ab2GpNKhhgv9OTTsNHI12trJaqvtLtZmckSls5BAOMYJ4HNbbeo9L/AKrpF0tvI1taFTLb+wo3ERBe8kH5DPX++6RUPFFQ0vFG7Ddjtp3qqzW9uLi80xf7kcEQEO3cQj5dmYrgsw46GeAfrVO01izt5oZPwkbtHJdvtaBdjCRQIxtJPAPjPA6NLSmiKaPFEezGNdXtIb63lsrd4bdbYxSRMFc7/meCewCy4J5wOaxzIzEs5yx5J+pqsKkDVRgo8oTbZ//Z">BLUEPRINT</div>
   <div class="nav-right">
     <div class="nav-pill">AI-Powered</div>
     <button class="nav-cta" onclick="document.getElementById('form-section').scrollIntoView({behavior:'smooth'})">Build My Plan</button>
@@ -303,7 +303,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ SIGNUP ══════════ -->
 <div id="screen-signup" class="screen">
 <nav>
-  <div class="logo"><span class="logo-icon">B</span>BLUEPRINT</div>
+  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAsAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAwYCBAUBBwj/xAAtEAACAQMEAQMCBQUAAAAAAAABAgMABBEFEiExQQYTIlFxFDJCgZEVI1Jh0f/EABgBAAMBAQAAAAAAAAAAAAAAAAABAgME/8QAHxEAAgICAgMBAAAAAAAAAAAAAAECEQMSIfATQXGx/9oADAMBAAIRAxEAPwD5gSjpVdKPGaARYjrTh02/kVWjsbp1YZBWFiCP4rKB+J+1Nd3p0s14Jp55be2KQRxlFZ3mkMSfCNARuPPPgZ+prHJk0aXfRcY2URpOpL+bTr0feB/+UHayOyOpVlOCpGCDTHHZ/gdSGn6Pcy3eqEZmuJPglkgHz/UQGAzufOF6HNYmr3EVzrF/PbktDLO7oTxlSxwf4qcWWU5V6HKKSIIaKpqsrcURWroMxUQ0ZDVccUVDx3QItKeDnqn2JdRa6trG1lNxrr2iGS7kbZFp9tsDYVul+BBeTxnAySSfPlIKkftTkPW4k06SzuND0uZJRELh/dnRpvaQKm8rIMgBQdvWecZrnzQcmqV979NINK+SN1rcekKtp6WuJIoYSHlvwuyS7dejg/liH6UPfbZJwOesoYrb1JdpBCsAZYpXgTgRSPGrugHgBmYY8deKDH6ltYHWbT/T+j2lwpzHMTNPsP8AkFkcrn7g1kSzyTzSTTyNJLIxd3c5ZmJyST5JNOEKldV+sG+KDhqmrVVDgdkURWrYgydHuIbTU7ee5T3IUbLKFBzwfBrTudR065lnBSSJZLeOP3FhUnerglsbvIGM5z+1YArtQ8ab2GpNKhhgv9OTTsNHI12trJaqvtLtZmckSls5BAOMYJ4HNbbeo9L/AKrpF0tvI1taFTLb+wo3ERBe8kH5DPX++6RUPFFQ0vFG7Ddjtp3qqzW9uLi80xf7kcEQEO3cQj5dmYrgsw46GeAfrVO01izt5oZPwkbtHJdvtaBdjCRQIxtJPAPjPA6NLSmiKaPFEezGNdXtIb63lsrd4bdbYxSRMFc7/meCewCy4J5wOaxzIzEs5yx5J+pqsKkDVRgo8oTbZ//Z">BLUEPRINT</div>
   <div class="nav-right">
     <div class="nav-pill" id="su-tier-pill">Beginner Plan</div>
     <button class="nav-cta" style="background:transparent;border:1px solid var(--border);color:var(--off)" onclick="goBackToResults()">← Back to Plan</button>
@@ -364,7 +364,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ DASHBOARD ══════════ -->
 <div id="screen-dash" class="screen">
 <nav>
-  <div class="logo"><span class="logo-icon">B</span>BLUEPRINT</div>
+  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAsAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAwYCBAUBBwj/xAAtEAACAQMEAQMCBQUAAAAAAAABAgMABBEFEiExQQYTIlFxFDJCgZEVI1Jh0f/EABgBAAMBAQAAAAAAAAAAAAAAAAABAgME/8QAHxEAAgICAgMBAAAAAAAAAAAAAAECEQMSIfATQXGx/9oADAMBAAIRAxEAPwD5gSjpVdKPGaARYjrTh02/kVWjsbp1YZBWFiCP4rKB+J+1Nd3p0s14Jp55be2KQRxlFZ3mkMSfCNARuPPPgZ+prHJk0aXfRcY2URpOpL+bTr0feB/+UHayOyOpVlOCpGCDTHHZ/gdSGn6Pcy3eqEZmuJPglkgHz/UQGAzufOF6HNYmr3EVzrF/PbktDLO7oTxlSxwf4qcWWU5V6HKKSIIaKpqsrcURWroMxUQ0ZDVccUVDx3QItKeDnqn2JdRa6trG1lNxrr2iGS7kbZFp9tsDYVul+BBeTxnAySSfPlIKkftTkPW4k06SzuND0uZJRELh/dnRpvaQKm8rIMgBQdvWecZrnzQcmqV979NINK+SN1rcekKtp6WuJIoYSHlvwuyS7dejg/liH6UPfbZJwOesoYrb1JdpBCsAZYpXgTgRSPGrugHgBmYY8deKDH6ltYHWbT/T+j2lwpzHMTNPsP8AkFkcrn7g1kSzyTzSTTyNJLIxd3c5ZmJyST5JNOEKldV+sG+KDhqmrVVDgdkURWrYgydHuIbTU7ee5T3IUbLKFBzwfBrTudR065lnBSSJZLeOP3FhUnerglsbvIGM5z+1YArtQ8ab2GpNKhhgv9OTTsNHI12trJaqvtLtZmckSls5BAOMYJ4HNbbeo9L/AKrpF0tvI1taFTLb+wo3ERBe8kH5DPX++6RUPFFQ0vFG7Ddjtp3qqzW9uLi80xf7kcEQEO3cQj5dmYrgsw46GeAfrVO01izt5oZPwkbtHJdvtaBdjCRQIxtJPAPjPA6NLSmiKaPFEezGNdXtIb63lsrd4bdbYxSRMFc7/meCewCy4J5wOaxzIzEs5yx5J+pqsKkDVRgo8oTbZ//Z">BLUEPRINT</div>
   <div class="nav-right">
     <div class="streak-pill"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" style="flex-shrink:0"><path d="M12 2c0 0-4 4.5-4 9a4 4 0 0 0 8 0c0-4.5-4-9-4-9zm0 11a2 2 0 0 1-2-2c0-2 2-5 2-5s2 3 2 5a2 2 0 0 1-2 2z"/></svg> <span id="dash-streak">1</span>-day streak</div>
     <div class="user-pill"><div class="avatar" id="dash-avatar">?</div><span id="dash-username">You</span></div>
@@ -1204,7 +1204,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ ONBOARDING ══════════ -->
 <div id="screen-onboard" class="screen active">
 <nav>
-  <div class="logo"><span class="logo-icon">B</span>BLUEPRINT</div>
+  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAsAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAwYCBAUBBwj/xAAtEAACAQMEAQMCBQUAAAAAAAABAgMABBEFEiExQQYTIlFxFDJCgZEVI1Jh0f/EABgBAAMBAQAAAAAAAAAAAAAAAAABAgME/8QAHxEAAgICAgMBAAAAAAAAAAAAAAECEQMSIfATQXGx/9oADAMBAAIRAxEAPwD5gSjpVdKPGaARYjrTh02/kVWjsbp1YZBWFiCP4rKB+J+1Nd3p0s14Jp55be2KQRxlFZ3mkMSfCNARuPPPgZ+prHJk0aXfRcY2URpOpL+bTr0feB/+UHayOyOpVlOCpGCDTHHZ/gdSGn6Pcy3eqEZmuJPglkgHz/UQGAzufOF6HNYmr3EVzrF/PbktDLO7oTxlSxwf4qcWWU5V6HKKSIIaKpqsrcURWroMxUQ0ZDVccUVDx3QItKeDnqn2JdRa6trG1lNxrr2iGS7kbZFp9tsDYVul+BBeTxnAySSfPlIKkftTkPW4k06SzuND0uZJRELh/dnRpvaQKm8rIMgBQdvWecZrnzQcmqV979NINK+SN1rcekKtp6WuJIoYSHlvwuyS7dejg/liH6UPfbZJwOesoYrb1JdpBCsAZYpXgTgRSPGrugHgBmYY8deKDH6ltYHWbT/T+j2lwpzHMTNPsP8AkFkcrn7g1kSzyTzSTTyNJLIxd3c5ZmJyST5JNOEKldV+sG+KDhqmrVVDgdkURWrYgydHuIbTU7ee5T3IUbLKFBzwfBrTudR065lnBSSJZLeOP3FhUnerglsbvIGM5z+1YArtQ8ab2GpNKhhgv9OTTsNHI12trJaqvtLtZmckSls5BAOMYJ4HNbbeo9L/AKrpF0tvI1taFTLb+wo3ERBe8kH5DPX++6RUPFFQ0vFG7Ddjtp3qqzW9uLi80xf7kcEQEO3cQj5dmYrgsw46GeAfrVO01izt5oZPwkbtHJdvtaBdjCRQIxtJPAPjPA6NLSmiKaPFEezGNdXtIb63lsrd4bdbYxSRMFc7/meCewCy4J5wOaxzIzEs5yx5J+pqsKkDVRgo8oTbZ//Z">BLUEPRINT</div>
   <div class="nav-right">
     <div class="nav-pill">AI-Powered</div>
     <button class="nav-cta" onclick="document.getElementById('form-section').scrollIntoView({behavior:'smooth'})">Build My Plan</button>
@@ -1384,7 +1384,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ SIGNUP ══════════ -->
 <div id="screen-signup" class="screen">
 <nav>
-  <div class="logo"><span class="logo-icon">B</span>BLUEPRINT</div>
+  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAsAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAwYCBAUBBwj/xAAtEAACAQMEAQMCBQUAAAAAAAABAgMABBEFEiExQQYTIlFxFDJCgZEVI1Jh0f/EABgBAAMBAQAAAAAAAAAAAAAAAAABAgME/8QAHxEAAgICAgMBAAAAAAAAAAAAAAECEQMSIfATQXGx/9oADAMBAAIRAxEAPwD5gSjpVdKPGaARYjrTh02/kVWjsbp1YZBWFiCP4rKB+J+1Nd3p0s14Jp55be2KQRxlFZ3mkMSfCNARuPPPgZ+prHJk0aXfRcY2URpOpL+bTr0feB/+UHayOyOpVlOCpGCDTHHZ/gdSGn6Pcy3eqEZmuJPglkgHz/UQGAzufOF6HNYmr3EVzrF/PbktDLO7oTxlSxwf4qcWWU5V6HKKSIIaKpqsrcURWroMxUQ0ZDVccUVDx3QItKeDnqn2JdRa6trG1lNxrr2iGS7kbZFp9tsDYVul+BBeTxnAySSfPlIKkftTkPW4k06SzuND0uZJRELh/dnRpvaQKm8rIMgBQdvWecZrnzQcmqV979NINK+SN1rcekKtp6WuJIoYSHlvwuyS7dejg/liH6UPfbZJwOesoYrb1JdpBCsAZYpXgTgRSPGrugHgBmYY8deKDH6ltYHWbT/T+j2lwpzHMTNPsP8AkFkcrn7g1kSzyTzSTTyNJLIxd3c5ZmJyST5JNOEKldV+sG+KDhqmrVVDgdkURWrYgydHuIbTU7ee5T3IUbLKFBzwfBrTudR065lnBSSJZLeOP3FhUnerglsbvIGM5z+1YArtQ8ab2GpNKhhgv9OTTsNHI12trJaqvtLtZmckSls5BAOMYJ4HNbbeo9L/AKrpF0tvI1taFTLb+wo3ERBe8kH5DPX++6RUPFFQ0vFG7Ddjtp3qqzW9uLi80xf7kcEQEO3cQj5dmYrgsw46GeAfrVO01izt5oZPwkbtHJdvtaBdjCRQIxtJPAPjPA6NLSmiKaPFEezGNdXtIb63lsrd4bdbYxSRMFc7/meCewCy4J5wOaxzIzEs5yx5J+pqsKkDVRgo8oTbZ//Z">BLUEPRINT</div>
   <div class="nav-right">
     <div class="nav-pill" id="su-tier-pill">Beginner Plan</div>
     <button class="nav-cta" style="background:transparent;border:1px solid var(--border);color:var(--off)" onclick="goBackToResults()">← Back to Plan</button>
@@ -1445,7 +1445,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ DASHBOARD ══════════ -->
 <div id="screen-dash" class="screen">
 <nav>
-  <div class="logo"><span class="logo-icon">B</span>BLUEPRINT</div>
+  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAsAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAwYCBAUBBwj/xAAtEAACAQMEAQMCBQUAAAAAAAABAgMABBEFEiExQQYTIlFxFDJCgZEVI1Jh0f/EABgBAAMBAQAAAAAAAAAAAAAAAAABAgME/8QAHxEAAgICAgMBAAAAAAAAAAAAAAECEQMSIfATQXGx/9oADAMBAAIRAxEAPwD5gSjpVdKPGaARYjrTh02/kVWjsbp1YZBWFiCP4rKB+J+1Nd3p0s14Jp55be2KQRxlFZ3mkMSfCNARuPPPgZ+prHJk0aXfRcY2URpOpL+bTr0feB/+UHayOyOpVlOCpGCDTHHZ/gdSGn6Pcy3eqEZmuJPglkgHz/UQGAzufOF6HNYmr3EVzrF/PbktDLO7oTxlSxwf4qcWWU5V6HKKSIIaKpqsrcURWroMxUQ0ZDVccUVDx3QItKeDnqn2JdRa6trG1lNxrr2iGS7kbZFp9tsDYVul+BBeTxnAySSfPlIKkftTkPW4k06SzuND0uZJRELh/dnRpvaQKm8rIMgBQdvWecZrnzQcmqV979NINK+SN1rcekKtp6WuJIoYSHlvwuyS7dejg/liH6UPfbZJwOesoYrb1JdpBCsAZYpXgTgRSPGrugHgBmYY8deKDH6ltYHWbT/T+j2lwpzHMTNPsP8AkFkcrn7g1kSzyTzSTTyNJLIxd3c5ZmJyST5JNOEKldV+sG+KDhqmrVVDgdkURWrYgydHuIbTU7ee5T3IUbLKFBzwfBrTudR065lnBSSJZLeOP3FhUnerglsbvIGM5z+1YArtQ8ab2GpNKhhgv9OTTsNHI12trJaqvtLtZmckSls5BAOMYJ4HNbbeo9L/AKrpF0tvI1taFTLb+wo3ERBe8kH5DPX++6RUPFFQ0vFG7Ddjtp3qqzW9uLi80xf7kcEQEO3cQj5dmYrgsw46GeAfrVO01izt5oZPwkbtHJdvtaBdjCRQIxtJPAPjPA6NLSmiKaPFEezGNdXtIb63lsrd4bdbYxSRMFc7/meCewCy4J5wOaxzIzEs5yx5J+pqsKkDVRgo8oTbZ//Z">BLUEPRINT</div>
   <div class="nav-right">
     <div class="streak-pill"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" style="flex-shrink:0"><path d="M12 2c0 0-4 4.5-4 9a4 4 0 0 0 8 0c0-4.5-4-9-4-9zm0 11a2 2 0 0 1-2-2c0-2 2-5 2-5s2 3 2 5a2 2 0 0 1-2 2z"/></svg> <span id="dash-streak">1</span>-day streak</div>
     <div class="user-pill"><div class="avatar" id="dash-avatar">?</div><span id="dash-username">You</span></div>
@@ -2176,8 +2176,8 @@ self.addEventListener('fetch', e => {
   --red: #F43F5E; --red-dim: rgba(244,63,94,0.12);
   --blue: #60A5FA; --tier-color: var(--gold); --tier-dim: var(--gold-dim);
 }
-body.intermediate { --tier-color: var(--orange); --tier-dim: var(--orange-dim); }
-body.advanced { --tier-color: var(--red); --tier-dim: var(--red-dim); }
+body.intermediate { --tier-color: var(--gold); --tier-dim: var(--gold-dim); }
+body.advanced { --tier-color: var(--gold); --tier-dim: var(--gold-dim); }
 html { overflow-x:hidden; max-width:100vw; padding-top: env(safe-area-inset-top); }
 body { font-family: 'Inter', 'Syne', sans-serif; background: var(--black); color: var(--white); min-height: 100vh; overflow-x: hidden; max-width:100vw; }
 body::before {
@@ -2193,13 +2193,13 @@ body::before {
 /* ── NAV ── */
 nav { display:flex; justify-content:space-between; align-items:center; padding:20px 48px; border-bottom:1px solid var(--border); background:rgba(10,10,10,0.92); backdrop-filter:blur(10px); position:sticky; top:0; z-index:200; width:100%; box-sizing:border-box; }
 .logo { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; letter-spacing:2px; display:flex; align-items:center; gap:10px; color:#D4A520; }
-.logo-icon { width:32px; height:32px; border-radius:8px; background:var(--gold-grad); display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:700; color:#111; flex-shrink:0; }
+.logo-icon { width:32px; height:32px; border-radius:6px; object-fit:cover; flex-shrink:0; }
 .logo-dot { color:var(--gold); transition:color 0.4s; }
 .nav-right { display:flex; align-items:center; gap:14px; }
 .nav-pill { font-size:0.68rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); border:1px solid var(--border); border-radius:100px; padding:6px 14px; }
 .nav-cta { padding:9px 22px; border-radius:10px; border:none; background:var(--gold-grad); color:var(--black); font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:1.5px; cursor:pointer; transition:all 0.2s; font-weight:700; }
 .nav-cta:hover { opacity:0.9; }
-.streak-pill { display:flex; align-items:center; gap:6px; background:var(--orange-dim); border:1px solid rgba(251,146,60,0.25); border-radius:100px; padding:7px 16px; font-size:0.75rem; font-weight:700; color:var(--orange); }
+.streak-pill { display:flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid rgba(212,165,32,0.25); border-radius:100px; padding:7px 16px; font-size:0.75rem; font-weight:700; color:var(--gold); }
 .user-pill { display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:100px; padding:6px 14px 6px 6px; font-size:0.78rem; color:var(--off); cursor:pointer; }
 .avatar { width:26px; height:26px; border-radius:50%; background:var(--gold-grad); display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; color:var(--black); flex-shrink:0; }
 
@@ -2316,8 +2316,8 @@ nav { display:flex; justify-content:space-between; align-items:center; padding:2
 .day-tag.rest { background:rgba(255,255,255,0.04); color:var(--dim); }
 .cta-into-app { background:linear-gradient(135deg,#111,#1a1a1a); border:1px solid var(--border); border-radius:20px; padding:48px; text-align:center; animation:fadeUp 0.4s 0.35s ease forwards; opacity:0; position:relative; overflow:hidden; }
 .cta-into-app::before { content:''; position:absolute; top:-60px; left:50%; transform:translateX(-50%); width:300px; height:300px; background:radial-gradient(circle,rgba(212,165,32,0.08),transparent 70%); pointer-events:none; }
-body.intermediate .cta-into-app::before { background:radial-gradient(circle,rgba(251,146,60,0.08),transparent 70%); }
-body.advanced .cta-into-app::before { background:radial-gradient(circle,rgba(244,63,94,0.08),transparent 70%); }
+body.intermediate .cta-into-app::before { background:radial-gradient(circle,rgba(212,165,32,0.08),transparent 70%); }
+body.advanced .cta-into-app::before { background:radial-gradient(circle,rgba(212,165,32,0.08),transparent 70%); }
 .cta-into-app h3 { font-family:'Bebas Neue',sans-serif; font-size:2.5rem; letter-spacing:1px; margin-bottom:8px; }
 .cta-into-app p { font-size:0.9rem; color:var(--off); margin-bottom:28px; }
 .btn-enter-app { display:inline-flex; align-items:center; gap:10px; padding:18px 44px; border-radius:12px; border:none; background:var(--gold-grad); color:var(--black); font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:2px; cursor:pointer; transition:all 0.2s; font-weight:700; }
@@ -2370,8 +2370,8 @@ body.advanced .cta-into-app::before { background:radial-gradient(circle,rgba(244
 .btn-start-trial { width:100%; padding:17px; background:var(--gold-grad); color:var(--black); border:none; border-radius:13px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:2px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; }
 .btn-start-trial:hover { opacity:0.9; transform:translateY(-2px); }
 .btn-start-trial:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-body.intermediate .btn-start-trial { background:var(--orange); }
-body.advanced .btn-start-trial { background:var(--red); }
+body.intermediate .btn-start-trial { background:var(--gold-grad); }
+body.advanced .btn-start-trial { background:var(--gold-grad); }
 .signup-fine { text-align:center; font-size:0.67rem; color:var(--dim); font-family:'DM Mono',monospace; margin-top:12px; line-height:1.6; }
 .signup-login { text-align:center; margin-top:14px; font-size:0.78rem; color:var(--dim); }
 .signup-login a { color:var(--off); text-decoration:underline; cursor:pointer; }
@@ -3211,7 +3211,7 @@ input::placeholder { color: var(--dim) !important; }
 .coach-starter-btn:hover { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
 .coach-starter-btn:active { transform:scale(0.97); }
 .coach-bubble { max-width:85%; padding:12px 16px; border-radius:18px; font-size:0.84rem; line-height:1.55; word-wrap:break-word; white-space:pre-wrap; }
-.coach-bubble.user { align-self:flex-end; background:linear-gradient(135deg, #D4A520, #22c55e); color:#0a0a0a; border-bottom-right-radius:4px; font-weight:500; }
+.coach-bubble.user { align-self:flex-end; background:var(--gold-grad); color:#0a0a0a; border-bottom-right-radius:4px; font-weight:600; }
 .coach-bubble.assistant { align-self:flex-start; background:var(--card); color:var(--off); border:1px solid var(--border); border-bottom-left-radius:4px; }
 .coach-bubble.assistant strong { color:var(--white); }
 .coach-typing { align-self:flex-start; padding:12px 16px; background:var(--card); border:1px solid var(--border); border-radius:14px; border-bottom-left-radius:4px; display:flex; gap:4px; align-items:center; }
@@ -3222,7 +3222,7 @@ input::placeholder { color: var(--dim) !important; }
 .coach-text-input { flex:1; background:var(--card); border:1px solid var(--border2); border-radius:22px; padding:11px 16px; color:var(--white); font-size:0.84rem; outline:none; font-family:inherit; }
 .coach-text-input:focus { border-color:var(--gold); box-shadow:0 0 0 1px rgba(212,165,32,0.15); }
 .coach-text-input::placeholder { color:var(--dim); }
-.coach-send-btn { width:40px; height:40px; border-radius:50%; border:none; background:var(--gold); color:var(--black); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:opacity 0.2s; flex-shrink:0; }
+.coach-send-btn { width:40px; height:40px; border-radius:50%; border:none; background:var(--gold-grad); color:var(--black); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:opacity 0.2s; flex-shrink:0; }
 .coach-send-btn:hover { opacity:0.85; }
 .coach-send-btn:disabled { opacity:0.3; cursor:not-allowed; }
 @media(max-width:600px) {
@@ -3242,8 +3242,8 @@ input::placeholder { color: var(--dim) !important; }
   --red: #F43F5E; --red-dim: rgba(244,63,94,0.12);
   --blue: #60A5FA; --tier-color: var(--gold); --tier-dim: var(--gold-dim);
 }
-body.intermediate { --tier-color: var(--orange); --tier-dim: var(--orange-dim); }
-body.advanced { --tier-color: var(--red); --tier-dim: var(--red-dim); }
+body.intermediate { --tier-color: var(--gold); --tier-dim: var(--gold-dim); }
+body.advanced { --tier-color: var(--gold); --tier-dim: var(--gold-dim); }
 html { overflow-x:hidden; max-width:100vw; padding-top: env(safe-area-inset-top); }
 body { font-family: 'Inter', 'Syne', sans-serif; background: var(--black); color: var(--white); min-height: 100vh; overflow-x: hidden; max-width:100vw; }
 body::before {
@@ -3259,13 +3259,13 @@ body::before {
 /* ── NAV ── */
 nav { display:flex; justify-content:space-between; align-items:center; padding:20px 48px; border-bottom:1px solid var(--border); background:rgba(10,10,10,0.92); backdrop-filter:blur(10px); position:sticky; top:0; z-index:200; width:100%; box-sizing:border-box; }
 .logo { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; letter-spacing:2px; display:flex; align-items:center; gap:10px; color:#D4A520; }
-.logo-icon { width:32px; height:32px; border-radius:8px; background:var(--gold-grad); display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:700; color:#111; flex-shrink:0; }
+.logo-icon { width:32px; height:32px; border-radius:6px; object-fit:cover; flex-shrink:0; }
 .logo-dot { color:var(--gold); transition:color 0.4s; }
 .nav-right { display:flex; align-items:center; gap:14px; }
 .nav-pill { font-size:0.68rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); border:1px solid var(--border); border-radius:100px; padding:6px 14px; }
 .nav-cta { padding:9px 22px; border-radius:10px; border:none; background:var(--gold-grad); color:var(--black); font-family:'Bebas Neue',sans-serif; font-size:0.95rem; letter-spacing:1.5px; cursor:pointer; transition:all 0.2s; font-weight:700; }
 .nav-cta:hover { opacity:0.9; }
-.streak-pill { display:flex; align-items:center; gap:6px; background:var(--orange-dim); border:1px solid rgba(251,146,60,0.25); border-radius:100px; padding:7px 16px; font-size:0.75rem; font-weight:700; color:var(--orange); }
+.streak-pill { display:flex; align-items:center; gap:6px; background:var(--gold-dim); border:1px solid rgba(212,165,32,0.25); border-radius:100px; padding:7px 16px; font-size:0.75rem; font-weight:700; color:var(--gold); }
 .user-pill { display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:100px; padding:6px 14px 6px 6px; font-size:0.78rem; color:var(--off); cursor:pointer; }
 .avatar { width:26px; height:26px; border-radius:50%; background:var(--gold-grad); display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; color:var(--black); flex-shrink:0; }
 
@@ -3382,8 +3382,8 @@ nav { display:flex; justify-content:space-between; align-items:center; padding:2
 .day-tag.rest { background:rgba(255,255,255,0.04); color:var(--dim); }
 .cta-into-app { background:linear-gradient(135deg,#111,#1a1a1a); border:1px solid var(--border); border-radius:20px; padding:48px; text-align:center; animation:fadeUp 0.4s 0.35s ease forwards; opacity:0; position:relative; overflow:hidden; }
 .cta-into-app::before { content:''; position:absolute; top:-60px; left:50%; transform:translateX(-50%); width:300px; height:300px; background:radial-gradient(circle,rgba(212,165,32,0.08),transparent 70%); pointer-events:none; }
-body.intermediate .cta-into-app::before { background:radial-gradient(circle,rgba(251,146,60,0.08),transparent 70%); }
-body.advanced .cta-into-app::before { background:radial-gradient(circle,rgba(244,63,94,0.08),transparent 70%); }
+body.intermediate .cta-into-app::before { background:radial-gradient(circle,rgba(212,165,32,0.08),transparent 70%); }
+body.advanced .cta-into-app::before { background:radial-gradient(circle,rgba(212,165,32,0.08),transparent 70%); }
 .cta-into-app h3 { font-family:'Bebas Neue',sans-serif; font-size:2.5rem; letter-spacing:1px; margin-bottom:8px; }
 .cta-into-app p { font-size:0.9rem; color:var(--off); margin-bottom:28px; }
 .btn-enter-app { display:inline-flex; align-items:center; gap:10px; padding:18px 44px; border-radius:12px; border:none; background:var(--gold-grad); color:var(--black); font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:2px; cursor:pointer; transition:all 0.2s; font-weight:700; }
@@ -3436,8 +3436,8 @@ body.advanced .cta-into-app::before { background:radial-gradient(circle,rgba(244
 .btn-start-trial { width:100%; padding:17px; background:var(--gold-grad); color:var(--black); border:none; border-radius:13px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:2px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; }
 .btn-start-trial:hover { opacity:0.9; transform:translateY(-2px); }
 .btn-start-trial:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-body.intermediate .btn-start-trial { background:var(--orange); }
-body.advanced .btn-start-trial { background:var(--red); }
+body.intermediate .btn-start-trial { background:var(--gold-grad); }
+body.advanced .btn-start-trial { background:var(--gold-grad); }
 .signup-fine { text-align:center; font-size:0.67rem; color:var(--dim); font-family:'DM Mono',monospace; margin-top:12px; line-height:1.6; }
 .signup-login { text-align:center; margin-top:14px; font-size:0.78rem; color:var(--dim); }
 .signup-login a { color:var(--off); text-decoration:underline; cursor:pointer; }
@@ -4277,7 +4277,7 @@ input::placeholder { color: var(--dim) !important; }
 .coach-starter-btn:hover { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
 .coach-starter-btn:active { transform:scale(0.97); }
 .coach-bubble { max-width:85%; padding:12px 16px; border-radius:18px; font-size:0.84rem; line-height:1.55; word-wrap:break-word; white-space:pre-wrap; }
-.coach-bubble.user { align-self:flex-end; background:linear-gradient(135deg, #D4A520, #22c55e); color:#0a0a0a; border-bottom-right-radius:4px; font-weight:500; }
+.coach-bubble.user { align-self:flex-end; background:var(--gold-grad); color:#0a0a0a; border-bottom-right-radius:4px; font-weight:600; }
 .coach-bubble.assistant { align-self:flex-start; background:var(--card); color:var(--off); border:1px solid var(--border); border-bottom-left-radius:4px; }
 .coach-bubble.assistant strong { color:var(--white); }
 .coach-typing { align-self:flex-start; padding:12px 16px; background:var(--card); border:1px solid var(--border); border-radius:14px; border-bottom-left-radius:4px; display:flex; gap:4px; align-items:center; }
@@ -4288,7 +4288,7 @@ input::placeholder { color: var(--dim) !important; }
 .coach-text-input { flex:1; background:var(--card); border:1px solid var(--border2); border-radius:22px; padding:11px 16px; color:var(--white); font-size:0.84rem; outline:none; font-family:inherit; }
 .coach-text-input:focus { border-color:var(--gold); box-shadow:0 0 0 1px rgba(212,165,32,0.15); }
 .coach-text-input::placeholder { color:var(--dim); }
-.coach-send-btn { width:40px; height:40px; border-radius:50%; border:none; background:var(--gold); color:var(--black); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:opacity 0.2s; flex-shrink:0; }
+.coach-send-btn { width:40px; height:40px; border-radius:50%; border:none; background:var(--gold-grad); color:var(--black); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:opacity 0.2s; flex-shrink:0; }
 .coach-send-btn:hover { opacity:0.85; }
 .coach-send-btn:disabled { opacity:0.3; cursor:not-allowed; }
 @media(max-width:600px) {
@@ -4616,12 +4616,12 @@ const tierConfig = {
     features:['Low-impact cardio & bodyweight exercises','No equipment required — home-friendly','Habit-building focus, short sessions','Macro guidance & calorie targets','Recovery and mobility basics']
   },
   intermediate: {
-    color:'var(--orange)', badge:'◆ Intermediate', badgeClass:'intermediate',
+    color:'var(--gold)', badge:'◆ Intermediate', badgeClass:'intermediate',
     sidebarLabel:'What You Get — Intermediate',
     features:['Strength + cardio hybrid training','Progressive overload built in','Gym or home with dumbbells/bands','Macro tracking & nutrition strategy','Weekly intensity variation & deload']
   },
   advanced: {
-    color:'var(--red)', badge:'▲ Advanced', badgeClass:'advanced',
+    color:'var(--gold)', badge:'▲ Advanced', badgeClass:'advanced',
     sidebarLabel:'What You Get — Advanced',
     features:['Heavy compound lifting with structured weekly progression','Track your max lifts and push for new personal records each week','Advanced techniques: drop sets, pause reps, and supersets built in','Built-in lighter recovery weeks every 4th week so you don\\'t burn out','Conditioning work tailored to your sport or athletic goals']
   }
@@ -6062,12 +6062,12 @@ const tierConfig = {
     features:['Low-impact cardio & bodyweight exercises','No equipment required — home-friendly','Habit-building focus, short sessions','Macro guidance & calorie targets','Recovery and mobility basics']
   },
   intermediate: {
-    color:'var(--orange)', badge:'◆ Intermediate', badgeClass:'intermediate',
+    color:'var(--gold)', badge:'◆ Intermediate', badgeClass:'intermediate',
     sidebarLabel:'What You Get — Intermediate',
     features:['Strength + cardio hybrid training','Progressive overload built in','Gym or home with dumbbells/bands','Macro tracking & nutrition strategy','Weekly intensity variation & deload']
   },
   advanced: {
-    color:'var(--red)', badge:'▲ Advanced', badgeClass:'advanced',
+    color:'var(--gold)', badge:'▲ Advanced', badgeClass:'advanced',
     sidebarLabel:'What You Get — Advanced',
     features:['Heavy compound lifting with structured weekly progression','Track your max lifts and push for new personal records each week','Advanced techniques: drop sets, pause reps, and supersets built in','Built-in lighter recovery weeks every 4th week so you don\\'t burn out','Conditioning work tailored to your sport or athletic goals']
   }
