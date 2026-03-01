@@ -316,12 +316,12 @@ const tierConfig = {
     features:['Low-impact cardio & bodyweight exercises','No equipment required — home-friendly','Habit-building focus, short sessions','Macro guidance & calorie targets','Recovery and mobility basics']
   },
   intermediate: {
-    color:'var(--orange)', badge:'◆ Intermediate', badgeClass:'intermediate',
+    color:'var(--gold)', badge:'◆ Intermediate', badgeClass:'intermediate',
     sidebarLabel:'What You Get — Intermediate',
     features:['Strength + cardio hybrid training','Progressive overload built in','Gym or home with dumbbells/bands','Macro tracking & nutrition strategy','Weekly intensity variation & deload']
   },
   advanced: {
-    color:'var(--red)', badge:'▲ Advanced', badgeClass:'advanced',
+    color:'var(--gold)', badge:'▲ Advanced', badgeClass:'advanced',
     sidebarLabel:'What You Get — Advanced',
     features:['Heavy compound lifting with structured weekly progression','Track your max lifts and push for new personal records each week','Advanced techniques: drop sets, pause reps, and supersets built in','Built-in lighter recovery weeks every 4th week so you don\'t burn out','Conditioning work tailored to your sport or athletic goals']
   }
