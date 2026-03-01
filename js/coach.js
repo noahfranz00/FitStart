@@ -245,6 +245,16 @@ Snacks:
   Rice Krispies Treat (1 bar): 90cal 1P 17C 2F
   String Cheese (1 stick): 80cal 7P 1C 5F
   Babybel Original (1 piece): 70cal 5P 0C 5F
+  Quaker Rice Cakes Chocolate (1 cake): 60cal 1P 12C 0.5F
+  Quaker Rice Cakes Lightly Salted (1 cake): 35cal 1P 7C 0F
+  Quaker Rice Cakes Caramel (1 cake): 50cal 1P 11C 0F
+  Quaker Rice Cakes White Cheddar (1 cake): 45cal 1P 10C 0F
+
+Drinks:
+  Fairlife Core Power (14oz/414ml): 230cal 42P 8C 4.5F
+  Fairlife Core Power (11.5oz/340ml): 170cal 26P 6C 4.5F
+  Gatorade (20oz): 140cal 0P 36C 0F
+  Body Armor (16oz): 70cal 0P 18C 0F
 
 Cereal & Oats:
   Quaker Oats (1/2 cup dry): 150cal 5P 27C 3F
@@ -292,7 +302,9 @@ Rules:
 - Include brand + quantity in the "name" field
 - cal, pro, carb, fat must be integers
 - ONLY include FOODLOG when the user describes food they ate — NOT for general nutrition questions
-- The FOODLOG block must be the LAST thing in your response`;
+- The FOODLOG block must be the LAST thing in your response
+- ACCURACY IS CRITICAL: Users trust these numbers for their diet. Getting macros wrong by even 50 calories per item compounds across meals. Always use the brand reference table or database results. If you don't have exact data for a branded item, say so and ask the user to check the label rather than guessing.
+- For common whole foods not in the brand table (chicken breast, rice, eggs, etc.), use standard USDA values.`;
 }
 
 function sendCoachStarter(text) {
