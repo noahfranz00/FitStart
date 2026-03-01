@@ -128,65 +128,56 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
 
   overlay.innerHTML =
     '<div style="max-width:400px;width:100%;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">' +
-    '<div id="wo-share-card" style="background:linear-gradient(145deg,#0c0c0c 0%,#151515 50%,#101318 100%);border:1px solid rgba(74,222,128,0.3);border-radius:24px;padding:30px 24px 22px;position:relative;overflow:hidden">' +
-      '<div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(74,222,128,0.12) 0%,transparent 70%);pointer-events:none"></div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px">' +
+    '<div id="wo-share-card" style="background:#111;border:1px solid rgba(74,222,128,0.4);border-radius:24px;padding:30px 24px 22px;position:relative;overflow:hidden">' +
+      '<div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(74,222,128,0.15) 0%,transparent 70%);pointer-events:none"></div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">' +
         '<div>' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.95rem;letter-spacing:3px;color:#aaa">' + dateStr + '</div>' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;letter-spacing:2px;color:#fff;line-height:1.1;margin-top:4px">' + (workoutName || 'WORKOUT').toUpperCase() + '</div>' +
-          (userName ? '<div style="font-size:0.95rem;color:#999;margin-top:3px;font-weight:600">' + userName + '</div>' : '') +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:3px;color:#ddd">' + dateStr + '</div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;letter-spacing:2px;color:#fff;line-height:1.1;margin-top:4px">' + (workoutName || 'WORKOUT').toUpperCase() + '</div>' +
+          (userName ? '<div style="font-size:1rem;color:#ccc;margin-top:4px;font-weight:600">' + userName + '</div>' : '') +
         '</div>' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:2px;color:#4ADE80;text-align:right;line-height:1.4">WORKOUT<br>COMPLETE ✓</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:2px;color:#4ADE80;text-align:right;line-height:1.3">WORKOUT<br>COMPLETE ✓</div>' +
       '</div>' +
-      '<div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;padding:18px;background:rgba(255,255,255,0.05);border-radius:16px;border:1px solid rgba(255,255,255,0.12)">' +
+      '<div style="display:flex;align-items:center;gap:20px;margin-bottom:22px;padding:20px;background:#1a1a1a;border-radius:16px;border:1px solid #333">' +
         '<div style="position:relative;width:100px;height:56px;flex-shrink:0">' +
           '<svg viewBox="0 0 200 110" style="width:100%;height:100%">' +
-            '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="14" stroke-linecap="round"/>' +
+            '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#333" stroke-width="14" stroke-linecap="round"/>' +
             '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#4ADE80" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="' + offset + '"/>' +
           '</svg>' +
-          '<div style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;color:#4ADE80;letter-spacing:1px">' + score + '</div>' +
+          '<div style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:#4ADE80">' + score + '</div>' +
         '</div>' +
         '<div style="flex:1">' +
-          '<div style="font-size:0.9rem;font-weight:700;letter-spacing:2px;color:#bbb">STRENGTH SCORE</div>' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2.5rem;color:#fff;line-height:1">' + score + '<span style="font-size:1rem;color:#888">/1000</span></div>' +
-          (deltaText ? '<div style="font-size:1rem;font-weight:700;color:' + deltaColor + '">' + deltaText + ' vs last</div>' : '') +
+          '<div style="font-size:1rem;font-weight:700;letter-spacing:2px;color:#ddd">STRENGTH SCORE</div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2.8rem;color:#fff;line-height:1">' + score + '<span style="font-size:1.1rem;color:#bbb">/1000</span></div>' +
+          (deltaText ? '<div style="font-size:1.05rem;font-weight:700;color:' + deltaColor + '">' + deltaText + ' vs last</div>' : '') +
         '</div>' +
       '</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(' + Math.min(displayStats.length, 4) + ',1fr);gap:1px;background:rgba(255,255,255,0.12);border-radius:14px;overflow:hidden;margin-bottom:18px">' +
+      '<div style="display:grid;grid-template-columns:repeat(' + Math.min(displayStats.length, 4) + ',1fr);gap:1px;background:#333;border-radius:14px;overflow:hidden;margin-bottom:20px">' +
         displayStats.map(function(s) {
-          var unitSpan = s.unit ? '<span style="font-size:0.9rem;color:#aaa;margin-left:2px;text-transform:uppercase">' + s.unit + '</span>' : '';
-          return '<div style="background:#141414;padding:16px 8px;text-align:center">' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;color:#fff;line-height:1">' + s.value + unitSpan + '</div>' +
-            '<div style="font-size:0.75rem;font-weight:700;letter-spacing:1.5px;color:#999;margin-top:5px">' + s.label + '</div>' +
+          var unitSpan = s.unit ? '<span style="font-size:1rem;color:#ccc;margin-left:2px;text-transform:uppercase">' + s.unit + '</span>' : '';
+          return '<div style="background:#1a1a1a;padding:18px 8px;text-align:center">' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;color:#fff;line-height:1">' + s.value + unitSpan + '</div>' +
+            '<div style="font-size:0.8rem;font-weight:700;letter-spacing:1.5px;color:#bbb;margin-top:6px">' + s.label + '</div>' +
           '</div>';
         }).join('') +
       '</div>' +
-      (heaviestLift.weight > 0 ? '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:12px;margin-bottom:14px">' +
-        '<div style="font-size:1.4rem;color:#4ADE80;font-weight:700">↑</div>' +
-        '<div style="flex:1"><div style="font-size:0.9rem;font-weight:700;letter-spacing:1.5px;color:#4ADE80">HEAVIEST LIFT</div>' +
-        '<div style="font-size:1.15rem;color:#fff;font-weight:700;margin-top:2px">' + heaviestLift.name + ' — ' + heaviestLift.weight + ' lbs × ' + heaviestLift.reps + '</div></div></div>' : '') +
-      (prRows ? '<div style="margin-bottom:14px"><div style="font-size:0.9rem;font-weight:700;letter-spacing:2px;color:#4ADE80;margin-bottom:10px">PERSONAL RECORDS</div>' + prRows + '</div>' : '') +
-      '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid rgba(255,255,255,0.12)">' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.15rem;letter-spacing:2px;color:#888">FIT<span style="color:#4ADE80">●</span>START</div>' +
-        '<div style="font-size:0.8rem;letter-spacing:1.5px;color:#777;font-weight:700">AI-POWERED FITNESS</div>' +
+      (heaviestLift.weight > 0 ? '<div style="display:flex;align-items:center;gap:12px;padding:16px 18px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);border-radius:12px;margin-bottom:16px">' +
+        '<div style="font-size:1.5rem;color:#4ADE80;font-weight:700">↑</div>' +
+        '<div style="flex:1"><div style="font-size:1rem;font-weight:700;letter-spacing:1.5px;color:#4ADE80">HEAVIEST LIFT</div>' +
+        '<div style="font-size:1.2rem;color:#fff;font-weight:700;margin-top:3px">' + heaviestLift.name + ' — ' + heaviestLift.weight + ' lbs × ' + heaviestLift.reps + '</div></div></div>' : '') +
+      (prRows ? '<div style="margin-bottom:16px"><div style="font-size:1rem;font-weight:700;letter-spacing:2px;color:#4ADE80;margin-bottom:10px">PERSONAL RECORDS</div>' + prRows + '</div>' : '') +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid #333">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;letter-spacing:2px;color:#ccc">FIT<span style="color:#4ADE80">●</span>START</div>' +
+        '<div style="font-size:0.85rem;letter-spacing:1.5px;color:#bbb;font-weight:700">AI-POWERED FITNESS</div>' +
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:10px;margin-top:14px">' +
       '<button id="wo-share-btn" style="flex:1;padding:14px;background:#4ADE80;border:none;border-radius:12px;color:#000;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>' +
         'SHARE WORKOUT</button>' +
-      '<button id="wo-summary-done-btn" style="padding:14px 24px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:#fff;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer">DONE</button>' +
+      '<button id="wo-summary-done-btn" style="padding:14px 24px;background:#222;border:1px solid #444;border-radius:12px;color:#fff;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer">DONE</button>' +
     '</div>' +
     '</div>';
-
-  document.body.appendChild(overlay);
-  document.getElementById('wo-summary-done-btn').onclick = function() { overlay.remove(); };
-
-  // ── Share functionality ──
-  document.getElementById('wo-share-btn').onclick = function() {
-    _shareWorkoutCard();
-  };
-}
 
 function _shareWorkoutCard() {
   var card = document.getElementById('wo-share-card');
