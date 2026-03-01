@@ -172,7 +172,7 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:10px;margin-top:14px">' +
-      '<button id="wo-share-btn" style="flex:1;padding:14px;background:#D4A520;border:none;border-radius:12px;color:#000;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">' +
+      '<button id="wo-share-btn" style="flex:1;padding:14px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:12px;color:#000;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>' +
         'SHARE WORKOUT</button>' +
       '<button id="wo-summary-done-btn" style="padding:14px 24px;background:#222;border:1px solid #444;border-radius:12px;color:#fff;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer">DONE</button>' +
