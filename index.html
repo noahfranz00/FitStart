@@ -386,15 +386,16 @@ self.addEventListener('fetch', e => {
         <div class="page-sub" id="dash-day-sub">Week 1 of your program</div>
       </div>
       <div class="today-grid">
-        <div class="stat-card"><div class="card-label">Calories Left</div><div class="sc-val" id="d-cal">—</div><div class="sc-sub" id="d-cal-sub">of — target</div><div class="prog-bar"><div class="prog-fill" id="d-cal-bar" style="width:0%"></div></div></div>
-        <div class="stat-card"><div class="card-label">Protein Left</div><div class="sc-val" id="d-pro">—</div><div class="sc-sub" id="d-pro-sub">of —g target</div><div class="prog-bar"><div class="prog-fill" id="d-pro-bar" style="width:0%"></div></div></div>
+        <div class="stat-card"><div class="card-label">Calories</div><div class="sc-val" id="d-cal">0</div><div class="sc-sub" id="d-cal-sub">of — target</div><div class="prog-bar"><div class="prog-fill" id="d-cal-bar" style="width:0%"></div></div></div>
+        <div class="stat-card"><div class="card-label">Protein</div><div class="sc-val" id="d-pro">0g</div><div class="sc-sub" id="d-pro-sub">of —g target</div><div class="prog-bar"><div class="prog-fill" id="d-pro-bar" style="width:0%"></div></div></div>
+        <div class="stat-card"><div class="card-label">Carbs</div><div class="sc-val" id="d-carb">0g</div><div class="sc-sub" id="d-carb-sub">of —g target</div><div class="prog-bar"><div class="prog-fill" id="d-carb-bar" style="width:0%"></div></div></div>
+        <div class="stat-card"><div class="card-label">Fat</div><div class="sc-val" id="d-fat">0g</div><div class="sc-sub" id="d-fat-sub">of —g target</div><div class="prog-bar"><div class="prog-fill" id="d-fat-bar" style="width:0%"></div></div></div>
         <div style="display:none" id="d-wkt-name" aria-hidden="true"></div><div style="display:none" id="d-wkt-sub" aria-hidden="true"></div><div style="display:none" id="d-wkt-bar" aria-hidden="true"></div>
       </div>
       <div class="log-toggle-card">
         <div style="display:flex;align-items:center;gap:10px;padding:14px 18px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;margin-right:4px">LOG FOOD</div>
-          <button class="btn-cat-scan" onclick="openBarcodeScanner('other')" style="font-size:0.78rem"><svg viewBox="0 0 32 20" width="18" height="12" fill="currentColor"><rect x="0" y="0" width="2" height="20"/><rect x="4" y="0" width="1" height="20"/><rect x="7" y="0" width="3" height="20"/><rect x="12" y="0" width="1" height="20"/><rect x="15" y="0" width="2" height="20"/><rect x="19" y="0" width="1" height="20"/><rect x="22" y="0" width="3" height="20"/><rect x="27" y="0" width="1" height="20"/><rect x="30" y="0" width="2" height="20"/></svg> SCAN</button>
-          <button class="btn-cat-add" onclick="openQuickFoodModal()">+ Search Food</button>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;margin-right:4px">TODAY'S FOOD</div>
+          <button class="btn-cat-add" onclick="dashNav('coach')" style="margin-left:auto">Log via AI Coach →</button>
         </div>
         <div id="today-mini-log" style="border-top:1px solid var(--border)"></div>
       </div>
@@ -434,10 +435,10 @@ self.addEventListener('fetch', e => {
 
       <!-- MACRO BARS -->
       <div class="macro-bar" style="margin-bottom:14px">
-        <div class="mb-item"><div class="mb-label">Calories Left</div><div class="mb-val" id="n-cal">—</div><div class="mb-target" id="n-cal-tgt">of —</div><div class="mb-bar"><div class="mb-fill" id="n-cal-bar" style="width:0%"></div></div></div>
-        <div class="mb-item"><div class="mb-label">Protein Left</div><div class="mb-val" id="n-pro">—</div><div class="mb-target" id="n-pro-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-pro-bar" style="width:0%"></div></div></div>
-        <div class="mb-item"><div class="mb-label">Carbs Left</div><div class="mb-val" id="n-carb">—</div><div class="mb-target" id="n-carb-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-carb-bar" style="width:0%"></div></div></div>
-        <div class="mb-item"><div class="mb-label">Fat Left</div><div class="mb-val" id="n-fat">—</div><div class="mb-target" id="n-fat-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-fat-bar" style="width:0%"></div></div></div>
+        <div class="mb-item"><div class="mb-label">Calories</div><div class="mb-val" id="n-cal">0</div><div class="mb-target" id="n-cal-tgt">of —</div><div class="mb-bar"><div class="mb-fill" id="n-cal-bar" style="width:0%"></div></div></div>
+        <div class="mb-item"><div class="mb-label">Protein</div><div class="mb-val" id="n-pro">0g</div><div class="mb-target" id="n-pro-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-pro-bar" style="width:0%"></div></div></div>
+        <div class="mb-item"><div class="mb-label">Carbs</div><div class="mb-val" id="n-carb">0g</div><div class="mb-target" id="n-carb-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-carb-bar" style="width:0%"></div></div></div>
+        <div class="mb-item"><div class="mb-label">Fat</div><div class="mb-val" id="n-fat">0g</div><div class="mb-target" id="n-fat-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-fat-bar" style="width:0%"></div></div></div>
       </div>
 
       <!-- WATER TRACKER -->
