@@ -1947,17 +1947,17 @@ function renderSetsTable(idx, ex) {
   for (let s=0; s<numSets; s++) {
     const prev = getPrevSet(woDay, idx, s);
     const isSaved = woSets[idx] && woSets[idx][s];
-    const savedW = isSaved && (woSets[idx][s].weight != null) ? String(woSets[idx][s].weight) : '';
-    const savedR = isSaved && (woSets[idx][s].reps != null) ? String(woSets[idx][s].reps) : '';
     const isDone = isSaved && woSets[idx][s].done;
-    const prevW = prev ? String(prev.weight) : '—';
-    const prevR = prev ? String(prev.reps) : '—';
-    const valW = savedW;
-    const valR = savedR;
+    // Only show saved values if the set was actually completed THIS session
+    const valW = isDone && (woSets[idx][s].weight != null) ? String(woSets[idx][s].weight) : '';
+    const valR = isDone && (woSets[idx][s].reps != null) ? String(woSets[idx][s].reps) : '';
+    const prevW = prev ? prev.weight : null;
+    const prevR = prev ? prev.reps : null;
+    const prevHint = (prevW && prevR) ? '<div style="font-size:0.62rem;color:var(--dim);margin-top:2px;font-family:\'DM Mono\',monospace">Last: ' + prevW + ' × ' + prevR + '</div>' : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap">Set '+(s+1)+'</td>'+
-      '<td class="set-cell-weight"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="decimal" placeholder="'+prevW+'" value="'+escapeAttr(valW)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
-      '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="number" inputmode="numeric" placeholder="'+prevR+'" value="'+escapeAttr(valR)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
+    tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div>' + prevHint + '</td>'+
+      '<td class="set-cell-weight"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="decimal" placeholder="lbs" value="'+escapeAttr(valW)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
+      '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="number" inputmode="numeric" placeholder="reps" value="'+escapeAttr(valR)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
       '<td><button class="set-check '+(isDone?'done':'')+'" id="sd-'+idx+'-'+s+'" '+(isDone?'disabled':'')+' onclick="completeSet('+idx+','+s+','+ex.rest+')" title="Mark done">✓</button></td>'+
       '<td><button class="set-del-btn" onclick="deleteSet('+idx+','+s+')" title="Delete set">✕</button></td>';
     tbody.appendChild(tr);
@@ -1996,12 +1996,15 @@ function autoSaveSet(exIdx, setIdx, restSecs) {
   if (!wEl || !rEl) return;
   const weight = (wEl.value || '').trim();
   const reps = (rEl.value || '').trim();
-  if (!woSets[exIdx]) woSets[exIdx] = [];
-  if (!woSets[exIdx][setIdx]) woSets[exIdx][setIdx] = {};
-  woSets[exIdx][setIdx].weight = weight;
-  woSets[exIdx][setIdx].reps = reps;
-  persistWorkoutDraft();
-  if (weight && reps) saveSet(woDay, exIdx, setIdx, weight, reps);
+  // Only save to draft if at least one field has a value
+  if (weight || reps) {
+    if (!woSets[exIdx]) woSets[exIdx] = [];
+    if (!woSets[exIdx][setIdx]) woSets[exIdx][setIdx] = {};
+    woSets[exIdx][setIdx].weight = weight;
+    woSets[exIdx][setIdx].reps = reps;
+    persistWorkoutDraft();
+    if (weight && reps) saveSet(woDay, exIdx, setIdx, weight, reps);
+  }
 }
 
 function isPR(exIdx, setIdx, weight, reps) {
