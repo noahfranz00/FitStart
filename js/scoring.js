@@ -89,9 +89,9 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
 
   // PR rows
   var prRows = (prs || []).map(function(p) {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06)">' +
-      '<span style="font-size:0.82rem;color:#fff">' + p.exercise + '</span>' +
-      '<span style="font-family:\'DM Mono\',monospace;font-size:0.78rem;color:#4ADE80;font-weight:700">' + p.weight + ' lbs × ' + p.reps + ' <span style="font-size:0.6rem;vertical-align:middle;letter-spacing:1px">▲ PR</span></span></div>';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.08)">' +
+      '<span style="font-size:0.95rem;color:#fff;font-weight:600">' + p.exercise + '</span>' +
+      '<span style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#4ADE80;font-weight:700">' + p.weight + ' lbs × ' + p.reps + ' <span style="font-size:0.7rem;vertical-align:middle;letter-spacing:1px">▲ PR</span></span></div>';
   }).join('');
 
   // Stat boxes — always show full numbers with lbs, no abbreviations
@@ -128,55 +128,55 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
   overlay.innerHTML =
     '<div style="max-width:400px;width:100%;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">' +
     // ── The shareable card area ──
-    '<div id="wo-share-card" style="background:linear-gradient(145deg,#0a0a0a 0%,#111 50%,#0d1117 100%);border:1px solid rgba(74,222,128,0.2);border-radius:24px;padding:28px 24px 20px;position:relative;overflow:hidden">' +
+    '<div id="wo-share-card" style="background:linear-gradient(145deg,#0a0a0a 0%,#111 50%,#0d1117 100%);border:1px solid rgba(74,222,128,0.25);border-radius:24px;padding:30px 24px 22px;position:relative;overflow:hidden">' +
       // Subtle glow effect
-      '<div style="position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(74,222,128,0.08) 0%,transparent 70%);pointer-events:none"></div>' +
-      '<div style="position:absolute;bottom:-30px;left:-30px;width:100px;height:100px;background:radial-gradient(circle,rgba(74,222,128,0.05) 0%,transparent 70%);pointer-events:none"></div>' +
+      '<div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(74,222,128,0.1) 0%,transparent 70%);pointer-events:none"></div>' +
+      '<div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(74,222,128,0.06) 0%,transparent 70%);pointer-events:none"></div>' +
       // Header
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px">' +
         '<div>' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.65rem;letter-spacing:3px;color:rgba(255,255,255,0.3)">' + dateStr + '</div>' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;letter-spacing:2px;color:#fff;line-height:1.1;margin-top:4px">' + (workoutName || 'WORKOUT').toUpperCase() + '</div>' +
-          (userName ? '<div style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-top:2px">' + userName + '</div>' : '') +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.8rem;letter-spacing:3px;color:rgba(255,255,255,0.5)">' + dateStr + '</div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;letter-spacing:2px;color:#fff;line-height:1.1;margin-top:4px">' + (workoutName || 'WORKOUT').toUpperCase() + '</div>' +
+          (userName ? '<div style="font-size:0.85rem;color:rgba(255,255,255,0.5);margin-top:3px;font-weight:600">' + userName + '</div>' : '') +
         '</div>' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.65rem;letter-spacing:2px;color:rgba(74,222,128,0.6)">WORKOUT<br>COMPLETE ✓</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.75rem;letter-spacing:2px;color:#4ADE80;text-align:right;line-height:1.4">WORKOUT<br>COMPLETE ✓</div>' +
       '</div>' +
       // Score gauge
-      '<div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;padding:16px;background:rgba(255,255,255,0.02);border-radius:16px;border:1px solid rgba(255,255,255,0.04)">' +
+      '<div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;padding:18px;background:rgba(255,255,255,0.03);border-radius:16px;border:1px solid rgba(255,255,255,0.06)">' +
         '<div style="position:relative;width:100px;height:56px;flex-shrink:0">' +
           '<svg viewBox="0 0 200 110" style="width:100%;height:100%">' +
-            '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round"/>' +
+            '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="14" stroke-linecap="round"/>' +
             '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#4ADE80" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="' + offset + '"/>' +
           '</svg>' +
-          '<div style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;color:#4ADE80;letter-spacing:1px">' + score + '</div>' +
+          '<div style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;color:#4ADE80;letter-spacing:1px">' + score + '</div>' +
         '</div>' +
         '<div style="flex:1">' +
-          '<div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.35)">STRENGTH SCORE</div>' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;color:#fff;line-height:1">' + score + '<span style="font-size:0.7rem;color:rgba(255,255,255,0.25)">/1000</span></div>' +
-          (deltaText ? '<div style="font-size:0.75rem;font-weight:700;color:' + deltaColor + '">' + deltaText + ' vs last</div>' : '') +
+          '<div style="font-size:0.75rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.5)">STRENGTH SCORE</div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2.2rem;color:#fff;line-height:1">' + score + '<span style="font-size:0.85rem;color:rgba(255,255,255,0.4)">/1000</span></div>' +
+          (deltaText ? '<div style="font-size:0.85rem;font-weight:700;color:' + deltaColor + '">' + deltaText + ' vs last</div>' : '') +
         '</div>' +
       '</div>' +
       // Stats grid
-      '<div style="display:grid;grid-template-columns:repeat(' + Math.min(displayStats.length, 4) + ',1fr);gap:1px;background:rgba(255,255,255,0.04);border-radius:12px;overflow:hidden;margin-bottom:16px">' +
+      '<div style="display:grid;grid-template-columns:repeat(' + Math.min(displayStats.length, 4) + ',1fr);gap:1px;background:rgba(255,255,255,0.06);border-radius:14px;overflow:hidden;margin-bottom:18px">' +
         displayStats.map(function(s) {
-          var unitSpan = s.unit ? '<span style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-left:2px">' + s.unit + '</span>' : '';
-          return '<div style="background:#0a0a0a;padding:14px 8px;text-align:center">' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;color:#fff;line-height:1">' + s.value + unitSpan + '</div>' +
-            '<div style="font-size:0.5rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.3);margin-top:3px">' + s.label + '</div>' +
+          var unitSpan = s.unit ? '<span style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-left:2px;text-transform:uppercase">' + s.unit + '</span>' : '';
+          return '<div style="background:#0a0a0a;padding:16px 8px;text-align:center">' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:#fff;line-height:1">' + s.value + unitSpan + '</div>' +
+            '<div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.45);margin-top:4px">' + s.label + '</div>' +
           '</div>';
         }).join('') +
       '</div>' +
       // Heaviest lift callout
-      (heaviestLift.weight > 0 ? '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.12);border-radius:10px;margin-bottom:12px">' +
-        '<div style="font-size:1.1rem;color:#4ADE80;font-weight:700">↑</div>' +
-        '<div style="flex:1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;color:rgba(74,222,128,0.7)">HEAVIEST LIFT</div>' +
-        '<div style="font-size:0.88rem;color:#fff;font-weight:600">' + heaviestLift.name + ' — ' + heaviestLift.weight + ' lbs × ' + heaviestLift.reps + '</div></div></div>' : '') +
+      (heaviestLift.weight > 0 ? '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:12px;margin-bottom:14px">' +
+        '<div style="font-size:1.3rem;color:#4ADE80;font-weight:700">↑</div>' +
+        '<div style="flex:1"><div style="font-size:0.75rem;font-weight:700;letter-spacing:1.5px;color:#4ADE80">HEAVIEST LIFT</div>' +
+        '<div style="font-size:1rem;color:#fff;font-weight:700;margin-top:2px">' + heaviestLift.name + ' — ' + heaviestLift.weight + ' lbs × ' + heaviestLift.reps + '</div></div></div>' : '') +
       // PRs
-      (prRows ? '<div style="margin-bottom:12px"><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:#4ADE80;margin-bottom:8px">PERSONAL RECORDS</div>' + prRows + '</div>' : '') +
+      (prRows ? '<div style="margin-bottom:14px"><div style="font-size:0.75rem;font-weight:700;letter-spacing:2px;color:#4ADE80;margin-bottom:10px">PERSONAL RECORDS</div>' + prRows + '</div>' : '') +
       // Footer branding
-      '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(255,255,255,0.04)">' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:2px;color:rgba(255,255,255,0.2)">FIT<span style="color:rgba(74,222,128,0.4)">●</span>START</div>' +
-        '<div style="font-size:0.55rem;letter-spacing:1px;color:rgba(255,255,255,0.15)">AI-POWERED FITNESS</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06)">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:2px;color:rgba(255,255,255,0.35)">FIT<span style="color:rgba(74,222,128,0.5)">●</span>START</div>' +
+        '<div style="font-size:0.65rem;letter-spacing:1.5px;color:rgba(255,255,255,0.25);font-weight:600">AI-POWERED FITNESS</div>' +
       '</div>' +
     '</div>' +
     // ── Action buttons (outside the shareable card) ──
