@@ -2205,15 +2205,28 @@ async function startAIWorkout() {
     const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
     const day = dayNames[_unplannedDayIdx] || 'Monday';
     
+    const duration = (USER && USER.duration) || '45-60 min';
+    const equipment = (USER && USER.equipment) ? USER.equipment.join(', ') : 'Full Gym';
+    const numExercises = tier === 'beginner' ? '3-4' : tier === 'intermediate' ? '4-5' : '4-5';
+    
     const aiText = await callClaude([{
       role: 'user',
       content: `Generate a ${day} gym workout for a ${tier} lifter whose goal is to ${goalText}.
+Session length: ${duration}. Equipment: ${equipment}.
 
-Return ONLY a valid JSON array of 4-6 exercises. Each object must have these fields:
+Return ONLY a valid JSON array of ${numExercises} exercises. Each object must have these fields:
 {"name":"string","sets":number,"reps":"string","rest":number,"muscles":"string"}
 
+RULES:
+- Exercise names must be simple and standard (2-3 words max, e.g. "Bench Press", "Lat Pulldown", "Romanian Deadlift")
+- NO complexes, supersets, or combination movements
+- Each exercise targets ONE primary muscle group
+- Rest in seconds (60-120)
+- Reps should be simple numbers like "8-10" or "12"
+- The ENTIRE workout must fit in ${duration}
+
 Example:
-[{"name":"Back Squat","sets":4,"reps":"8-10","rest":120,"muscles":"Quads, Glutes"}]
+[{"name":"Back Squat","sets":4,"reps":"8-10","rest":90,"muscles":"Quads"}]
 
 No markdown, no backticks, no explanation — just the raw JSON array.`
     }], {
