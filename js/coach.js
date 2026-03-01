@@ -121,15 +121,40 @@ function _getCoachSystemPrompt() {
   else if (hour >= 21 || hour < 5) timeOfDay = 'night';
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-  // Today's nutrition so far
+  // Today's nutrition so far (all 4 macros)
   const todayMeals = getMealCatEntries ? (() => {
-    let totalCal = 0, totalPro = 0;
+    let totalCal = 0, totalPro = 0, totalCarb = 0, totalFat = 0;
     for (const cat of (MEAL_CATS || [])) {
       const entries = getMealCatEntries(TODAY_IDX, cat.id);
-      for (const e of entries) { totalCal += (e.cal || 0); totalPro += (e.pro || 0); }
+      for (const e of entries) { totalCal += (e.cal || 0); totalPro += (e.pro || 0); totalCarb += (e.carb || 0); totalFat += (e.fat || 0); }
     }
-    return { cal: totalCal, pro: totalPro };
-  })() : { cal: 0, pro: 0 };
+    return { cal: totalCal, pro: totalPro, carb: totalCarb, fat: totalFat };
+  })() : { cal: 0, pro: 0, carb: 0, fat: 0 };
+
+  // Build food memory — compact summary of recent meals (last 3 days) from mealLogs
+  let foodMemory = '';
+  try {
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const memoryDays = [];
+    for (let d = 0; d < 3; d++) {
+      const dayIdx = TODAY_IDX - d;
+      if (dayIdx < 0) break;
+      const dayLabel = d === 0 ? 'Today' : d === 1 ? 'Yesterday' : dayNames[(new Date().getDay() - d + 7) % 7];
+      const allItems = [];
+      for (const cat of ['breakfast','lunch','dinner','snacks','other']) {
+        const entries = getMealCatEntries(dayIdx, cat);
+        for (const e of entries) {
+          allItems.push(cat + ': ' + e.name + ' (' + e.cal + 'cal ' + e.pro + 'P ' + (e.carb||0) + 'C ' + (e.fat||0) + 'F)');
+        }
+      }
+      if (allItems.length > 0) {
+        memoryDays.push(dayLabel + ':\n  ' + allItems.join('\n  '));
+      }
+    }
+    if (memoryDays.length > 0) {
+      foodMemory = '\n\nRECENT FOOD LOG (from app database — use this if user says "same as yesterday" or references past meals):\n' + memoryDays.join('\n');
+    }
+  } catch(e) { foodMemory = ''; }
 
   // Today's workout status
   const todayWorkout = DAY_WORKOUTS[TODAY_IDX];
@@ -160,8 +185,8 @@ Training schedule: ${GYM_DAYS.map(i => DAYS_FULL[i]).join(', ')}
 
 TODAY'S APP DATA:
 ${isGymDay ? (todayDone ? 'Workout COMPLETED today (' + (todayWorkout?.name || 'workout') + ')' : 'Scheduled workout: ' + (todayWorkout?.name || 'workout') + ' — not yet completed') : 'Rest day (no workout scheduled)'}
-Logged nutrition so far: ${todayMeals.cal} of ${TARGETS.cal} cal, ${todayMeals.pro}g of ${TARGETS.pro}g protein
-Daily macro targets: ${TARGETS.cal} cal · ${TARGETS.pro}g protein · ${TARGETS.carb}g carbs · ${TARGETS.fat}g fat
+Logged nutrition so far: ${todayMeals.cal} of ${TARGETS.cal} cal, ${todayMeals.pro}g of ${TARGETS.pro}g protein, ${todayMeals.carb}g of ${TARGETS.carb}g carbs, ${todayMeals.fat}g of ${TARGETS.fat}g fat
+Daily macro targets: ${TARGETS.cal} cal · ${TARGETS.pro}g protein · ${TARGETS.carb}g carbs · ${TARGETS.fat}g fat${foodMemory}
 
 RECENT ACTIVITY (from app logs):
 Workout streak: ${streak} day${streak !== 1 ? 's' : ''}
@@ -169,14 +194,14 @@ Workouts this week: ${recentDays.length > 0 ? recentDays.join(', ') : 'none yet'
 All-time workouts: ${workoutDates.size}
 
 BEHAVIOR:
-- You have access to the full message history with this user. Reference past conversations naturally when relevant.
-- Be concise and practical — 2-4 short paragraphs max.
+- Be concise and practical — 2-3 short paragraphs max.
 - Use their name occasionally.
 - Reference their actual numbers, schedule, and progress.
 - Adjust energy to the time of day.
 - Use **bold** sparingly for key points.
 - If they mention pain or injury, recommend a medical professional.
 - Never say you don't have access to real-time data — the app provides it to you above.
+- When the user logs food, keep your response SHORT. Acknowledge what they logged, show the macros, give one brief comment. Do NOT list or recap previously logged meals — the nutrition tab handles that. Do NOT give a running summary of the day's food unless the user asks for it.
 
 FOOD LOGGING:
 When the user tells you what they ate, include a FOODLOG JSON block at the END of your response so the app can auto-log it.
@@ -436,8 +461,13 @@ async function _sendCoachMsg(text) {
       }
     }
 
-    // Build messages
-    const messages = _coachHistory.slice(-20);
+    // Build messages — strip old FOODLOG blocks so AI doesn't re-log old food
+    const messages = _coachHistory.slice(-20).map(function(msg) {
+      if (msg.role === 'assistant' && msg.content) {
+        return { role: msg.role, content: msg.content.replace(/```FOODLOG[\s\S]*?```/g, '').trim() };
+      }
+      return msg;
+    });
     let systemPrompt = _getCoachSystemPrompt();
     if (autoLogContext) {
       systemPrompt += autoLogContext;
