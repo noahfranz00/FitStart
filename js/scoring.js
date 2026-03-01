@@ -91,14 +91,14 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
   var prRows = (prs || []).map(function(p) {
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06)">' +
       '<span style="font-size:0.82rem;color:#fff">' + p.exercise + '</span>' +
-      '<span style="font-family:\'DM Mono\',monospace;font-size:0.78rem;color:#4ADE80;font-weight:700">' + p.weight + ' lbs × ' + p.reps + ' <span style="font-size:0.6rem;vertical-align:middle">🏆 PR</span></span></div>';
+      '<span style="font-family:\'DM Mono\',monospace;font-size:0.78rem;color:#4ADE80;font-weight:700">' + p.weight + ' lbs × ' + p.reps + ' <span style="font-size:0.6rem;vertical-align:middle;letter-spacing:1px">▲ PR</span></span></div>';
   }).join('');
 
-  // Stat boxes
+  // Stat boxes — always show full numbers with lbs, no abbreviations
   var stats = [];
-  if (totalVolume > 0) stats.push({ label: 'TOTAL VOLUME', value: totalVolume >= 1000 ? (totalVolume/1000).toFixed(1) + 'k' : totalVolume.toString(), unit: 'lbs' });
-  if (maxWeight > 0) stats.push({ label: 'MAX WEIGHT', value: maxWeight.toString(), unit: 'lbs' });
-  if (totalSets > 0) stats.push({ label: 'SETS', value: totalSets.toString(), unit: 'completed' });
+  if (totalVolume > 0) stats.push({ label: 'TOTAL VOLUME', value: totalVolume.toLocaleString(), unit: 'lbs' });
+  if (maxWeight > 0) stats.push({ label: 'MAX WEIGHT', value: maxWeight.toLocaleString(), unit: 'lbs' });
+  if (totalSets > 0) stats.push({ label: 'SETS', value: totalSets.toString(), unit: '' });
   if (totalReps > 0) stats.push({ label: 'TOTAL REPS', value: totalReps.toString(), unit: '' });
   if (durMins > 0) stats.push({ label: 'DURATION', value: durStr, unit: '' });
   if (exercises && exercises.length) stats.push({ label: 'EXERCISES', value: exercises.length.toString(), unit: '' });
@@ -106,8 +106,9 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
   // Take the top 4 most relevant stats
   var displayStats = stats.slice(0, 4);
   var statGrid = displayStats.map(function(s) {
+    var unitSpan = s.unit ? '<span style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-left:2px">' + s.unit + '</span>' : '';
     return '<div style="text-align:center;padding:10px 0">' +
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:1px;color:#fff;line-height:1">' + s.value + '</div>' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;letter-spacing:1px;color:#fff;line-height:1">' + s.value + unitSpan + '</div>' +
       '<div style="font-size:0.55rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.4);margin-top:2px">' + s.label + '</div>' +
       '</div>';
   }).join('');
@@ -158,19 +159,20 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
       // Stats grid
       '<div style="display:grid;grid-template-columns:repeat(' + Math.min(displayStats.length, 4) + ',1fr);gap:1px;background:rgba(255,255,255,0.04);border-radius:12px;overflow:hidden;margin-bottom:16px">' +
         displayStats.map(function(s) {
+          var unitSpan = s.unit ? '<span style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-left:2px">' + s.unit + '</span>' : '';
           return '<div style="background:#0a0a0a;padding:14px 8px;text-align:center">' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;color:#fff;line-height:1">' + s.value + '</div>' +
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.4rem;color:#fff;line-height:1">' + s.value + unitSpan + '</div>' +
             '<div style="font-size:0.5rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.3);margin-top:3px">' + s.label + '</div>' +
           '</div>';
         }).join('') +
       '</div>' +
       // Heaviest lift callout
       (heaviestLift.weight > 0 ? '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.12);border-radius:10px;margin-bottom:12px">' +
-        '<div style="font-size:1.1rem">🏋️</div>' +
+        '<div style="font-size:1.1rem;color:#4ADE80;font-weight:700">↑</div>' +
         '<div style="flex:1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;color:rgba(74,222,128,0.7)">HEAVIEST LIFT</div>' +
         '<div style="font-size:0.88rem;color:#fff;font-weight:600">' + heaviestLift.name + ' — ' + heaviestLift.weight + ' lbs × ' + heaviestLift.reps + '</div></div></div>' : '') +
       // PRs
-      (prRows ? '<div style="margin-bottom:12px"><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:#4ADE80;margin-bottom:8px">🏆 PERSONAL RECORDS</div>' + prRows + '</div>' : '') +
+      (prRows ? '<div style="margin-bottom:12px"><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:#4ADE80;margin-bottom:8px">PERSONAL RECORDS</div>' + prRows + '</div>' : '') +
       // Footer branding
       '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(255,255,255,0.04)">' +
         '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:2px;color:rgba(255,255,255,0.2)">FIT<span style="color:rgba(74,222,128,0.4)">●</span>START</div>' +
