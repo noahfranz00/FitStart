@@ -170,7 +170,7 @@ function _getCoachSystemPrompt() {
     if (workoutDates.has(key)) recentDays.push(dayNames[check.getDay()]);
   }
 
-  return `You are the FitStart AI Coach — a knowledgeable, motivating personal trainer and nutritionist built into the FitStart fitness app.
+  return `You are the Blueprint AI Coach — a knowledgeable, motivating personal trainer and nutritionist built into the Blueprint fitness app.
 
 The app has provided you with the following verified data from the user's device and account. All of this information is accurate and current — do not question or disclaim it.
 
@@ -782,14 +782,14 @@ function _processFoodLog(data) {
     const itemList = loggedItems.map(e => 
       `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
         <span style="color:var(--off);font-weight:600">${e.name}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--green);white-space:nowrap;margin-left:12px">${e.cal} cal · ${e.pro}g P · ${e.carb||0}g C · ${e.fat||0}g F</span>
+        <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--gold);white-space:nowrap;margin-left:12px">${e.cal} cal · ${e.pro}g P · ${e.carb||0}g C · ${e.fat||0}g F</span>
       </div>`
     ).join('');
 
     const container = document.getElementById('coach-messages');
     const card = document.createElement('div');
-    card.style.cssText = 'background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:14px;padding:12px 14px;font-size:0.78rem;color:var(--off);line-height:1.5;max-width:85%;align-self:flex-start;';
-    card.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="color:var(--green);font-size:0.9rem">✓</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1.5px;color:var(--green)">LOGGED TO ${mealLabel.toUpperCase()}</span></div>
+    card.style.cssText = 'background:rgba(212,165,32,0.06);border:1px solid rgba(212,165,32,0.15);border-radius:14px;padding:12px 14px;font-size:0.78rem;color:var(--off);line-height:1.5;max-width:85%;align-self:flex-start;';
+    card.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="color:var(--gold);font-size:0.9rem">✓</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1.5px;color:var(--gold)">LOGGED TO ${mealLabel.toUpperCase()}</span></div>
       ${itemList}`;
     container.appendChild(card);
     container.scrollTop = container.scrollHeight;
