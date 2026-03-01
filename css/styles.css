@@ -25,7 +25,7 @@ body::before {
 /* ── NAV ── */
 nav { display:flex; justify-content:space-between; align-items:center; padding:20px 48px; border-bottom:1px solid var(--border); background:rgba(10,10,10,0.92); backdrop-filter:blur(10px); position:sticky; top:0; z-index:200; width:100%; box-sizing:border-box; }
 .logo { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; letter-spacing:2px; display:flex; align-items:center; gap:10px; color:#D4A520; }
-.logo-icon { width:32px; height:32px; border-radius:8px; object-fit:contain; flex-shrink:0; }
+.logo-icon { width:32px; height:32px; border-radius:8px; background:var(--gold-grad); display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:700; color:#111; flex-shrink:0; }
 .logo-dot { color:var(--gold); transition:color 0.4s; }
 .nav-right { display:flex; align-items:center; gap:14px; }
 .nav-pill { font-size:0.68rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); border:1px solid var(--border); border-radius:100px; padding:6px 14px; }
@@ -281,7 +281,7 @@ body.advanced .btn-start-trial { background:var(--red); }
 .today-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px; }
 .stat-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; }
 .sc-val { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:1px; background:var(--gold-grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; margin-bottom:3px; transition:color 0.3s; }
-.sc-val.over { color:var(--red); }
+.sc-val.over { background:var(--red); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .sc-sub { font-family:'DM Mono',monospace; font-size:0.75rem; color:var(--off); }
 .prog-bar { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; margin-top:10px; }
 .prog-fill { height:100%; border-radius:2px; background:var(--gold-grad); transition:width 0.4s ease, background 0.3s; }
