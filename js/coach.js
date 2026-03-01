@@ -298,8 +298,8 @@ FOODLOG FORMAT (must be at the very end of your response):
 \`\`\`
 
 Rules:
-- "meal": "breakfast", "lunch", "dinner", or "snacks"
-- Infer meal from context or time: before 11am=breakfast, 11am-2pm=lunch, 2-5pm=snacks, after 5pm=dinner
+- "meal": "breakfast", "lunch", "dinner", "snacks", or "other"
+- ONLY use a specific meal category if the user explicitly mentions it (e.g. "for breakfast", "lunch was", "dinner snack"). If the user doesn't specify the meal, ALWAYS default to "other".
 - Include brand + quantity in the "name" field
 - cal, pro, carb, fat must be integers
 - ONLY include FOODLOG when the user describes food they ate — NOT for general nutrition questions
@@ -408,12 +408,8 @@ async function _sendCoachMsg(text) {
             const foodName = bestMatch.name + (bestMatch.brand && !bestMatch.name.includes(bestMatch.brand) ? ' (' + bestMatch.brand + ')' : '');
             const displayName = foodName.length > 50 ? foodName.substring(0, 47) + '...' : foodName;
 
-            // Determine meal from time of day
-            const hour = new Date().getHours();
-            let meal = 'snacks';
-            if (hour < 11) meal = 'breakfast';
-            else if (hour < 14) meal = 'lunch';
-            else if (hour >= 17) meal = 'dinner';
+            // Determine meal — default to 'other' unless user explicitly says
+            let meal = 'other';
 
             // Check for explicit meal mentions
             const tl = text.toLowerCase();
@@ -757,14 +753,29 @@ function _processFoodLog(data) {
     const totalCarb = loggedItems.reduce((s, e) => s + (e.carb || 0), 0);
     const totalFat = loggedItems.reduce((s, e) => s + (e.fat || 0), 0);
     const mealLabel = meal.charAt(0).toUpperCase() + meal.slice(1);
-    const itemList = loggedItems.map(e => `${e.name} — ${e.cal} cal, ${e.pro}g P, ${e.carb||0}g C, ${e.fat||0}g F`).join('<br>');
+    const itemList = loggedItems.map(e => 
+      `<div style="padding:6px 0;border-bottom:1px solid rgba(74,222,128,0.08)">
+        <div style="font-weight:600;color:var(--off);margin-bottom:3px">${e.name}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-family:'DM Mono',monospace;font-size:0.68rem">
+          <span style="color:var(--green)">${e.cal} cal</span>
+          <span style="color:#f472b6">${e.pro}g P</span>
+          <span style="color:#60a5fa">${e.carb||0}g C</span>
+          <span style="color:#fbbf24">${e.fat||0}g F</span>
+        </div>
+      </div>`
+    ).join('');
 
     const container = document.getElementById('coach-messages');
     const card = document.createElement('div');
     card.style.cssText = 'background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:14px;padding:12px 14px;font-size:0.78rem;color:var(--off);line-height:1.5;max-width:85%;align-self:flex-start;';
-    card.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="color:var(--green);font-size:0.9rem">✓</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1.5px;color:var(--green)">LOGGED TO ${mealLabel.toUpperCase()}</span></div>
-      <div style="font-size:0.76rem;color:var(--off);line-height:1.6">${itemList}</div>
-      <div style="margin-top:6px;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--green);opacity:0.8">${totalCal} cal · ${totalPro}g protein · ${totalCarb}g carbs · ${totalFat}g fat</div>`;
+    card.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="color:var(--green);font-size:0.9rem">✓</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1.5px;color:var(--green)">LOGGED TO ${mealLabel.toUpperCase()}</span></div>
+      ${itemList}
+      <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(74,222,128,0.15);display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:700">
+        <span style="color:var(--green)">${totalCal} cal</span>
+        <span style="color:#f472b6">${totalPro}g P</span>
+        <span style="color:#60a5fa">${totalCarb}g C</span>
+        <span style="color:#fbbf24">${totalFat}g F</span>
+      </div>`;
     container.appendChild(card);
     container.scrollTop = container.scrollHeight;
   }
