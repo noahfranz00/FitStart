@@ -333,7 +333,8 @@ function setTier(tier, btn) {
   btn.classList.add('active');
   document.body.className = tier === 'beginner' ? '' : tier;
   const cfg = tierConfig[tier];
-  document.getElementById('ob-logo-dot').style.color = cfg.color;
+  const logoDot = document.getElementById('ob-logo-dot');
+  if (logoDot) logoDot.style.color = cfg.color;
   // Headline change
   const accent = document.getElementById('ob-accent');
   const line3  = document.getElementById('ob-headline-line3');
@@ -344,7 +345,14 @@ function setTier(tier, btn) {
     accent.textContent = 'SMARTER';
     line3.textContent = 'AND HARDER';
   }
-  accent.style.color = cfg.color;
+  if (tier === 'beginner') {
+    accent.style.background = 'var(--gold-grad)';
+  } else {
+    accent.style.background = cfg.color;
+  }
+  accent.style.webkitBackgroundClip = 'text';
+  accent.style.webkitTextFillColor = 'transparent';
+  accent.style.backgroundClip = 'text';
   const badge = document.getElementById('tierBadge');
   badge.textContent = cfg.badge; badge.className = 'tier-badge ' + cfg.badgeClass;
   document.getElementById('sidebar-label').textContent = cfg.sidebarLabel;
