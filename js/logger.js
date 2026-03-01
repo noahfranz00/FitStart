@@ -1772,6 +1772,7 @@ let woWorkout = null;
 let woSets = {};
 let woExtraSets = {};
 let woPRs = []; // Track PRs hit during this workout session
+let woStartTime = null; // Track workout duration
 let restTimerInterval = null;
 
 function openWorkoutEnv(dayIdx) {
@@ -1784,6 +1785,7 @@ function openWorkoutEnv(dayIdx) {
   woCurrentEx = 0;
   woWorkout = workout;
   woPRs = [];
+  woStartTime = Date.now();
   const draft = getWorkoutDraft(dayIdx);
   if (draft && draft.sets) {
     woSets = draft.sets;
@@ -1838,9 +1840,12 @@ function finishWorkout() {
   stopRestTimer();
   lsSet('fs_rest_timer', null);
 
-  // Collect PR summary before clearing workout state
+  // Collect stats before clearing workout state
   const prList = woPRs.slice();
   const workoutName = woWorkout ? woWorkout.name : 'Workout';
+  const durationMs = woStartTime ? Date.now() - woStartTime : 0;
+  const setsSnapshot = woSets ? JSON.parse(JSON.stringify(woSets)) : {};
+  const exercisesSnapshot = woWorkout ? woWorkout.exercises.slice() : [];
 
   const woEl2 = document.getElementById('screen-workout');
   woEl2.classList.remove('active');
@@ -1852,7 +1857,7 @@ function finishWorkout() {
   renderTodayWorkout();
   renderWeek();
 
-  _showWorkoutSummary(workoutName, prList);
+  _showWorkoutSummary(workoutName, prList, durationMs, setsSnapshot, exercisesSnapshot);
 }
 
 function loadExercise(idx) {
