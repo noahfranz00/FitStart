@@ -117,7 +117,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ ONBOARDING ══════════ -->
 <div id="screen-onboard" class="screen active">
 <nav>
-  <div class="logo"><img src="assets/logo.png" alt="Blueprint" id="header-logo" class="logo-icon">BLUEPRINT</div>
+  <div class="logo"><img src="assets/logo.jpeg" alt="Blueprint" class="logo-icon">BLUEPRINT</div>
   <div class="nav-right">
     <div class="nav-pill">AI-Powered</div>
     <button class="nav-cta" onclick="document.getElementById('form-section').scrollIntoView({behavior:'smooth'})">Build My Plan</button>
@@ -297,7 +297,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ SIGNUP ══════════ -->
 <div id="screen-signup" class="screen">
 <nav>
-  <div class="logo"><img src="assets/logo.png" alt="Blueprint" id="header-logo" class="logo-icon">BLUEPRINT</div>
+  <div class="logo"><img src="assets/logo.jpeg" alt="Blueprint" class="logo-icon">BLUEPRINT</div>
   <div class="nav-right">
     <div class="nav-pill" id="su-tier-pill">Beginner Plan</div>
     <button class="nav-cta" style="background:transparent;border:1px solid var(--border);color:var(--off)" onclick="goBackToResults()">← Back to Plan</button>
@@ -358,7 +358,7 @@ self.addEventListener('fetch', e => {
 <!-- ══════════ DASHBOARD ══════════ -->
 <div id="screen-dash" class="screen">
 <nav>
-  <div class="logo"><img src="assets/logo.png" alt="Blueprint" id="header-logo" class="logo-icon">BLUEPRINT</div>
+  <div class="logo"><img src="assets/logo.jpeg" alt="Blueprint" class="logo-icon">BLUEPRINT</div>
   <div class="nav-right">
     <div class="streak-pill"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" style="flex-shrink:0"><path d="M12 2c0 0-4 4.5-4 9a4 4 0 0 0 8 0c0-4.5-4-9-4-9zm0 11a2 2 0 0 1-2-2c0-2 2-5 2-5s2 3 2 5a2 2 0 0 1-2 2z"/></svg> <span id="dash-streak">1</span>-day streak</div>
     <div class="user-pill"><div class="avatar" id="dash-avatar">?</div><span id="dash-username">You</span></div>
@@ -517,7 +517,7 @@ self.addEventListener('fetch', e => {
             <input type="number" id="weight-log-input" placeholder="lbs" step="0.1" min="50" max="600"
               style="width:80px;padding:8px 10px;background:var(--dark);border:1px solid var(--border2);border-radius:8px;font-size:0.95rem;color:var(--white);outline:none;text-align:center"
               onkeydown="if(event.key==='Enter')logBodyWeight()">
-            <button onclick="logBodyWeight()" style="padding:8px 14px;background:var(--gold);border:none;border-radius:8px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">LOG</button>
+            <button onclick="logBodyWeight()" style="padding:8px 14px;background:var(--gold-grad);border:none;border-radius:8px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">LOG</button>
           </div>
         </div>
         <div id="weight-current-display" style="font-size:0.82rem;color:var(--off);margin-bottom:12px"></div>
@@ -803,7 +803,7 @@ self.addEventListener('fetch', e => {
       <div style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;color:var(--dim);margin-bottom:14px" id="ai-preview-label"></div>
       <div id="ai-debug-status" style="display:none;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--orange);background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.2);border-radius:8px;padding:8px 12px;margin-bottom:12px;word-break:break-all;max-height:80px;overflow-y:auto"></div>
       <div id="ai-preview-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px"></div>
-      <button onclick="launchAIWorkout()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:12px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
+      <button onclick="launchAIWorkout()" style="width:100%;padding:16px;background:var(--gold-grad);border:none;border-radius:12px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
       <button onclick="regenerateAIWorkout()" style="width:100%;padding:12px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--dim);font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer;margin-top:8px">↺ GENERATE ANOTHER</button>
     </div>
 
@@ -817,7 +817,7 @@ self.addEventListener('fetch', e => {
       <div id="custom-selected" style="margin-top:16px;display:none">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;color:var(--gold);margin-bottom:10px">SELECTED — CONFIGURE SETS</div>
         <div id="custom-selected-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
-        <button onclick="launchCustomWorkout()" style="width:100%;padding:16px;background:var(--gold);border:none;border-radius:12px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
+        <button onclick="launchCustomWorkout()" style="width:100%;padding:16px;background:var(--gold-grad);border:none;border-radius:12px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
       </div>
     </div>
   </div>
@@ -837,7 +837,7 @@ self.addEventListener('fetch', e => {
         style="flex:1;padding:14px 16px;background:var(--card);border:1px solid var(--border2);border-radius:10px;font-family:'DM Mono',monospace;font-size:1.1rem;color:var(--white);outline:none;text-align:center;letter-spacing:1px"
         onkeydown="if(event.key==='Enter')submitBarcode()">
       <button onclick="submitBarcode()"
-        style="padding:14px 24px;background:var(--gold);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer;font-weight:700;white-space:nowrap">LOOK UP</button>
+        style="padding:14px 24px;background:var(--gold-grad);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer;font-weight:700;white-space:nowrap">LOOK UP</button>
     </div>
     <div id="barcode-lookup-status" style="font-size:0.72rem;margin-top:8px;color:var(--dim);text-align:center"></div>
   </div>
@@ -977,7 +977,7 @@ self.addEventListener('fetch', e => {
     <!-- Build mode: selected tray + begin button -->
     <div id="aes-build-tray" style="display:none;border-top:1px solid var(--border);padding:14px 16px;background:var(--dark)">
       <div id="aes-build-selected" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;min-height:28px"></div>
-      <button onclick="beginCustomWorkoutFromPicker()" id="aes-begin-btn" style="display:none;width:100%;padding:13px;background:var(--gold);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
+      <button onclick="beginCustomWorkoutFromPicker()" id="aes-begin-btn" style="display:none;width:100%;padding:13px;background:var(--gold-grad);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
     </div>
 
     <!-- Quick config overlay — sets/reps/rest before adding to list -->
@@ -1014,7 +1014,7 @@ self.addEventListener('fetch', e => {
         </div>
         <div style="display:flex;gap:10px">
           <button onclick="closeAesConfig()" style="flex:1;padding:13px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--dim);font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer">CANCEL</button>
-          <button onclick="confirmAesConfig()" style="flex:2;padding:13px;background:var(--gold);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">ADD TO WORKOUT</button>
+          <button onclick="confirmAesConfig()" style="flex:2;padding:13px;background:var(--gold-grad);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">ADD TO WORKOUT</button>
         </div>
       </div>
     </div>
@@ -1065,7 +1065,7 @@ self.addEventListener('fetch', e => {
         <button onclick="adjustSRE('rest',15)" style="padding:8px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:1rem;cursor:pointer">+15s</button>
       </div>
     </div>
-    <button onclick="applySetRepEdit()" style="width:100%;padding:13px;background:var(--gold);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">APPLY</button>
+    <button onclick="applySetRepEdit()" style="width:100%;padding:13px;background:var(--gold-grad);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">APPLY</button>
   </div>
 </div>
 
