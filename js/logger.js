@@ -36,17 +36,19 @@ function dashNav(view, btn) {
 function renderTodayWorkout() {
   const workout = DAY_WORKOUTS[TODAY_IDX];
   if (!workout) {
-    document.getElementById('d-wkt-name').textContent = 'Rest Day';
-    document.getElementById('d-wkt-sub').textContent = 'Recovery & mobility';
-    document.getElementById('wc-badge').textContent = '● Rest Day';
-    document.getElementById('wc-name').textContent = 'ACTIVE RECOVERY';
+    const wktName = document.getElementById('d-wkt-name'); if (wktName) wktName.textContent = 'Rest Day';
+    const wktSub = document.getElementById('d-wkt-sub'); if (wktSub) wktSub.textContent = 'Recovery & mobility';
+    const wcBadge = document.getElementById('wc-badge'); if (wcBadge) wcBadge.textContent = '● Rest Day';
+    const wcName = document.getElementById('wc-name'); if (wcName) wcName.textContent = 'ACTIVE RECOVERY';
     const startBtn = document.getElementById('today-start-btn');
-    startBtn.style.display = '';
-    startBtn.textContent = '+ LOG UNPLANNED WORKOUT';
-    startBtn.style.background = 'rgba(251,146,60,0.15)';
-    startBtn.style.border = '1px solid rgba(251,146,60,0.3)';
-    startBtn.style.color = 'var(--orange)';
-    startBtn.onclick = () => openUnplannedWorkout(TODAY_IDX);
+    if (startBtn) {
+      startBtn.style.display = '';
+      startBtn.textContent = '+ LOG UNPLANNED WORKOUT';
+      startBtn.style.background = 'rgba(251,146,60,0.15)';
+      startBtn.style.border = '1px solid rgba(251,146,60,0.3)';
+      startBtn.style.color = 'var(--orange)';
+      startBtn.onclick = () => openUnplannedWorkout(TODAY_IDX);
+    }
     document.getElementById('today-ex-list').innerHTML = '<div style="padding:16px;color:var(--off);font-size:0.86rem">Rest day — stretch, hydrate, recover. Or log an unplanned workout.</div>';
     const custBtn = document.getElementById('today-customize-btn');
     if (custBtn) custBtn.style.display = 'none';
