@@ -253,9 +253,9 @@ Jerky & Meat Snacks (per 1oz/28g unless noted):
   Slim Jim Original (1 stick/0.28oz): 40cal 2P 1C 3F | Slim Jim Giant: 150cal 6P 2C 13F
 
 Frozen Chicken & Prepared Meats:
-  Just Bare Lightly Breaded Chicken Breast Chunks (3oz/85g): 150cal 13P 10C 6F
-  Just Bare Lightly Breaded Chicken Breast Strips (3oz/85g): 150cal 14P 11C 5F
-  Just Bare Chicken Breast Nuggets (5 nuggets/84g): 150cal 13P 10C 6F
+  Just Bare Lightly Breaded Chicken Breast Chunks (3oz/84g): 160cal 16P 9C 7F
+  Just Bare Lightly Breaded Chicken Breast Strips (3oz/84g): 160cal 16P 9C 7F
+  Just Bare Chicken Breast Nuggets (5 nuggets/84g): 160cal 16P 9C 7F
   Tyson Chicken Nuggets (5 pieces/90g): 230cal 12P 15C 14F
   Tyson Grilled Chicken Breast Strips (3oz): 110cal 19P 2C 3F
   Perdue Chicken Breast Tenders (3oz): 170cal 12P 12C 8F
@@ -293,10 +293,9 @@ CRITICAL SERVING SIZE RULE: When a user specifies an exact weight (e.g. "2.68oz"
 3. Multiply ALL macros by that number
 4. Round to nearest whole number
 
-Example: Just Bare Chicken Nuggets are 150cal/13P/10C/6F per 3oz serving. If user says "7oz":
-  7oz ÷ 3oz = 2.33 servings
-  Cal: 150 × 2.33 = 350 | Pro: 13 × 2.33 = 30 | Carb: 10 × 2.33 = 23 | Fat: 6 × 2.33 = 14
-  Log: 350cal 30P 23C 14F
+Example: Just Bare Chicken Chunks are 160cal/16P/9C/7F per 3oz serving. If user says "7oz":
+  7/3 = 2.333 servings → 2.333 × 160 = 373cal | 2.333 × 16 = 37P | 2.333 × 9 = 21C | 2.333 × 7 = 16F
+  Log: 373cal 37P 21C 16F
 
 Example: Old Trapper Peppered Jerky is 70cal/11P/6C/0F per 1oz. If user says "2.68oz":
   2.68 × 70 = 188cal | 2.68 × 11 = 29P | 2.68 × 6 = 16C | 2.68 × 0 = 0F
