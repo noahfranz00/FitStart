@@ -754,15 +754,17 @@ function _processFoodLog(data) {
     // Show a confirmation card in the chat
     const totalCal = loggedItems.reduce((s, e) => s + e.cal, 0);
     const totalPro = loggedItems.reduce((s, e) => s + e.pro, 0);
+    const totalCarb = loggedItems.reduce((s, e) => s + (e.carb || 0), 0);
+    const totalFat = loggedItems.reduce((s, e) => s + (e.fat || 0), 0);
     const mealLabel = meal.charAt(0).toUpperCase() + meal.slice(1);
-    const itemList = loggedItems.map(e => `${e.name} — ${e.cal} cal, ${e.pro}g P`).join('<br>');
+    const itemList = loggedItems.map(e => `${e.name} — ${e.cal} cal, ${e.pro}g P, ${e.carb||0}g C, ${e.fat||0}g F`).join('<br>');
 
     const container = document.getElementById('coach-messages');
     const card = document.createElement('div');
     card.style.cssText = 'background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:14px;padding:12px 14px;font-size:0.78rem;color:var(--off);line-height:1.5;max-width:85%;align-self:flex-start;';
     card.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="color:var(--green);font-size:0.9rem">✓</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1.5px;color:var(--green)">LOGGED TO ${mealLabel.toUpperCase()}</span></div>
       <div style="font-size:0.76rem;color:var(--off);line-height:1.6">${itemList}</div>
-      <div style="margin-top:6px;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--green);opacity:0.8">${totalCal} cal · ${totalPro}g protein</div>`;
+      <div style="margin-top:6px;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--green);opacity:0.8">${totalCal} cal · ${totalPro}g protein · ${totalCarb}g carbs · ${totalFat}g fat</div>`;
     container.appendChild(card);
     container.scrollTop = container.scrollHeight;
   }
