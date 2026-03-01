@@ -590,34 +590,40 @@ CRITICAL RULES:
     }
   }
 
-  // Validate the parsed plan has required fields
-  if (!parsed || !parsed.schedule || !Array.isArray(parsed.schedule) || parsed.schedule.length < 7) {
-    throw new Error('AI returned an incomplete plan. Please try again — this is usually a one-time issue.');
+  // Validate the parsed plan has required fields — accept multiple possible key names
+  const sched = parsed.schedule || parsed.weekly_schedule || parsed.weeklySchedule || parsed.days || parsed.plan;
+  if (!parsed || !sched || !Array.isArray(sched) || sched.length < 7) {
+    throw new Error('AI returned an incomplete plan (missing schedule). Please try again.');
   }
 
   // Enrich exercises with DB data (sets/reps/rest overridden by AI, but pull muscle images etc.)
-  const schedule = parsed.schedule.map(day => {
-    if (day.type === 'rest') {
-      return { day: day.day, type: 'rest', badge: 'Rest', workout: 'Rest day. Recover, hydrate, and let your muscles rebuild.', exercises: [] };
-    }
-    const exercises = (day.exercises || []).map(ex => {
-      const db = getExerciseData(ex.name);
+  const schedule = sched.map(day => {
+    try {
+      if (day.type === 'rest' || !day.exercises || day.exercises.length === 0) {
+        return { day: day.day, type: 'rest', badge: day.badge || 'Rest', workout: 'Rest day. Recover, hydrate, and let your muscles rebuild.', exercises: [] };
+      }
+      const exercises = (day.exercises || []).map(ex => {
+        const db = getExerciseData(ex.name);
+        return {
+          name: ex.name,
+          sets: ex.sets || db.sets,
+          reps: ex.reps || db.reps,
+          rest: ex.rest || db.rest,
+          muscles: ex.muscles || db.muscles,
+          ytId: db.yt || null
+        };
+      });
       return {
-        name: ex.name,
-        sets: ex.sets || db.sets,
-        reps: ex.reps || db.reps,
-        rest: ex.rest || db.rest,
-        muscles: ex.muscles || db.muscles,
-        ytId: db.yt || null
+        day: day.day,
+        type: 'workout',
+        badge: day.badge,
+        workout: exercises.map(e => e.name + ' ' + e.sets + '×' + e.reps).join(', '),
+        exercises
       };
-    });
-    return {
-      day: day.day,
-      type: 'workout',
-      badge: day.badge,
-      workout: exercises.map(e => e.name + ' ' + e.sets + '×' + e.reps).join(', '),
-      exercises
-    };
+    } catch(mapErr) {
+      // If any single day fails to parse, make it a rest day rather than crashing
+      return { day: day.day || 'Day', type: 'rest', badge: 'Rest', workout: 'Rest day.', exercises: [] };
+    }
   });
 
   const nu = USER.nutrition;
@@ -631,7 +637,7 @@ CRITICAL RULES:
     mode: nu.mode,
     timeline: u.weeks + ' weeks',
     workout_philosophy: parsed.philosophy,
-    schedule
+    weekly_schedule: schedule
   };
 }
 
