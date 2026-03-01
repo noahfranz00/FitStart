@@ -304,6 +304,7 @@ Rules:
 - cal, pro, carb, fat must be integers
 - ONLY include FOODLOG when the user describes food they ate — NOT for general nutrition questions
 - The FOODLOG block must be the LAST thing in your response
+- CRITICAL: ONLY log food items mentioned in the user's CURRENT message. NEVER re-log items from earlier in the conversation. If the user says "I ate one egg", the FOODLOG should ONLY contain the egg — not anything they mentioned before. Previous items are already logged.
 - ACCURACY IS CRITICAL: Users trust these numbers for their diet. Getting macros wrong by even 50 calories per item compounds across meals. Always use the brand reference table or database results. If you don't have exact data for a branded item, say so and ask the user to check the label rather than guessing.
 - For common whole foods not in the brand table (chicken breast, rice, eggs, etc.), use standard USDA values.`;
 }
