@@ -747,21 +747,12 @@ function _processFoodLog(data) {
     renderMacros();
     refreshDashMacros();
 
-    // Show a confirmation card in the chat
-    const totalCal = loggedItems.reduce((s, e) => s + e.cal, 0);
-    const totalPro = loggedItems.reduce((s, e) => s + e.pro, 0);
-    const totalCarb = loggedItems.reduce((s, e) => s + (e.carb || 0), 0);
-    const totalFat = loggedItems.reduce((s, e) => s + (e.fat || 0), 0);
+    // Show a confirmation card in the chat — ONLY the items just logged
     const mealLabel = meal.charAt(0).toUpperCase() + meal.slice(1);
     const itemList = loggedItems.map(e => 
-      `<div style="padding:6px 0;border-bottom:1px solid rgba(74,222,128,0.08)">
-        <div style="font-weight:600;color:var(--off);margin-bottom:3px">${e.name}</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-family:'DM Mono',monospace;font-size:0.68rem">
-          <span style="color:var(--green)">${e.cal} cal</span>
-          <span style="color:#f472b6">${e.pro}g P</span>
-          <span style="color:#60a5fa">${e.carb||0}g C</span>
-          <span style="color:#fbbf24">${e.fat||0}g F</span>
-        </div>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
+        <span style="color:var(--off);font-weight:600">${e.name}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--green);white-space:nowrap;margin-left:12px">${e.cal} cal · ${e.pro}g P · ${e.carb||0}g C · ${e.fat||0}g F</span>
       </div>`
     ).join('');
 
@@ -769,13 +760,7 @@ function _processFoodLog(data) {
     const card = document.createElement('div');
     card.style.cssText = 'background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:14px;padding:12px 14px;font-size:0.78rem;color:var(--off);line-height:1.5;max-width:85%;align-self:flex-start;';
     card.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="color:var(--green);font-size:0.9rem">✓</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1.5px;color:var(--green)">LOGGED TO ${mealLabel.toUpperCase()}</span></div>
-      ${itemList}
-      <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(74,222,128,0.15);display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:700">
-        <span style="color:var(--green)">${totalCal} cal</span>
-        <span style="color:#f472b6">${totalPro}g P</span>
-        <span style="color:#60a5fa">${totalCarb}g C</span>
-        <span style="color:#fbbf24">${totalFat}g F</span>
-      </div>`;
+      ${itemList}`;
     container.appendChild(card);
     container.scrollTop = container.scrollHeight;
   }
