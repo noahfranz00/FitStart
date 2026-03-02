@@ -513,6 +513,12 @@ async function generatePlan() {
   const nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
   USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
 
+  // Auto-calculate water goal: half bodyweight in oz, capped at 128oz (1 gallon)
+  if (!lsGet('fs_water_goal_custom')) {
+    const autoWaterOz = Math.min(Math.round(weight / 2), 128);
+    lsSet('fs_water_goal', autoWaterOz);
+  }
+
   document.getElementById('generateBtn').disabled = true;
   document.querySelector('.main-layout').style.display = 'none';
   document.getElementById('hero-section').style.display = 'none';
