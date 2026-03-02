@@ -1032,10 +1032,12 @@ function initDashboard() {
 
   loadFromStorage();
 
-  // Auto-calculate water goal from bodyweight if user hasn't manually set one
+  // Auto-calculate water goal from bodyweight: half bodyweight in oz, max 128 (1 gallon)
   if (USER && USER.weight && !lsGet('fs_water_goal_custom')) {
     const autoWaterOz = Math.min(Math.round(USER.weight / 2), 128);
-    lsSet('fs_water_goal', autoWaterOz);
+    if (lsGet('fs_water_goal') !== autoWaterOz) {
+      lsSet('fs_water_goal', autoWaterOz);
+    }
   }
 
   TARGETS = {
