@@ -1144,3 +1144,124 @@ input::placeholder { color: var(--dim) !important; }
 .macro-ring-val { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:0.85rem; color:var(--white); line-height:1; }
 .macro-ring-label { font-size:0.55rem; font-weight:700; letter-spacing:1.5px; color:var(--dim); margin-top:4px; text-transform:uppercase; }
 .macro-ring-tgt { font-size:0.62rem; color:var(--dim); margin-top:1px; }
+
+/* ═══════════════════════════════════════════
+   FEATURE ADDITIONS: Last Session, Progress Photos, Transitions
+   ═══════════════════════════════════════════ */
+
+/* Last Session Panel (Feature 1) */
+.last-session-card {
+  background: linear-gradient(135deg, rgba(96,165,250,0.06), rgba(96,165,250,0.02));
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.lsc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.lsc-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+.lsc-date {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--dim);
+}
+.lsc-sets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lsp-set {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(96,165,250,0.08);
+  border: 1px solid rgba(96,165,250,0.15);
+  border-radius: 7px;
+  padding: 5px 10px;
+  min-width: 56px;
+}
+.lsp-set-num {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 2px;
+}
+.lsp-set-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--blue);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lsp-unit {
+  font-size: 0.6rem;
+  opacity: 0.7;
+}
+
+/* Progress Photos (Feature 4) */
+.pp-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.pp-thumb {
+  position: relative;
+  aspect-ratio: 3/4;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--dark);
+  border: 1px solid var(--border);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.pp-thumb:hover {
+  transform: scale(1.02);
+  border-color: var(--gold);
+}
+.pp-date {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 6px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.75));
+  font-size: 0.6rem;
+  font-family: 'DM Mono', monospace;
+  color: rgba(255,255,255,0.85);
+  text-align: center;
+}
+
+/* View transition - ensure views don't overflow during animation */
+.view {
+  will-change: opacity, transform;
+}
+
+/* Smooth card entrance animation */
+@keyframes cardEntrance {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.prog-card {
+  animation: cardEntrance 0.25s ease forwards;
+}
+
+/* Number counter animation support */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sbox-val {
+  animation: countUp 0.3s ease forwards;
+}
