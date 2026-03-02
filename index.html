@@ -478,6 +478,68 @@ self.addEventListener('fetch', e => {
 
       <!-- MEAL CATEGORIES (MFP-style) -->
       <div id="meal-categories"></div>
+
+      <!-- MY RECIPES BUTTON -->
+      <div style="margin-top:16px;padding:0 2px">
+        <button onclick="openRecipeBook()" style="width:100%;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span style="font-size:1.1rem">📋</span> MY RECIPES
+        </button>
+      </div>
+    </div>
+
+    <!-- RECIPE BOOK MODAL -->
+    <div id="recipe-book-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;max-width:520px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;flex:1">📋 MY RECIPES</div>
+          <button onclick="closeRecipeBook()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:1.2rem">✕</button>
+        </div>
+        <div id="recipe-list" style="flex:1;overflow-y:auto"></div>
+        <div style="padding:14px 20px;border-top:1px solid var(--border)">
+          <button onclick="openCreateRecipe()" style="width:100%;padding:12px;background:rgba(212,165,32,0.15);border:1px solid rgba(212,165,32,0.3);border-radius:10px;color:#D4A520;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:0.5px">+ CREATE NEW RECIPE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATE RECIPE MODAL -->
+    <div id="create-recipe-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.9);align-items:center;justify-content:center;padding:16px">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;max-width:520px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;flex:1">CREATE RECIPE</div>
+          <button onclick="closeCreateRecipe()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:1.2rem">✕</button>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:16px 20px">
+          <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Recipe Name</label>
+          <input type="text" id="cr-name" placeholder="e.g. High Protein McGriddle Muffins" style="width:100%;margin:6px 0 16px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;font-family:inherit;outline:none">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+            <div>
+              <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Servings</label>
+              <input type="number" id="cr-servings" value="1" min="1" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;font-family:inherit;outline:none">
+            </div>
+            <div>
+              <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Total Weight (g) <span style="font-weight:400;font-size:0.62rem">optional</span></label>
+              <input type="number" id="cr-total-weight" placeholder="auto-calc" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;font-family:inherit;outline:none">
+            </div>
+          </div>
+
+          <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Add Ingredients</label>
+          <div style="display:flex;gap:8px;margin:8px 0 4px">
+            <input type="text" id="cr-ing-name" placeholder="Ingredient name" style="flex:2;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.84rem;font-family:inherit;outline:none">
+            <input type="number" id="cr-ing-grams" placeholder="g" style="width:70px;padding:10px 8px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.84rem;font-family:inherit;outline:none;text-align:center">
+            <button id="cr-ing-add-btn" onclick="addCRIngredient()" style="padding:10px 14px;background:rgba(212,165,32,0.15);border:1px solid rgba(212,165,32,0.3);border-radius:8px;color:#D4A520;font-weight:700;font-size:0.78rem;cursor:pointer;white-space:nowrap">+ ADD</button>
+          </div>
+          <div style="font-size:0.65rem;color:var(--dim);margin-bottom:12px;padding-left:2px">Each ingredient is looked up in the USDA database for verified macros</div>
+
+          <div id="cr-ingredient-list" style="background:var(--card);border-radius:10px;padding:0 12px;margin-bottom:16px"></div>
+
+          <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Notes <span style="font-weight:400;font-size:0.62rem">optional</span></label>
+          <textarea id="cr-notes" placeholder="Cooking instructions, tips..." rows="2" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.84rem;font-family:inherit;outline:none;resize:vertical"></textarea>
+        </div>
+        <div style="padding:14px 20px;border-top:1px solid var(--border)">
+          <button onclick="saveNewRecipe()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B8900B,#D4A520);border:none;border-radius:10px;color:#000;font-weight:700;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px">SAVE RECIPE</button>
+        </div>
+      </div>
     </div>
 
     <!-- PROGRESS -->
