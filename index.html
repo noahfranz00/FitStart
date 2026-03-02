@@ -45,25 +45,24 @@ self.addEventListener('fetch', e => {
     ctx.fillStyle = bg;
     roundRect(ctx, 0, 0, 512, 512, 90);
     ctx.fill();
-    // Dumbbell shape in green
-    ctx.fillStyle = '#D4A520';
-    ctx.shadowColor = '#D4A520'; ctx.shadowBlur = 20;
-    // Left plate
-    roundRect(ctx, 52, 188, 80, 136, 20); ctx.fill();
-    // Left collar
-    roundRect(ctx, 128, 208, 48, 96, 12); ctx.fill();
-    // Bar
-    roundRect(ctx, 172, 238, 168, 36, 8); ctx.fill();
-    // Right collar
-    roundRect(ctx, 336, 208, 48, 96, 12); ctx.fill();
-    // Right plate
-    roundRect(ctx, 380, 188, 80, 136, 20); ctx.fill();
-    // "FS" text
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 72px system-ui, -apple-system, sans-serif';
+    // Metallic gold gradient for the B
+    const goldGrad = ctx.createLinearGradient(120, 80, 400, 430);
+    goldGrad.addColorStop(0, '#B8900B');
+    goldGrad.addColorStop(0.3, '#D4A520');
+    goldGrad.addColorStop(0.5, '#F0D060');
+    goldGrad.addColorStop(0.7, '#D4A520');
+    goldGrad.addColorStop(1, '#B8900B');
+    // Draw bold "B" letter
+    ctx.fillStyle = goldGrad;
+    ctx.font = 'bold 380px "Helvetica Neue", "Arial Black", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('FS', 256, 440);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('B', 265, 270);
+    // Subtle gold glow
+    ctx.shadowColor = '#D4A520';
+    ctx.shadowBlur = 30;
+    ctx.fillText('B', 265, 270);
+    ctx.shadowBlur = 0;
 
     function roundRect(ctx, x, y, w, h, r) {
       ctx.beginPath();
