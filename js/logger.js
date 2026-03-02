@@ -512,6 +512,12 @@ function addWater(oz) {
   renderWater();
 }
 
+function subtractWater(oz) {
+  const current = getWaterOz(TODAY_IDX);
+  setWaterOz(TODAY_IDX, Math.max(0, current - oz));
+  renderWater();
+}
+
 function undoWater() {
   const current = getWaterOz(nutDay);
   setWaterOz(nutDay, Math.max(0, current - 8));
@@ -553,7 +559,7 @@ function renderWater() {
 function renderDashWater() {
   WATER_GOAL = getWaterGoal();
   const oz = getWaterOz(TODAY_IDX);
-  const pct = Math.min(oz / WATER_GOAL, 1);
+  const pct = WATER_GOAL > 0 ? Math.min(oz / WATER_GOAL, 1) : 0;
   const circumference = 263.9;
   const offset = circumference * (1 - pct);
   const pctInt = Math.round(pct * 100);
@@ -575,7 +581,7 @@ function renderDashWater() {
     ringEl.setAttribute('stroke', ringColor);
   }
   if (ozEl) ozEl.textContent = oz;
-  if (goalEl) goalEl.textContent = WATER_GOAL + ' oz / day';
+  if (goalEl) goalEl.textContent = 'Goal: ' + WATER_GOAL + ' oz / day';
   if (pctEl) {
     pctEl.style.color = ringColor;
     if (pct >= 1) pctEl.textContent = '✓ Goal reached!';
