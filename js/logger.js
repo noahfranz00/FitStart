@@ -589,13 +589,14 @@ function renderMealCategories() {
       </div>`
     ).join('');
     const totalRow = entries.length ? `<div class="meal-cat-total"><span>${totalPro}g protein</span><span>${totalCarb}g carbs</span><span>${totalFat}g fat</span><span style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${totalCal} cal</span></div>` : '';
-    return `<div class="meal-cat-card">
+    return `<div class="meal-cat-card" onclick="openCoachForMeal('${cat.id}','${cat.label}')" style="cursor:pointer">
       <div class="meal-cat-header">
         <div class="meal-cat-left" style="gap:10px;flex:1">
           <div><div class="meal-cat-name">${cat.label}</div>${totalCal>0?`<div class="meal-cat-cals">${totalCal} cal</div>`:''}</div>
         </div>
+        <div style="font-size:0.7rem;color:var(--gold);font-weight:600;letter-spacing:0.5px">+ LOG FOOD</div>
       </div>
-      ${entryRows ? `<div class="meal-cat-entries">${entryRows}${totalRow}</div>` : '<div style="padding:8px 12px;font-size:0.75rem;color:var(--dim)">No items logged. Use AI Coach to log food.</div>'}
+      ${entryRows ? `<div class="meal-cat-entries" onclick="event.stopPropagation()">${entryRows}${totalRow}</div>` : '<div style="padding:8px 12px;font-size:0.75rem;color:var(--dim)">Tap to log via AI Coach</div>'}
     </div>`;
   }).join('');
 }
@@ -603,6 +604,22 @@ function renderMealCategories() {
 function deleteCatMeal(catId, idx) {
   getMealCatEntries(nutDay, catId).splice(idx, 1);
   renderMealCategories(); renderMacros(); saveToStorage();
+}
+
+function openCoachForMeal(catId, catLabel) {
+  // Set the pending meal context so AI Coach logs to this meal
+  window._pendingMealCat = catId;
+  window._pendingMealLabel = catLabel;
+  // Navigate to AI Coach
+  dashNav('coach');
+  // Focus the input and show a hint
+  setTimeout(function() {
+    var input = document.getElementById('coach-input');
+    if (input) {
+      input.placeholder = 'What did you have for ' + catLabel.toLowerCase() + '?';
+      input.focus();
+    }
+  }, 100);
 }
 
 // ── FOOD MODAL ──
@@ -2695,7 +2712,7 @@ function showCustomBuilder() {
   if (document.getElementById('custom-ex-search')) document.getElementById('custom-ex-search').value = '';
   renderCustomExList();
   renderCustomSelected();
-  const cats = [...new Set(Object.values(EXERCISE_DB).map(e => e.category))].sort();
+  const cats = EXERCISE_CATEGORIES;
   document.getElementById('custom-cat-filters').innerHTML =
     ['All', ...cats].map(c =>
       `<button onclick="filterCustomExCat('${c}',this)" class="custom-cat-btn" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:${c==='All'?'var(--gold)':'var(--card)'};color:${c==='All'?'var(--black)':'var(--off)'};font-size:0.72rem;cursor:pointer">${c}</button>`
