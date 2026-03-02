@@ -490,6 +490,40 @@ async function _sendCoachMsg(text, image) {
       const foodQuery = _extractFoodQuery(text);
       const servingInfo = _extractServingAmount(text);
       if (foodQuery) {
+        // Check user's recipe book FIRST — these have verified macros
+        const recipeMatch = typeof findRecipeByName === 'function' ? findRecipeByName(foodQuery) : null;
+        if (recipeMatch) {
+          const rm = calcRecipeMacros(recipeMatch);
+          // Determine amount from text
+          let recipeFactor = 1 / recipeMatch.servings; // default 1 serving
+          const gramMatch = text.match(/(\d+)\s*g(?:ram)?s?\b/i);
+          const servMatch = text.match(/(\d+(?:\.\d+)?)\s*serving/i);
+          if (gramMatch) {
+            recipeFactor = parseFloat(gramMatch[1]) / recipeMatch.totalWeightG;
+          } else if (servMatch) {
+            recipeFactor = parseFloat(servMatch[1]) / recipeMatch.servings;
+          }
+          autoLogContext = `\n\n[AUTO-LOGGED FROM RECIPE: "${recipeMatch.name}" — ${Math.round(rm.totalCal * recipeFactor)} cal, ${Math.round(rm.totalPro * recipeFactor)}g P, ${Math.round(rm.totalCarb * recipeFactor)}g C, ${Math.round(rm.totalFat * recipeFactor)}g F. These macros are USDA-verified. Confirm this was logged and show the macros. Include a FOODLOG block with these exact values.]`;
+          // Auto-log it
+          const mealCat = window._pendingMealCat || _detectMealFromText(text) || 'other';
+          const entry = {
+            name: recipeMatch.name,
+            cal: Math.round(rm.totalCal * recipeFactor),
+            pro: Math.round(rm.totalPro * recipeFactor),
+            carb: Math.round(rm.totalCarb * recipeFactor),
+            fat: Math.round(rm.totalFat * recipeFactor),
+            source: 'recipe'
+          };
+          if (!mealLogs[TODAY_IDX]) mealLogs[TODAY_IDX] = {};
+          if (!mealLogs[TODAY_IDX][mealCat]) mealLogs[TODAY_IDX][mealCat] = [];
+          mealLogs[TODAY_IDX][mealCat].push(entry);
+          saveToStorage();
+          refreshDashMacros();
+          if (nutDay === TODAY_IDX) { renderMacros(); renderMealCategories(); }
+          autoLogged = true;
+        }
+
+        if (!autoLogged) {
         try {
           // Search USDA first, then OFF as fallback
           let bestMatch = null;
@@ -556,6 +590,7 @@ async function _sendCoachMsg(text, image) {
           console.log('Auto-log pre-fetch failed:', e.message);
           // Fall through to normal AI flow with FOODLOG
         }
+        } // end if (!autoLogged) — recipe was not found
       }
     }
 
@@ -575,6 +610,11 @@ async function _sendCoachMsg(text, image) {
       return msg;
     });
     let systemPrompt = _getCoachSystemPrompt();
+    // Add user's saved recipes to context
+    if (typeof getRecipeContext === 'function') {
+      systemPrompt += getRecipeContext();
+      systemPrompt += '\n\nWhen the user mentions a saved recipe, use the EXACT macros listed above — these are USDA-verified. Do NOT estimate or recalculate. If they say how many grams or servings, multiply the per-serving or per-gram values accordingly.';
+    }
     if (autoLogContext) {
       systemPrompt += autoLogContext;
     }
