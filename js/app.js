@@ -1035,10 +1035,12 @@ function initDashboard() {
   // Auto-calculate water goal from bodyweight: half bodyweight in oz, max 128 (1 gallon)
   if (USER && USER.weight && !lsGet('fs_water_goal_custom')) {
     const autoWaterOz = Math.min(Math.round(USER.weight / 2), 128);
-    if (lsGet('fs_water_goal') !== autoWaterOz) {
-      lsSet('fs_water_goal', autoWaterOz);
-    }
+    lsSet('fs_water_goal', autoWaterOz);
   }
+  // Always set dashboard water goal text immediately
+  const _wg = lsGet('fs_water_goal') || (USER && USER.weight ? Math.min(Math.round(USER.weight / 2), 128) : 64);
+  const _wgEl = document.getElementById('dash-water-goal');
+  if (_wgEl) _wgEl.textContent = 'Goal: ' + _wg + ' oz / day';
 
   TARGETS = {
     cal:  USER.nutrition.calories,
