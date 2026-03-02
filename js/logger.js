@@ -43,10 +43,10 @@ function renderTodayWorkout() {
     const startBtn = document.getElementById('today-start-btn');
     if (startBtn) {
       startBtn.style.display = '';
-      startBtn.textContent = '+ LOG UNPLANNED WORKOUT';
-      startBtn.style.background = 'rgba(251,146,60,0.15)';
-      startBtn.style.border = '1px solid rgba(251,146,60,0.3)';
-      startBtn.style.color = 'var(--orange)';
+      startBtn.textContent = '+ ADD UNPLANNED WORKOUT';
+      startBtn.style.background = 'linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B)';
+      startBtn.style.border = 'none';
+      startBtn.style.color = '#111';
       startBtn.onclick = () => openUnplannedWorkout(TODAY_IDX);
     }
     document.getElementById('today-ex-list').innerHTML = '<div style="padding:16px;color:var(--off);font-size:0.86rem">Rest day — stretch, hydrate, recover. Or log an unplanned workout.</div>';
@@ -295,9 +295,9 @@ function _updateBuildTray() {
     if (beginBtn) beginBtn.style.display = 'none';
   } else {
     sel.innerHTML = _buildPickerSelected.map(function(e, i){
-      return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:6px;padding:3px 8px;font-size:0.7rem;color:var(--gold);font-family:\'Bebas Neue\',sans-serif;letter-spacing:0.5px">'
+      return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:6px;padding:3px 8px;font-size:0.7rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:\'Bebas Neue\',sans-serif;letter-spacing:0.5px">'
         + e.name + ' ' + e.sets + '×' + e.reps
-        + '<button onclick="_removeBuildEx('+i+')" style="background:none;border:none;color:var(--gold);cursor:pointer;padding:0;margin-left:2px;font-size:0.75rem;opacity:0.7">✕</button></span>';
+        + '<button onclick="_removeBuildEx('+i+')" style="background:none;border:none;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;cursor:pointer;padding:0;margin-left:2px;font-size:0.75rem;opacity:0.7">✕</button></span>';
     }).join('');
     if (beginBtn) beginBtn.style.display = 'block';
   }
@@ -588,7 +588,7 @@ function renderMealCategories() {
         <button class="mer-del" onclick="deleteCatMeal('${cat.id}',${i})">✕</button>
       </div>`
     ).join('');
-    const totalRow = entries.length ? `<div class="meal-cat-total"><span>${totalPro}g protein</span><span>${totalCarb}g carbs</span><span>${totalFat}g fat</span><span style="color:var(--gold)">${totalCal} cal</span></div>` : '';
+    const totalRow = entries.length ? `<div class="meal-cat-total"><span>${totalPro}g protein</span><span>${totalCarb}g carbs</span><span>${totalFat}g fat</span><span style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${totalCal} cal</span></div>` : '';
     return `<div class="meal-cat-card">
       <div class="meal-cat-header">
         <div class="meal-cat-left" style="gap:10px;flex:1">
@@ -684,12 +684,12 @@ function renderCustomFoodsInModal() {
   const resultsEl = document.getElementById('food-modal-results');
   if (!customs.length) {
     resultsEl.innerHTML = `<div class="food-modal-empty">No custom foods saved yet.<br><br>
-      <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:10px;color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">+ CREATE CUSTOM FOOD</button>
+      <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:10px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">+ CREATE CUSTOM FOOD</button>
     </div>`;
     return;
   }
   resultsEl.innerHTML = `<div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end">
-    <button onclick="openManualFoodEntry()" style="padding:8px 14px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:8px;color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer">+ NEW CUSTOM FOOD</button>
+    <button onclick="openManualFoodEntry()" style="padding:8px 14px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:8px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer">+ NEW CUSTOM FOOD</button>
   </div>` +
   customs.map((item, i) =>
     `<div class="food-modal-item" onclick="openServingModal(${i}, 'custom')">
@@ -922,7 +922,7 @@ function renderFoodResults(results, resultsEl) {
   }
   resultsEl.innerHTML = results.slice(0, 30).map((item, i) => {
     const srcBadge = item._source === 'usda_branded'
-      ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(212,165,32,0.1);color:var(--gold);border:1px solid rgba(212,165,32,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
+      ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(212,165,32,0.1);background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;border:1px solid rgba(212,165,32,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
       : item._source === 'usda_foundation'
       ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(96,165,250,0.1);color:var(--blue);border:1px solid rgba(96,165,250,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
       : '';
@@ -1049,8 +1049,8 @@ async function searchFoodModal() {
       + '<div style="font-size:1.2rem;margin-bottom:8px">\uD83D\uDD0D</div>'
       + 'No results for "<strong>' + rawQuery + '</strong>".<br><br>'
       + 'Try a shorter term like <em>chicken breast</em> or <em>white rice</em>, or add it manually.<br><br>'
-      + '<button onclick="searchFoodModal()" style="padding:10px 20px;background:var(--card);border:1px solid var(--border2);border-radius:10px;color:var(--gold);font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">\u21BA RETRY</button>'
-      + ' <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:10px;color:var(--gold);font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">+ ADD CUSTOM</button>'
+      + '<button onclick="searchFoodModal()" style="padding:10px 20px;background:var(--card);border:1px solid var(--border2);border-radius:10px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">\u21BA RETRY</button>'
+      + ' <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:10px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">+ ADD CUSTOM</button>'
       + '</div>';
   }
 }
@@ -1687,9 +1687,9 @@ function renderProgram() {
     const wDeload = isDeloadWeek(w);
     const phaseTag = wDeload
       ? '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(251,146,60,0.1);color:var(--orange);padding:2px 7px;border-radius:4px;border:1px solid rgba(251,146,60,0.2)">⚡ DELOAD</span>'
-      : '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(212,165,32,0.07);color:var(--gold);padding:2px 7px;border-radius:4px;border:1px solid rgba(212,165,32,0.15)">'+wPhase.name+'</span>';
+      : '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(212,165,32,0.07);background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:2px 7px;border-radius:4px;border:1px solid rgba(212,165,32,0.15)">'+wPhase.name+'</span>';
     const badge = isDone
-      ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--gold-dim);color:var(--gold);padding:3px 9px;border-radius:5px">✓ Done</span>'
+      ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--gold-dim);background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:3px 9px;border-radius:5px">✓ Done</span>'
       : isCurrent
       ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--orange-dim);color:var(--orange);padding:3px 9px;border-radius:5px">In Progress</span>'
       : '';
@@ -1896,7 +1896,7 @@ function loadExercise(idx) {
     } else {
       const ph = getTrainingPhase(CURRENT_WEEK);
       phBadgeEl.textContent = `${ph.name} PHASE · ${ph.intensityLabel}`;
-      phBadgeEl.style.cssText = 'display:block;background:rgba(212,165,32,0.07);border:1px solid rgba(212,165,32,0.2);border-radius:8px;padding:8px 14px;font-size:0.75rem;color:var(--gold);margin-bottom:10px';
+      phBadgeEl.style.cssText = 'display:block;background:rgba(212,165,32,0.07);border:1px solid rgba(212,165,32,0.2);border-radius:8px;padding:8px 14px;font-size:0.75rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px';
     }
   }
   document.getElementById('wo-muscles-tag').textContent = `Muscles: ${ex.muscles || db.muscles}`;
@@ -2495,7 +2495,7 @@ function _renderAIPreviewList() {
           <div style="font-size:0.75rem;color:var(--dim);margin-top:2px">${ex.muscles}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;color:var(--gold)">${ex.sets} × ${ex.reps}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${ex.sets} × ${ex.reps}</div>
           <div style="font-size:0.7rem;color:var(--dim)">REST ${ex.rest}s</div>
         </div>
       </div>
@@ -2584,7 +2584,7 @@ function _aiSwapExercise(idx) {
         ${candidates.slice(0, 15).map(([name, db]) =>
           `<div onclick="_aiDoSwap(${idx},'${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
             <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-            <div style="font-size:0.68rem;color:var(--gold)">${db.sets}×${db.reps}</div>
+            <div style="font-size:0.68rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${db.sets}×${db.reps}</div>
           </div>`
         ).join('')}
       </div>
@@ -2603,7 +2603,7 @@ function _aiFilterSwap(idx, query) {
   list.innerHTML = results.map(([name, db]) =>
     `<div onclick="_aiDoSwap(${idx},'${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
       <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-      <div style="font-size:0.68rem;color:var(--gold)">${db.sets}×${db.reps}</div>
+      <div style="font-size:0.68rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${db.sets}×${db.reps}</div>
     </div>`
   ).join('') || '<div style="padding:12px;color:var(--dim);font-size:0.78rem;text-align:center">No matches</div>';
 }
@@ -2640,7 +2640,7 @@ function _aiAddExercise() {
         ${candidates.slice(0, 20).map(([name, db]) =>
           `<div onclick="_aiDoAdd('${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
             <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-            <div style="color:var(--gold);font-size:1rem;font-weight:700">+</div>
+            <div style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1rem;font-weight:700">+</div>
           </div>`
         ).join('')}
       </div>
@@ -2660,7 +2660,7 @@ function _aiFilterAdd(query) {
   list.innerHTML = results.map(([name, db]) =>
     `<div onclick="_aiDoAdd('${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
       <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-      <div style="color:var(--gold);font-size:1rem;font-weight:700">+</div>
+      <div style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1rem;font-weight:700">+</div>
     </div>`
   ).join('') || '<div style="padding:12px;color:var(--dim);font-size:0.78rem;text-align:center">No matches</div>';
 }
@@ -2853,9 +2853,9 @@ function renderTodayMiniLog() {
   el.innerHTML = last5.map(e =>
     `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 18px;border-bottom:1px solid rgba(255,255,255,0.04)">
       <div style="font-size:0.84rem;color:var(--off)">${e.name}</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:var(--gold)">${e.cal} cal</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem" class="gm">${e.cal} cal</div>
     </div>`
-  ).join('') + (entries.length > 5 ? `<div style="padding:8px 18px;font-size:0.75rem;color:var(--dim);text-align:center">+${entries.length-5} more · <a onclick="dashNav('nutrition',document.querySelector('.sb-btn:nth-child(4)'))" style="color:var(--gold);cursor:pointer">View all in Nutrition</a></div>` : '');
+  ).join('') + (entries.length > 5 ? `<div style="padding:8px 18px;font-size:0.75rem;color:var(--dim);text-align:center">+${entries.length-5} more · <a onclick="dashNav('nutrition',document.querySelector('.sb-btn:nth-child(4)'))" style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;cursor:pointer">View all in Nutrition</a></div>` : '');
 }
 
 function renderEcList() {
