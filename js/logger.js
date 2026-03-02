@@ -3230,3 +3230,303 @@ document.addEventListener('visibilitychange', function() {
     }
   }
 });
+
+
+// ═══════════════════════════════════════════
+// RECIPE BOOK — Custom recipes with USDA-verified macros
+// ═══════════════════════════════════════════
+// Storage: fs_recipes = [{id, name, ingredients:[{name,grams,cal100,pro100,carb100,fat100}], totalWeightG, servings, notes}]
+
+function getRecipes() { return lsGet('fs_recipes') || []; }
+function saveRecipes(recipes) { lsSet('fs_recipes', recipes); }
+
+function openRecipeBook() {
+  document.getElementById('recipe-book-modal').style.display = 'flex';
+  renderRecipeList();
+}
+function closeRecipeBook() {
+  document.getElementById('recipe-book-modal').style.display = 'none';
+}
+
+function renderRecipeList() {
+  const recipes = getRecipes();
+  const el = document.getElementById('recipe-list');
+  if (!el) return;
+  if (!recipes.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim)">No recipes yet. Create your first recipe below.</div>';
+    return;
+  }
+  el.innerHTML = recipes.map(function(r, i) {
+    const macros = calcRecipeMacros(r);
+    return `<div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--white);font-size:0.92rem">${r.name}</div>
+        <div style="font-size:0.75rem;color:var(--dim);margin-top:2px">
+          ${r.servings} serving${r.servings!==1?'s':''} · Per serving: ${macros.calPerServing} cal · ${macros.proPerServing}p · ${macros.carbPerServing}c · ${macros.fatPerServing}f
+        </div>
+        <div style="font-size:0.7rem;color:var(--dim);margin-top:1px">${r.ingredients.length} ingredient${r.ingredients.length!==1?'s':''} · ${Math.round(r.totalWeightG)}g total</div>
+      </div>
+      <button onclick="logRecipeServing(${i})" style="padding:6px 14px;background:rgba(212,165,32,0.15);border:1px solid rgba(212,165,32,0.3);border-radius:8px;color:#D4A520;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">+ LOG</button>
+      <button onclick="viewRecipe(${i})" style="padding:6px 10px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--off);font-size:0.72rem;cursor:pointer">View</button>
+      <button onclick="deleteRecipe(${i})" style="padding:6px 8px;background:none;border:none;color:#ef4444;font-size:0.8rem;cursor:pointer">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function calcRecipeMacros(recipe) {
+  let totalCal = 0, totalPro = 0, totalCarb = 0, totalFat = 0;
+  for (const ing of recipe.ingredients) {
+    const factor = ing.grams / 100;
+    totalCal += (ing.cal100 || 0) * factor;
+    totalPro += (ing.pro100 || 0) * factor;
+    totalCarb += (ing.carb100 || 0) * factor;
+    totalFat += (ing.fat100 || 0) * factor;
+  }
+  const s = recipe.servings || 1;
+  return {
+    totalCal: Math.round(totalCal), totalPro: Math.round(totalPro),
+    totalCarb: Math.round(totalCarb), totalFat: Math.round(totalFat),
+    calPerServing: Math.round(totalCal / s), proPerServing: Math.round(totalPro / s),
+    carbPerServing: Math.round(totalCarb / s), fatPerServing: Math.round(totalFat / s),
+    calPerGram: totalCal / (recipe.totalWeightG || 1),
+    proPerGram: totalPro / (recipe.totalWeightG || 1),
+    carbPerGram: totalCarb / (recipe.totalWeightG || 1),
+    fatPerGram: totalFat / (recipe.totalWeightG || 1)
+  };
+}
+
+function logRecipeServing(idx) {
+  const recipes = getRecipes();
+  const r = recipes[idx];
+  if (!r) return;
+  const macros = calcRecipeMacros(r);
+  // Ask for amount
+  const amount = prompt(`Log "${r.name}"\n\nEnter servings (1 serving = ${Math.round(r.totalWeightG / r.servings)}g)\nor enter grams like "180g":`, '1');
+  if (!amount) return;
+  let factor;
+  if (amount.toLowerCase().includes('g')) {
+    const grams = parseFloat(amount);
+    if (!grams || grams <= 0) return;
+    factor = grams / r.totalWeightG;
+  } else {
+    const servings = parseFloat(amount);
+    if (!servings || servings <= 0) return;
+    factor = servings / r.servings;
+  }
+  const entry = {
+    name: r.name + (factor !== 1/r.servings ? '' : ''),
+    cal: Math.round(macros.totalCal * factor),
+    pro: Math.round(macros.totalPro * factor),
+    carb: Math.round(macros.totalCarb * factor),
+    fat: Math.round(macros.totalFat * factor),
+    source: 'recipe'
+  };
+  // Log to current meal category (default to 'other')
+  const cat = window._pendingMealCat || 'other';
+  if (!mealLogs[TODAY_IDX]) mealLogs[TODAY_IDX] = {};
+  if (!mealLogs[TODAY_IDX][cat]) mealLogs[TODAY_IDX][cat] = [];
+  mealLogs[TODAY_IDX][cat].push(entry);
+  saveToStorage();
+  refreshDashMacros();
+  if (nutDay === TODAY_IDX) { renderMacros(); renderMealCategories(); }
+  closeRecipeBook();
+  alert(`Logged: ${entry.name}\n${entry.cal} cal · ${entry.pro}g P · ${entry.carb}g C · ${entry.fat}g F`);
+}
+
+function deleteRecipe(idx) {
+  if (!confirm('Delete this recipe?')) return;
+  const recipes = getRecipes();
+  recipes.splice(idx, 1);
+  saveRecipes(recipes);
+  renderRecipeList();
+}
+
+function viewRecipe(idx) {
+  const recipes = getRecipes();
+  const r = recipes[idx];
+  if (!r) return;
+  const macros = calcRecipeMacros(r);
+  let details = `📋 ${r.name}\n`;
+  details += `Total: ${macros.totalCal} cal · ${macros.totalPro}g P · ${macros.totalCarb}g C · ${macros.totalFat}g F\n`;
+  details += `Servings: ${r.servings} · Per serving: ${macros.calPerServing} cal\n`;
+  details += `Total weight: ${Math.round(r.totalWeightG)}g\n\nIngredients:\n`;
+  for (const ing of r.ingredients) {
+    const f = ing.grams / 100;
+    details += `• ${ing.name}: ${ing.grams}g (${Math.round(ing.cal100 * f)} cal, ${Math.round(ing.pro100 * f)}g P)\n`;
+  }
+  if (r.notes) details += `\nNotes: ${r.notes}`;
+  alert(details);
+}
+
+// ── CREATE RECIPE FLOW ──
+let _newRecipe = { name: '', ingredients: [], servings: 1, totalWeightG: 0, notes: '' };
+
+function openCreateRecipe() {
+  _newRecipe = { name: '', ingredients: [], servings: 1, totalWeightG: 0, notes: '' };
+  document.getElementById('create-recipe-modal').style.display = 'flex';
+  document.getElementById('cr-name').value = '';
+  document.getElementById('cr-servings').value = '1';
+  document.getElementById('cr-total-weight').value = '';
+  document.getElementById('cr-notes').value = '';
+  renderCRIngredients();
+}
+function closeCreateRecipe() {
+  document.getElementById('create-recipe-modal').style.display = 'none';
+}
+
+function renderCRIngredients() {
+  const el = document.getElementById('cr-ingredient-list');
+  if (!el) return;
+  if (!_newRecipe.ingredients.length) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--dim);font-size:0.82rem">No ingredients added yet</div>';
+    return;
+  }
+  let totalCal = 0, totalPro = 0;
+  el.innerHTML = _newRecipe.ingredients.map(function(ing, i) {
+    const f = ing.grams / 100;
+    const cal = Math.round(ing.cal100 * f);
+    const pro = Math.round(ing.pro100 * f);
+    totalCal += cal; totalPro += pro;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-size:0.84rem;color:var(--white)">${ing.name}</div>
+        <div style="font-size:0.7rem;color:var(--dim)">${ing.grams}g · ${cal} cal · ${pro}g P · ${Math.round(ing.carb100*f)}g C · ${Math.round(ing.fat100*f)}g F</div>
+        <div style="font-size:0.62rem;color:var(--dim);font-style:italic">${ing._source === 'usda_branded' ? '✓ USDA Branded' : ing._source === 'usda_foundation' ? '✓ USDA Verified' : '⚠ Manual entry'}</div>
+      </div>
+      <button onclick="_newRecipe.ingredients.splice(${i},1);renderCRIngredients()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:4px 8px">✕</button>
+    </div>`;
+  }).join('');
+  el.innerHTML += `<div style="padding:10px 0;font-size:0.8rem;color:var(--off);font-weight:600">Running total: ${totalCal} cal · ${totalPro}g protein</div>`;
+}
+
+async function addCRIngredient() {
+  const nameInput = document.getElementById('cr-ing-name');
+  const gramsInput = document.getElementById('cr-ing-grams');
+  const query = (nameInput.value || '').trim();
+  const grams = parseFloat(gramsInput.value) || 0;
+  if (!query) { alert('Enter an ingredient name'); return; }
+  if (!grams || grams <= 0) { alert('Enter amount in grams'); return; }
+
+  // Show searching state
+  const addBtn = document.getElementById('cr-ing-add-btn');
+  const origText = addBtn.textContent;
+  addBtn.textContent = 'Searching USDA...';
+  addBtn.disabled = true;
+
+  try {
+    // Search USDA branded first, then foundation
+    let results = await _searchUSDA_branded(query);
+    let source = 'usda_branded';
+    if (!results.length) {
+      results = await _searchUSDA_foundation(query);
+      source = 'usda_foundation';
+    }
+
+    if (results.length > 0) {
+      // Show top 3 matches for user to pick
+      let pickMsg = `Found in USDA database. Pick the best match:\n\n`;
+      const top = results.slice(0, 5);
+      top.forEach(function(r, i) {
+        pickMsg += `${i+1}. ${r.name}${r.brand ? ' ('+r.brand+')' : ''}\n   Per 100g: ${r.cal100} cal, ${r.pro100}g P, ${r.carb100}g C, ${r.fat100}g F\n\n`;
+      });
+      pickMsg += `Enter number (1-${top.length}), or 0 for manual entry:`;
+      const pick = prompt(pickMsg, '1');
+
+      if (pick && parseInt(pick) > 0 && parseInt(pick) <= top.length) {
+        const chosen = top[parseInt(pick) - 1];
+        _newRecipe.ingredients.push({
+          name: chosen.name + (chosen.brand ? ' ('+chosen.brand+')' : ''),
+          grams: grams,
+          cal100: chosen.cal100, pro100: chosen.pro100,
+          carb100: chosen.carb100, fat100: chosen.fat100,
+          _source: source
+        });
+        nameInput.value = '';
+        gramsInput.value = '';
+        renderCRIngredients();
+      } else if (pick === '0') {
+        _addManualIngredient(query, grams);
+      }
+    } else {
+      // No USDA results — manual entry
+      alert('Not found in USDA database. Please enter macros manually (per 100g).');
+      _addManualIngredient(query, grams);
+    }
+  } catch(e) {
+    alert('USDA search failed. Please enter macros manually.');
+    _addManualIngredient(query, grams);
+  }
+
+  addBtn.textContent = origText;
+  addBtn.disabled = false;
+}
+
+function _addManualIngredient(name, grams) {
+  const cal = prompt(`${name} — Enter CALORIES per 100g:`);
+  const pro = prompt(`${name} — Enter PROTEIN (g) per 100g:`);
+  const carb = prompt(`${name} — Enter CARBS (g) per 100g:`);
+  const fat = prompt(`${name} — Enter FAT (g) per 100g:`);
+  if (cal === null) return;
+  _newRecipe.ingredients.push({
+    name: name, grams: grams,
+    cal100: parseFloat(cal) || 0, pro100: parseFloat(pro) || 0,
+    carb100: parseFloat(carb) || 0, fat100: parseFloat(fat) || 0,
+    _source: 'manual'
+  });
+  document.getElementById('cr-ing-name').value = '';
+  document.getElementById('cr-ing-grams').value = '';
+  renderCRIngredients();
+}
+
+function saveNewRecipe() {
+  const name = document.getElementById('cr-name').value.trim();
+  const servings = parseFloat(document.getElementById('cr-servings').value) || 1;
+  const totalWeight = parseFloat(document.getElementById('cr-total-weight').value) || 0;
+  const notes = document.getElementById('cr-notes').value.trim();
+
+  if (!name) { alert('Enter a recipe name'); return; }
+  if (!_newRecipe.ingredients.length) { alert('Add at least one ingredient'); return; }
+
+  // Calculate total weight from ingredients if not manually entered
+  const calcWeight = _newRecipe.ingredients.reduce(function(sum, ing) { return sum + ing.grams; }, 0);
+  const finalWeight = totalWeight > 0 ? totalWeight : calcWeight;
+
+  const recipe = {
+    id: Date.now(),
+    name: name,
+    ingredients: _newRecipe.ingredients,
+    servings: servings,
+    totalWeightG: finalWeight,
+    notes: notes
+  };
+
+  const recipes = getRecipes();
+  recipes.push(recipe);
+  saveRecipes(recipes);
+
+  closeCreateRecipe();
+  renderRecipeList();
+
+  const macros = calcRecipeMacros(recipe);
+  alert(`Recipe saved: ${name}\n\nTotal: ${macros.totalCal} cal\nPer serving (${servings}): ${macros.calPerServing} cal · ${macros.proPerServing}g P · ${macros.carbPerServing}g C · ${macros.fatPerServing}g F`);
+}
+
+// ── RECIPE LOOKUP FOR AI COACH ──
+function findRecipeByName(query) {
+  const recipes = getRecipes();
+  const q = query.toLowerCase();
+  // Try exact match first, then partial
+  let match = recipes.find(function(r) { return r.name.toLowerCase() === q; });
+  if (!match) match = recipes.find(function(r) { return r.name.toLowerCase().includes(q) || q.includes(r.name.toLowerCase()); });
+  return match || null;
+}
+
+function getRecipeContext() {
+  const recipes = getRecipes();
+  if (!recipes.length) return '';
+  return '\n\nUSER\'S SAVED RECIPES (use these for accurate logging — macros are USDA-verified):\n' +
+    recipes.map(function(r) {
+      const m = calcRecipeMacros(r);
+      return `- "${r.name}": ${r.servings} servings, ${Math.round(r.totalWeightG)}g total. Per serving: ${m.calPerServing} cal, ${m.proPerServing}g P, ${m.carbPerServing}g C, ${m.fatPerServing}g F. Per gram: ${m.calPerGram.toFixed(2)} cal, ${m.proPerGram.toFixed(2)}g P`;
+    }).join('\n');
+}
