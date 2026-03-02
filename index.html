@@ -169,10 +169,16 @@ self.addEventListener('fetch', e => {
 
     <div class="form-section-label">Goal Timeline</div>
     <div class="timeline-selector" id="timeline-selector">
+      <div class="tl-btn" data-weeks="0" onclick="selectTimeline(this)">Maintain<br><small style="font-size:0.62rem;opacity:0.6">Stay where you are</small></div>
       <div class="tl-btn" data-weeks="12" onclick="selectTimeline(this)">12 Weeks<br><small style="font-size:0.62rem;opacity:0.6">Aggressive</small></div>
       <div class="tl-btn active" data-weeks="16" onclick="selectTimeline(this)">16 Weeks<br><small style="font-size:0.62rem;opacity:0.6">Balanced</small></div>
       <div class="tl-btn" data-weeks="24" onclick="selectTimeline(this)">24 Weeks<br><small style="font-size:0.62rem;opacity:0.6">Sustainable</small></div>
       <div class="tl-btn" data-weeks="36" onclick="selectTimeline(this)">36 Weeks<br><small style="font-size:0.62rem;opacity:0.6">Gradual</small></div>
+      <div class="tl-btn" data-weeks="custom" onclick="selectTimeline(this)">Custom<br><small style="font-size:0.62rem;opacity:0.6">Set your own</small></div>
+    </div>
+    <div id="custom-weeks-row" style="display:none;margin-top:10px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px">
+      <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Number of Weeks</label>
+      <input type="number" id="custom-weeks-input" min="1" max="104" value="8" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:1rem;font-family:'DM Mono',monospace" oninput="selectedWeeks=parseInt(this.value)||8">
     </div>
 
     <div class="form-section-label">Training Split</div>
