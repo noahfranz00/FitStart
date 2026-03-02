@@ -26,7 +26,7 @@ function dashNav(view, btn) {
   if (view==='myplan') { /* already rendered on plan generation */ }
   if (view==='week') renderWeek();
   if (view==='progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); }
-  if (view==='today') { renderTodayWorkout(); refreshDashMacros(); }
+  if (view==='today') { renderTodayWorkout(); refreshDashMacros(); renderDashWater(); }
   if (view==='program') renderProgram();
   if (view==='settings') renderSettingsGymDays();
   if (view==='coach') initCoach();
@@ -540,6 +540,37 @@ function renderWater() {
   else if (pct >= 0.25) status = `${pctInt}% — keep drinking!`;
   else if (oz > 0) status = `${pctInt}% — just getting started`;
   document.getElementById('water-status').innerHTML = status;
+
+  // Also update dashboard water tracker
+  renderDashWater();
+}
+
+function renderDashWater() {
+  WATER_GOAL = getWaterGoal();
+  const oz = getWaterOz(TODAY_IDX);
+  const pct = Math.min(oz / WATER_GOAL, 1);
+  const circumference = 263.9;
+  const offset = circumference * (1 - pct);
+  const pctInt = Math.round(pct * 100);
+
+  const ringEl = document.getElementById('dash-water-ring');
+  const ozEl = document.getElementById('dash-water-oz');
+  const pctEl = document.getElementById('dash-water-pct');
+  const cupsEl = document.getElementById('dash-water-cups');
+
+  if (ringEl) ringEl.style.strokeDashoffset = offset;
+  if (ozEl) ozEl.textContent = oz;
+  if (pctEl) {
+    if (pct >= 1) pctEl.textContent = '✓ Goal reached!';
+    else pctEl.textContent = pctInt + '% of ' + WATER_GOAL + ' oz';
+  }
+  if (cupsEl) {
+    const cups = Math.floor(oz / 8);
+    const totalCups = Math.min(Math.ceil(WATER_GOAL / 8), 16);
+    cupsEl.innerHTML = Array.from({length: totalCups}, (_,i) =>
+      `<div class="water-cup ${i < cups ? 'filled' : 'empty'}"></div>`
+    ).join('');
+  }
 }
 
 // ── MEAL CATEGORIES (MFP-style) ──
@@ -1332,7 +1363,6 @@ function renderNutrition() {
   waterLogs = lsGet('fs_water') || {};
   renderWater();
   renderMacros(); renderMealCategories();
-  renderTodayMiniLog();
 }
 
 function selectNutDay(idx, btn) {
@@ -1353,7 +1383,7 @@ function renderMacros() {
     bar.style.width = pct+'%';
     bar.className = 'mb-fill'+(over?' over':'');
   });
-  if (nutDay===TODAY_IDX) { refreshDashMacros(); renderTodayMiniLog(); }
+  if (nutDay===TODAY_IDX) { refreshDashMacros(); }
 }
 
 function renderMealList() {
