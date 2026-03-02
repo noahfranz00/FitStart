@@ -558,25 +558,28 @@ function renderDashWater() {
   const offset = circumference * (1 - pct);
   const pctInt = Math.round(pct * 100);
 
+  // Dynamic ring color based on percentage
+  let ringColor;
+  if (pct >= 0.9) ringColor = '#22c55e';       // green
+  else if (pct >= 0.76) ringColor = '#eab308';  // yellow
+  else if (pct >= 0.51) ringColor = '#f97316';  // orange
+  else ringColor = '#ef4444';                    // red
+
   const ringEl = document.getElementById('dash-water-ring');
   const ozEl = document.getElementById('dash-water-oz');
   const pctEl = document.getElementById('dash-water-pct');
-  const cupsEl = document.getElementById('dash-water-cups');
   const goalEl = document.getElementById('dash-water-goal');
 
-  if (ringEl) ringEl.style.strokeDashoffset = offset;
+  if (ringEl) {
+    ringEl.style.strokeDashoffset = offset;
+    ringEl.setAttribute('stroke', ringColor);
+  }
   if (ozEl) ozEl.textContent = oz;
   if (goalEl) goalEl.textContent = WATER_GOAL + ' oz / day';
   if (pctEl) {
+    pctEl.style.color = ringColor;
     if (pct >= 1) pctEl.textContent = '✓ Goal reached!';
     else pctEl.textContent = pctInt + '%';
-  }
-  if (cupsEl) {
-    const cups = Math.floor(oz / 8);
-    const totalCups = Math.min(Math.ceil(WATER_GOAL / 8), 16);
-    cupsEl.innerHTML = Array.from({length: totalCups}, (_,i) =>
-      `<div class="water-cup ${i < cups ? 'filled' : 'empty'}"></div>`
-    ).join('');
   }
 }
 
