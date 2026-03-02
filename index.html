@@ -424,65 +424,94 @@ self.addEventListener('fetch', e => {
       <div class="page-header"><div class="page-title">NUTRITION</div><div class="page-sub">Track food, water & macros</div></div>
       <div class="day-picker-nav" id="day-picker-nav"></div>
 
-      <!-- MACRO BARS -->
-      <div class="macro-bar" style="margin-bottom:14px">
-        <div class="mb-item"><div class="mb-label">Calories</div><div class="mb-val" id="n-cal">0</div><div class="mb-target" id="n-cal-tgt">of —</div><div class="mb-bar"><div class="mb-fill" id="n-cal-bar" style="width:0%"></div></div></div>
-        <div class="mb-item"><div class="mb-label">Protein</div><div class="mb-val" id="n-pro">0g</div><div class="mb-target" id="n-pro-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-pro-bar" style="width:0%"></div></div></div>
-        <div class="mb-item"><div class="mb-label">Carbs</div><div class="mb-val" id="n-carb">0g</div><div class="mb-target" id="n-carb-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-carb-bar" style="width:0%"></div></div></div>
-        <div class="mb-item"><div class="mb-label">Fat</div><div class="mb-val" id="n-fat">0g</div><div class="mb-target" id="n-fat-tgt">of —g</div><div class="mb-bar"><div class="mb-fill" id="n-fat-bar" style="width:0%"></div></div></div>
-      </div>
-
-      <!-- WATER TRACKER -->
-      <div class="water-section">
-        <div class="water-header">
-          <div class="water-title">WATER INTAKE</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:0.85rem;color:var(--off);font-weight:600">Goal:</span>
-            <input type="number" id="water-goal-input" value="64" min="16" max="300"
-              style="width:60px;padding:5px 8px;background:var(--dark);border:1px solid var(--border2);border-radius:7px;font-family:'Inter',sans-serif;font-size:0.85rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;outline:none;text-align:center"
-              onchange="updateWaterGoal(this.value)">
-            <span style="font-size:0.85rem;color:var(--off);font-weight:600">oz / day</span>
-          </div>
-        </div>
-        <div class="water-ring-wrap">
-          <div class="water-ring">
-            <svg width="100" height="100" viewBox="0 0 100 100">
-              <circle class="water-ring-track" cx="50" cy="50" r="42"/>
-              <circle class="water-ring-fill" id="water-ring-fill" cx="50" cy="50" r="42"
-                stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+      <!-- MACRO RINGS -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+        <div class="macro-ring-card" id="macro-ring-cal">
+          <div class="macro-ring-wrap">
+            <svg viewBox="0 0 100 100" width="56" height="56">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+              <circle id="mr-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
             </svg>
-            <div class="water-ring-text">
-              <div class="water-oz" id="water-oz-display">0</div>
-              <div class="water-oz-label">oz</div>
-            </div>
+            <div class="macro-ring-val" id="n-cal">0</div>
           </div>
-          <div style="flex:1">
-            <div style="font-size:0.85rem;color:var(--off);margin-bottom:10px" id="water-status">Stay hydrated <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg></div>
-            <div class="water-btns" style="flex-wrap:wrap;gap:8px">
-              <button class="water-add-btn" onclick="addWater(8)">+8 oz</button>
-              <button class="water-add-btn" onclick="addWater(16)">+16 oz</button>
-              <button class="water-add-btn" onclick="addWater(32)">+32 oz</button>
-              <button class="water-add-btn" onclick="toggleCustomWater()" id="water-custom-toggle" style="white-space:nowrap">+ Add</button>
-            </div>
-            <div id="water-custom-row" style="display:none;margin-top:10px;display:none;align-items:center;gap:8px">
-              <input type="number" id="water-custom-input" placeholder="oz" min="1" max="200"
-                style="width:72px;padding:7px 10px;background:var(--dark);border:1px solid rgba(56,189,248,0.3);border-radius:8px;font-family:'Syne',sans-serif;font-size:0.88rem;color:var(--white);outline:none;"
-                onkeydown="if(event.key==='Enter')addCustomWater()">
-              <button class="water-add-btn" onclick="addCustomWater()" style="white-space:nowrap;background:rgba(56,189,248,0.18)">LOG</button>
-              <button onclick="toggleCustomWater()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.85rem;padding:4px 6px">✕</button>
-            </div>
-          </div>
+          <div class="macro-ring-label">CALORIES</div>
+          <div class="macro-ring-tgt" id="n-cal-tgt">of —</div>
         </div>
-        <div class="water-cups" id="water-cups"></div>
+        <div class="macro-ring-card" id="macro-ring-pro">
+          <div class="macro-ring-wrap">
+            <svg viewBox="0 0 100 100" width="56" height="56">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+              <circle id="mr-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+            </svg>
+            <div class="macro-ring-val" id="n-pro">0g</div>
+          </div>
+          <div class="macro-ring-label">PROTEIN</div>
+          <div class="macro-ring-tgt" id="n-pro-tgt">of —g</div>
+        </div>
+        <div class="macro-ring-card" id="macro-ring-carb">
+          <div class="macro-ring-wrap">
+            <svg viewBox="0 0 100 100" width="56" height="56">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+              <circle id="mr-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+            </svg>
+            <div class="macro-ring-val" id="n-carb">0g</div>
+          </div>
+          <div class="macro-ring-label">CARBS</div>
+          <div class="macro-ring-tgt" id="n-carb-tgt">of —g</div>
+        </div>
+        <div class="macro-ring-card" id="macro-ring-fat">
+          <div class="macro-ring-wrap">
+            <svg viewBox="0 0 100 100" width="56" height="56">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+              <circle id="mr-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+            </svg>
+            <div class="macro-ring-val" id="n-fat">0g</div>
+          </div>
+          <div class="macro-ring-label">FAT</div>
+          <div class="macro-ring-tgt" id="n-fat-tgt">of —g</div>
+        </div>
       </div>
 
-      <!-- MEAL CATEGORIES (MFP-style) -->
-      <div id="meal-categories"></div>
+      <!-- COMPACT WATER TRACKER -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:14px">
+        <div style="position:relative;width:50px;height:50px;flex-shrink:0">
+          <svg width="50" height="50" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+            <circle id="water-ring-fill" cx="50" cy="50" r="42" fill="none" stroke="#38bdf8" stroke-width="8" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div id="water-oz-display" style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--white);line-height:1">0</div>
+            <div style="font-size:0.45rem;color:var(--dim);text-transform:uppercase">oz</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:1px;color:var(--off)">WATER</span>
+            <span style="font-size:0.7rem;color:var(--dim)" id="water-status">Goal:
+              <input type="number" id="water-goal-input" value="64" min="16" max="300" style="width:40px;padding:2px 4px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--off);font-size:0.7rem;font-family:inherit;outline:none;text-align:center" onchange="updateWaterGoal(this.value)"> oz</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="water-add-btn" onclick="addWater(8)" style="padding:4px 10px;font-size:0.68rem">+8</button>
+            <button class="water-add-btn" onclick="addWater(16)" style="padding:4px 10px;font-size:0.68rem">+16</button>
+            <button class="water-add-btn" onclick="addWater(32)" style="padding:4px 10px;font-size:0.68rem">+32</button>
+            <button class="water-add-btn" onclick="toggleCustomWater()" id="water-custom-toggle" style="padding:4px 10px;font-size:0.68rem">+</button>
+            <button class="water-add-btn" onclick="undoWater()" style="padding:4px 10px;font-size:0.68rem;border-color:rgba(239,68,68,0.3);color:#ef4444">−8</button>
+          </div>
+          <div id="water-custom-row" style="display:none;margin-top:6px;align-items:center;gap:6px">
+            <input type="number" id="water-custom-input" placeholder="oz" min="1" max="200" style="width:56px;padding:5px 8px;background:var(--dark);border:1px solid rgba(56,189,248,0.3);border-radius:6px;font-size:0.8rem;color:var(--white);outline:none" onkeydown="if(event.key==='Enter')addCustomWater()">
+            <button class="water-add-btn" onclick="addCustomWater()" style="padding:4px 10px;font-size:0.68rem">LOG</button>
+            <button onclick="toggleCustomWater()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.75rem">✕</button>
+          </div>
+        </div>
+      </div>
 
-      <!-- MY RECIPES BUTTON -->
-      <div style="margin-top:16px;padding:0 2px">
-        <button onclick="openRecipeBook()" style="width:100%;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:1.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-          <span style="font-size:1.1rem">📋</span> MY RECIPES
+      <!-- RECIPE BUTTON + MEAL CATEGORIES -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <button onclick="openRecipeBook()" style="padding:7px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--off);font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;letter-spacing:0.5px">
+          📋 RECIPES
+        </button>
+      </div>
+      <div id="meal-categories"></div>
         </button>
       </div>
     </div>
@@ -537,7 +566,7 @@ self.addEventListener('fetch', e => {
           <textarea id="cr-notes" placeholder="Cooking instructions, tips..." rows="2" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.84rem;font-family:inherit;outline:none;resize:vertical"></textarea>
         </div>
         <div style="padding:14px 20px;border-top:1px solid var(--border)">
-          <button onclick="saveNewRecipe()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B8900B,#D4A520);border:none;border-radius:10px;color:#000;font-weight:700;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px">SAVE RECIPE</button>
+          <button onclick="saveNewRecipe()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:#000;font-weight:700;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px">SAVE RECIPE</button>
         </div>
       </div>
     </div>
