@@ -5,17 +5,46 @@
 // Dependencies: All globals from app.js, scoring.js functions
 
 function dashNav(view, btn) {
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const currentActive = document.querySelector('.view.active');
+  const targetView = document.getElementById('view-'+view);
+  if (!targetView) return;
+
+  // Slide direction based on nav order
+  const navOrder = ['today','week','nutrition','coach','progress','program','myplan','settings'];
+  const fromView = currentActive ? (currentActive.id.replace('view-','')) : null;
+  const fromIdx = navOrder.indexOf(fromView);
+  const toIdx = navOrder.indexOf(view);
+  const direction = (toIdx >= fromIdx) ? 1 : -1;
+
+  // Exit current view
+  if (currentActive && currentActive !== targetView) {
+    currentActive.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
+    currentActive.style.opacity = '0';
+    currentActive.style.transform = 'translateX(' + (direction * -30) + 'px)';
+    setTimeout(() => {
+      currentActive.classList.remove('active');
+      currentActive.style.cssText = '';
+    }, 180);
+  }
+
   document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('view-'+view).classList.add('active');
+
+  // Enter new view
+  targetView.style.cssText = 'display:block;opacity:0;transform:translateX(' + (direction * 30) + 'px);transition:none';
+  targetView.classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    targetView.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+    targetView.style.opacity = '1';
+    targetView.style.transform = 'translateX(0)';
+    setTimeout(() => { targetView.style.cssText = ''; }, 240);
+  }));
+
   if (btn) btn.classList.add('active');
-  // Toggle coach-active class on main-content for full-screen coach layout
   const mainContent = document.querySelector('.main-content');
   if (mainContent) {
     if (view === 'coach') mainContent.classList.add('coach-active');
     else mainContent.classList.remove('coach-active');
   }
-  // Sync mobile bottom tabs
   const mobViews = ['today','week','nutrition','coach'];
   document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
   if (mobViews.includes(view)) {
@@ -25,7 +54,7 @@ function dashNav(view, btn) {
   if (view==='nutrition') renderNutrition();
   if (view==='myplan') { /* already rendered on plan generation */ }
   if (view==='week') renderWeek();
-  if (view==='progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); }
+  if (view==='progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); renderProgressPhotos(); _renderWeeklyReportCard(null, false); }
   if (view==='today') { renderTodayWorkout(); refreshDashMacros(); renderDashWater(); }
   if (view==='program') renderProgram();
   if (view==='settings') renderSettingsGymDays();
@@ -1798,7 +1827,135 @@ function renderProgram() {
 
 function toggleWeekRow(id) { const r=document.getElementById(id); if(r) r.style.display=r.style.display==='block'?'none':'block'; }
 
-// ── SETTINGS ──
+// ═══════════════════════════════════════════
+// PROGRESS PHOTOS
+// ═══════════════════════════════════════════
+function renderProgressPhotos() {
+  const container = document.getElementById('progress-photos-gallery');
+  if (!container) return;
+  const photos = lsGet('fs_progress_photos') || [];
+  if (photos.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--dim);font-size:0.82rem">No photos yet. Take your first progress photo to track your transformation.</div>';
+    const compareBtn = document.getElementById('pp-compare-btn');
+    if (compareBtn) compareBtn.style.display = 'none';
+    return;
+  }
+  const compareBtn = document.getElementById('pp-compare-btn');
+  if (compareBtn) compareBtn.style.display = photos.length >= 2 ? '' : 'none';
+
+  container.innerHTML = photos.slice().reverse().map((p, i) => {
+    const realIdx = photos.length - 1 - i;
+    const d = new Date(p.date);
+    const label = d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+    return `<div class="pp-thumb" onclick="openPhotoViewer(${realIdx})" title="${label}">
+      <img src="${p.data}" alt="${label}" style="width:100%;height:100%;object-fit:cover;border-radius:10px">
+      <div class="pp-date">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function openProgressPhotoCapture() {
+  const input = document.getElementById('progress-photo-input');
+  if (input) input.click();
+}
+
+async function handleProgressPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    // Compress/resize to max 800px
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxW = 800;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.75);
+      const photos = lsGet('fs_progress_photos') || [];
+      photos.push({ date: new Date().toISOString().split('T')[0], data: compressed });
+      lsSet('fs_progress_photos', photos);
+      renderProgressPhotos();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function openPhotoViewer(idx) {
+  const photos = lsGet('fs_progress_photos') || [];
+  const photo = photos[idx];
+  if (!photo) return;
+  const modal = document.getElementById('photo-viewer-modal');
+  const img = document.getElementById('photo-viewer-img');
+  const dateEl = document.getElementById('photo-viewer-date');
+  const delBtn = document.getElementById('photo-viewer-del');
+  if (!modal || !img) return;
+  const d = new Date(photo.date);
+  img.src = photo.data;
+  dateEl.textContent = d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  delBtn.onclick = function() {
+    if (!confirm('Delete this progress photo?')) return;
+    photos.splice(idx, 1);
+    lsSet('fs_progress_photos', photos);
+    closePhotoViewer();
+    renderProgressPhotos();
+  };
+  modal.style.display = 'flex';
+}
+
+function closePhotoViewer() {
+  const modal = document.getElementById('photo-viewer-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function openPhotoComparison() {
+  const photos = lsGet('fs_progress_photos') || [];
+  if (photos.length < 2) return;
+  const modal = document.getElementById('photo-compare-modal');
+  if (!modal) return;
+  // Default: first and last
+  _renderCompareSelectors(photos);
+  modal.style.display = 'flex';
+}
+
+function closePhotoComparison() {
+  const modal = document.getElementById('photo-compare-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function _renderCompareSelectors(photos) {
+  const leftSel = document.getElementById('compare-left-sel');
+  const rightSel = document.getElementById('compare-right-sel');
+  if (!leftSel || !rightSel) return;
+  const opts = photos.map((p, i) => {
+    const d = new Date(p.date);
+    return `<option value="${i}">${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</option>`;
+  }).join('');
+  leftSel.innerHTML = opts;
+  rightSel.innerHTML = opts;
+  leftSel.value = 0;
+  rightSel.value = photos.length - 1;
+  _updateCompareImages(photos);
+  leftSel.onchange = rightSel.onchange = () => _updateCompareImages(photos);
+}
+
+function _updateCompareImages(photos) {
+  const leftSel = document.getElementById('compare-left-sel');
+  const rightSel = document.getElementById('compare-right-sel');
+  const leftImg = document.getElementById('compare-img-left');
+  const rightImg = document.getElementById('compare-img-right');
+  if (!leftSel || !rightSel || !leftImg || !rightImg) return;
+  const l = photos[parseInt(leftSel.value)];
+  const r = photos[parseInt(rightSel.value)];
+  if (l) { leftImg.src = l.data; leftImg.style.display = ''; }
+  if (r) { rightImg.src = r.data; rightImg.style.display = ''; }
+}
+
+
 function renderSettingsGymDays() {
   const container = document.getElementById('settings-gym-days'); if (!container) return;
   container.innerHTML = '';
@@ -1960,9 +2117,13 @@ function loadExercise(idx) {
 
   document.getElementById('wo-ex-title').textContent = ex.name;
   const _badgeEl = document.getElementById('wo-ex-badge');
+  // Apply phase rep range if not a deload
+  const _phModBadge = getPhaseExerciseModifier(CURRENT_WEEK);
+  const _phSets = isDeloadWeek(CURRENT_WEEK) ? Math.max(2, Math.round(ex.sets * 0.6)) : (_phModBadge.setMult !== 1.0 ? Math.max(3, Math.round(ex.sets * _phModBadge.setMult)) : ex.sets);
+  const _phReps = (!isDeloadWeek(CURRENT_WEEK) && _phModBadge.repRange) ? _phModBadge.repRange : ex.reps;
   _badgeEl.innerHTML = 
     `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">` +
-    `<span>${ex.sets} × ${ex.reps}</span>` +
+    `<span>${_phSets} × ${_phReps}</span>` +
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11" style="opacity:0.6;flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
     `</div>` +
     `<span style="font-size:0.6rem;opacity:0.7;letter-spacing:0.5px">REST ${ex.rest}s</span>`;
@@ -2000,8 +2161,13 @@ function loadExercise(idx) {
     renderDemoPlaceholder(framesEl, ex.name, ex.muscles || db.muscles);
   }
 
-  // Initialize dynamic set count if not set
-  if (!woExtraSets[idx]) woExtraSets[idx] = ex.sets;
+  // Initialize dynamic set count if not set — use phase-adjusted count
+  if (!woExtraSets[idx]) {
+    const _initPhMod = getPhaseExerciseModifier(CURRENT_WEEK);
+    woExtraSets[idx] = isDeloadWeek(CURRENT_WEEK)
+      ? Math.max(2, Math.round(ex.sets * 0.6))
+      : (_initPhMod.setMult !== 1.0 ? Math.max(3, Math.round(ex.sets * _initPhMod.setMult)) : ex.sets);
+  }
   renderSetsTable(idx, ex);
 
   // Rest timer button
@@ -2029,21 +2195,57 @@ function loadExercise(idx) {
 function renderSetsTable(idx, ex) {
   const tbody = document.getElementById('sets-tbody');
   if (!tbody) return;
-  // Apply deload week volume reduction (60% of normal sets, min 2)
+  // Apply phase-based periodization modifiers
+  const _phMod = getPhaseExerciseModifier(CURRENT_WEEK);
   let baseSets = ex.sets;
-  if (isDeloadWeek(CURRENT_WEEK)) baseSets = Math.max(2, Math.round(baseSets * 0.6));
+  if (isDeloadWeek(CURRENT_WEEK)) {
+    baseSets = Math.max(2, Math.round(baseSets * 0.6));
+  } else if (_phMod.setMult && _phMod.setMult !== 1.0) {
+    baseSets = Math.max(3, Math.round(baseSets * _phMod.setMult));
+  }
   const numSets = woExtraSets[idx] || baseSets;
   tbody.innerHTML = '';
 
   // Look up previous session for THIS exercise by NAME (not index)
   let prevSets = [];
+  let prevSessionDate = null;
   try {
     const exlogs = getExLogs();
     const sessions = exlogs[ex.name] || [];
     const today = todayDateStr();
     const prevSession = sessions.find(s => s.date !== today);
-    if (prevSession && prevSession.sets) prevSets = prevSession.sets;
+    if (prevSession && prevSession.sets) {
+      prevSets = prevSession.sets;
+      prevSessionDate = prevSession.date;
+    }
   } catch(e) {}
+
+  // ── LAST SESSION PANEL ──
+  // Render a prominent "LAST SESSION" card above the sets table
+  let lastSessionPanel = document.getElementById('last-session-panel');
+  if (!lastSessionPanel) {
+    lastSessionPanel = document.createElement('div');
+    lastSessionPanel.id = 'last-session-panel';
+    const tableWrap = tbody.closest('table') || tbody.parentElement;
+    if (tableWrap && tableWrap.parentElement) {
+      tableWrap.parentElement.insertBefore(lastSessionPanel, tableWrap);
+    }
+  }
+  if (prevSets.length > 0 && prevSets.some(s => s && s.weight)) {
+    const dateLabel = prevSessionDate ? (() => {
+      const d = new Date(prevSessionDate + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    })() : 'Last time';
+    const setsHTML = prevSets.slice(0, numSets).map((ps, i) => {
+      if (!ps || (!ps.weight && !ps.reps)) return `<div class="lsp-set"><span class="lsp-set-num">S${i+1}</span><span class="lsp-set-val">—</span></div>`;
+      return `<div class="lsp-set"><span class="lsp-set-num">S${i+1}</span><span class="lsp-set-val">${ps.weight}<span class="lsp-unit">lbs</span> × ${ps.reps}</span></div>`;
+    }).join('');
+    lastSessionPanel.innerHTML = `<div class="last-session-card"><div class="lsc-header"><span class="lsc-label">⏱ LAST SESSION</span><span class="lsc-date">${dateLabel}</span></div><div class="lsc-sets">${setsHTML}</div></div>`;
+    lastSessionPanel.style.display = '';
+  } else {
+    lastSessionPanel.innerHTML = '';
+    lastSessionPanel.style.display = 'none';
+  }
 
   for (let s=0; s<numSets; s++) {
     const isSaved = woSets[idx] && woSets[idx][s];
@@ -2051,11 +2253,8 @@ function renderSetsTable(idx, ex) {
     // Only show saved values if the set was actually completed THIS session
     const valW = isDone && (woSets[idx][s].weight != null) ? String(woSets[idx][s].weight) : '';
     const valR = isDone && (woSets[idx][s].reps != null) ? String(woSets[idx][s].reps) : '';
-    // Previous data from the SAME exercise name
-    const prev = prevSets[s] || null;
-    const prevHint = (prev && prev.weight && prev.reps) ? '<div style="font-size:0.7rem;color:var(--off);margin-top:3px;font-family:\'DM Mono\',monospace">Last: ' + prev.weight + 'lbs × ' + prev.reps + '</div>' : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div>' + prevHint + '</td>'+
+    tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div></td>'+
       '<td class="set-cell-weight"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="decimal" value="'+escapeAttr(valW)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
       '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="number" inputmode="numeric" value="'+escapeAttr(valR)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
       '<td><button class="set-check '+(isDone?'done':'')+'" id="sd-'+idx+'-'+s+'" '+(isDone?'disabled':'')+' onclick="completeSet('+idx+','+s+','+ex.rest+')" title="Mark done">✓</button></td>'+
