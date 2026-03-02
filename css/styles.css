@@ -26,7 +26,7 @@ body::before {
 nav { display:flex; justify-content:space-between; align-items:center; padding:20px 48px; border-bottom:1px solid var(--border); background:rgba(10,10,10,0.92); backdrop-filter:blur(10px); position:sticky; top:0; z-index:200; width:100%; box-sizing:border-box; }
 .logo { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; letter-spacing:2px; display:flex; align-items:center; gap:10px; color:#C8A23D; }
 .logo-text { background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-.logo-icon { width:34px; height:34px; border-radius:6px; object-fit:contain; flex-shrink:0; }
+.logo-icon { height:32px; width:auto; border-radius:4px; object-fit:contain; flex-shrink:0; }
 .logo-dot { color:var(--gold); transition:color 0.4s; }
 .nav-right { display:flex; align-items:center; gap:14px; }
 .nav-pill { font-size:0.68rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); border:1px solid var(--border); border-radius:100px; padding:6px 14px; }
@@ -1067,25 +1067,14 @@ input::placeholder { color: var(--dim) !important; }
 
 
 /* ═══ METALLIC GOLD TEXT ═══ */
-.streak-pill,
-.tier-badge,
-.results-tier-badge,
 .day-tag.workout,
 .day-tag.workout.intermediate,
 .day-tag.workout.advanced,
-.included-check,
-.trial-badge,
 .tb-val.free,
-.sb-btn.active,
-.sb-btn.active .sb-badge,
-.wc-badge,
-.btn-primary.done,
 .ex-row.done .ex-name,
 .log-toggle-title,
-.plus-icon,
 .lf-label.p,
 .wday.is-today .wday-name,
-.dp-btn.active,
 .mb-val,
 .mr-macros .mp,
 .weight-change,
@@ -1094,25 +1083,18 @@ input::placeholder { color: var(--dim) !important; }
 .strength-score-delta,
 .ex-video-badge,
 .demo-frame:nth-child(2) .demo-frame-label,
-.btn-add-ex,
 .ec-row.active .ec-num,
 .ec-row.active .ec-name,
-.aes-filter-btn.active,
 .aes-dropdown-item.selected,
 .aes-item.added .aes-item-name,
-.aes-item-add,
 .set-done-btn:hover,
 .rest-countdown,
 .btn-skip-rest:hover,
 .wo-ex-sidebar-item.active .wo-ex-sidebar-num,
 .mer-cal,
-.btn-food-modal-search,
 .fmt-tab.active,
 .fmi-cal,
-.fmi-add,
-.btn-food-search,
 .fri-cal,
-.btn-log-food,
 .wo-ex-item.active .wo-ex-num,
 .wo-ex-item.active .wo-ex-name,
 .wo-ex-item.completed .wo-ex-name {
@@ -1131,14 +1113,8 @@ input::placeholder { color: var(--dim) !important; }
 }
 
 /* ═══ ADDITIONAL METALLIC GOLD TEXT ═══ */
-.streak-pill,
 .logo-dot,
 .coach-starter-btn:hover,
-.set-done-btn.done,
-.btn-next-ex,
-.set-check.done,
-.set-weight-input.done,
-.set-reps-input.done,
 .coach-typing-dot,
 .wo-back:hover,
 .set-done-btn:hover,
