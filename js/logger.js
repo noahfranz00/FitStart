@@ -539,24 +539,10 @@ function renderWater() {
   const circumference = 263.9;
   const offset = circumference * (1 - pct);
 
-  document.getElementById('water-oz-display').textContent = oz;
-  document.getElementById('water-ring-fill').style.strokeDashoffset = offset;
-
-  const cups = Math.floor(oz / 8);
-  const totalCups = Math.min(Math.ceil(WATER_GOAL / 8), 16);
-  document.getElementById('water-cups').innerHTML =
-    Array.from({length: totalCups}, (_,i) =>
-      `<div class="water-cup ${i < cups ? 'filled' : 'empty'}"></div>`
-    ).join('');
-
-  const pctInt = Math.round(pct * 100);
-  let status = 'Stay hydrated <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg>';
-  if (pct >= 1) status = 'Goal reached! Great work! ★';
-  else if (pct >= 0.75) status = `${pctInt}% — almost there!`;
-  else if (pct >= 0.5) status = `${pctInt}% — halfway there`;
-  else if (pct >= 0.25) status = `${pctInt}% — keep drinking!`;
-  else if (oz > 0) status = `${pctInt}% — just getting started`;
-  document.getElementById('water-status').innerHTML = status;
+  const ozEl = document.getElementById('water-oz-display');
+  const ringEl = document.getElementById('water-ring-fill');
+  if (ozEl) ozEl.textContent = oz;
+  if (ringEl) ringEl.style.strokeDashoffset = offset;
 
   // Also update dashboard water tracker
   renderDashWater();
@@ -1415,14 +1401,31 @@ function selectNutDay(idx, btn) {
 function renderMacros() {
   const allEntries = getAllEntries(nutDay);
   const t = allEntries.reduce((a,e)=>({cal:a.cal+e.cal,pro:a.pro+e.pro,carb:a.carb+e.carb,fat:a.fat+e.fat}),{cal:0,pro:0,carb:0,fat:0});
-  [['cal',TARGETS.cal,'','n-cal','n-cal-bar'],['pro',TARGETS.pro,'g','n-pro','n-pro-bar'],['carb',TARGETS.carb,'g','n-carb','n-carb-bar'],['fat',TARGETS.fat,'g','n-fat','n-fat-bar']].forEach(([k,tgt,u,vid,bid])=>{
-    const over = t[k] > tgt, pct = Math.min(t[k]/tgt*100,100);
-    const el = document.getElementById(vid), bar = document.getElementById(bid);
-    el.textContent = (k==='cal' ? t[k].toLocaleString() : t[k]) + u;
-    el.className = 'mb-val'+(over?' over':'');
-    bar.style.width = pct+'%';
-    bar.className = 'mb-fill'+(over?' over':'');
+  const circumference = 263.9;
+  [['cal',TARGETS.cal,'','n-cal','mr-cal-ring'],['pro',TARGETS.pro,'g','n-pro','mr-pro-ring'],['carb',TARGETS.carb,'g','n-carb','mr-carb-ring'],['fat',TARGETS.fat,'g','n-fat','mr-fat-ring']].forEach(([k,tgt,u,vid,rid])=>{
+    const val = t[k];
+    const pct = tgt > 0 ? val / tgt : 0;
+    const offset = circumference * (1 - Math.min(pct, 1));
+    // Color logic: green within 10% of target, red if over 5%, gold otherwise
+    let color;
+    if (pct > 1.05) color = '#ef4444';       // over 5% → red
+    else if (pct >= 0.90) color = '#22c55e';  // within 10% → green
+    else color = '#D4A520';                    // default gold
+
+    const el = document.getElementById(vid);
+    const ring = document.getElementById(rid);
+    if (el) el.textContent = (k==='cal' ? val.toLocaleString() : val) + u;
+    if (ring) {
+      ring.style.strokeDashoffset = offset;
+      ring.setAttribute('stroke', color);
+    }
   });
+  // Update target labels
+  const tgtEl = (id, txt) => { const e = document.getElementById(id); if(e) e.textContent = txt; };
+  tgtEl('n-cal-tgt', 'of ' + (TARGETS.cal||'—').toLocaleString());
+  tgtEl('n-pro-tgt', 'of ' + (TARGETS.pro||'—') + 'g');
+  tgtEl('n-carb-tgt', 'of ' + (TARGETS.carb||'—') + 'g');
+  tgtEl('n-fat-tgt', 'of ' + (TARGETS.fat||'—') + 'g');
   if (nutDay===TODAY_IDX) { refreshDashMacros(); }
 }
 
