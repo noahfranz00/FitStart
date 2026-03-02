@@ -1032,6 +1032,12 @@ function initDashboard() {
 
   loadFromStorage();
 
+  // Auto-calculate water goal from bodyweight if user hasn't manually set one
+  if (USER && USER.weight && !lsGet('fs_water_goal_custom')) {
+    const autoWaterOz = Math.min(Math.round(USER.weight / 2), 128);
+    lsSet('fs_water_goal', autoWaterOz);
+  }
+
   TARGETS = {
     cal:  USER.nutrition.calories,
     pro:  USER.nutrition.protein,
