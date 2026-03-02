@@ -359,7 +359,7 @@ self.addEventListener('fetch', e => {
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;margin-right:4px">WATER INTAKE</div>
           <div id="dash-water-pct" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--dim)"></div>
         </div>
-        <div style="padding:0 18px 14px;display:flex;align-items:center;gap:16px">
+        <div style="padding:0 18px 10px;display:flex;align-items:center;gap:16px">
           <div style="position:relative;width:70px;height:70px;flex-shrink:0">
             <svg width="70" height="70" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
@@ -372,10 +372,19 @@ self.addEventListener('fetch', e => {
             </div>
           </div>
           <div style="flex:1">
+            <div style="font-size:0.72rem;color:var(--dim);margin-bottom:8px">Goal: <span id="dash-water-goal" style="color:var(--off);font-weight:600"></span></div>
             <div class="water-btns" style="flex-wrap:wrap;gap:8px;display:flex">
               <button class="water-add-btn" onclick="addWater(8)">+8 oz</button>
               <button class="water-add-btn" onclick="addWater(16)">+16 oz</button>
               <button class="water-add-btn" onclick="addWater(32)">+32 oz</button>
+              <button class="water-add-btn" onclick="toggleDashCustomWater()" id="dash-water-custom-toggle" style="white-space:nowrap">+ Add</button>
+            </div>
+            <div id="dash-water-custom-row" style="display:none;margin-top:8px;align-items:center;gap:8px">
+              <input type="number" id="dash-water-custom-input" placeholder="oz" min="1" max="200"
+                style="width:72px;padding:7px 10px;background:var(--dark);border:1px solid rgba(212,165,32,0.3);border-radius:8px;font-family:'Inter',sans-serif;font-size:0.88rem;color:var(--white);outline:none"
+                onkeydown="if(event.key==='Enter')addDashCustomWater()">
+              <button class="water-add-btn" onclick="addDashCustomWater()" style="white-space:nowrap">LOG</button>
+              <button onclick="toggleDashCustomWater()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.85rem;padding:4px 6px">✕</button>
             </div>
           </div>
         </div>
