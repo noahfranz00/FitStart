@@ -345,11 +345,7 @@ function setTier(tier, btn) {
     accent.textContent = 'SMARTER';
     line3.textContent = 'AND HARDER';
   }
-  if (tier === 'beginner') {
-    accent.style.background = 'var(--gold-grad)';
-  } else {
-    accent.style.background = cfg.color;
-  }
+  accent.style.background = 'linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B)';
   accent.style.webkitBackgroundClip = 'text';
   accent.style.webkitTextFillColor = 'transparent';
   accent.style.backgroundClip = 'text';
@@ -1271,7 +1267,7 @@ function _showAdaptiveInsight() {
   }
   const phMod2 = getPhaseExerciseModifier(CURRENT_WEEK);
   const phLabel2 = isDeloadWeek(CURRENT_WEEK) ? '⚡ DELOAD' : phMod2.label;
-  card.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.1rem">🧠</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;color:var(--gold)">AI INSIGHT</span><span style="font-size:0.62rem;font-weight:700;letter-spacing:1.5px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:4px;padding:2px 7px;color:var(--gold)">${phLabel2} · WK ${CURRENT_WEEK}</span><button onclick="this.parentElement.parentElement.remove();lsSet('fs_adaptive_insight',null)" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem">✕</button></div><p style="font-size:0.82rem;color:var(--off);line-height:1.5;margin:0">${msg}</p><div style="margin-top:10px;display:flex;gap:8px"><button onclick="_generateWeeklyProgressReport(0,0,0)" style="padding:5px 12px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:6px;color:var(--gold);font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH REPORT</button><button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:5px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button></div>`;
+  card.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.1rem">🧠</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">AI INSIGHT</span><span style="font-size:0.62rem;font-weight:700;letter-spacing:1.5px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:4px;padding:2px 7px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${phLabel2} · WK ${CURRENT_WEEK}</span><button onclick="this.parentElement.parentElement.remove();lsSet('fs_adaptive_insight',null)" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem">✕</button></div><p style="font-size:0.82rem;color:var(--off);line-height:1.5;margin:0">${msg}</p><div style="margin-top:10px;display:flex;gap:8px"><button onclick="_generateWeeklyProgressReport(0,0,0)" style="padding:5px 12px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:6px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH REPORT</button><button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:5px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button></div>`;
 }
 
 // ── INIT (called from index.html after all modules load) ──
@@ -1394,7 +1390,7 @@ function renderMyPlan(plan) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
         <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Training Days</div>
-        <div style="font-size:2rem;font-weight:700;color:var(--gold)">${gymCount}<span style="font-size:0.85rem;font-weight:400;color:var(--dim);margin-left:2px">/ week</span></div>
+        <div style="font-size:2rem;font-weight:700;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${gymCount}<span style="font-size:0.85rem;font-weight:400;color:var(--dim);margin-left:2px">/ week</span></div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
         <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Program Length</div>
