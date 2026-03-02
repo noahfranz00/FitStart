@@ -955,3 +955,4 @@ function _processFoodLog(data) {
     container.scrollTop = container.scrollHeight;
   }
 }
+
