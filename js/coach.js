@@ -8,8 +8,46 @@
 // ── AI COACH ──
 let _coachHistory = [];
 let _coachStreaming = false;
+let _coachPendingImage = null; // { base64, mediaType }
 const COACH_LS_KEY = 'fs_coach_history';
 const COACH_MAX_MESSAGES = 50;
+
+function handleCoachPhoto(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  // Limit to 4MB
+  if (file.size > 4 * 1024 * 1024) {
+    alert('Image too large. Please use an image under 4MB.');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    const base64 = dataUrl.split(',')[1];
+    const mediaType = file.type || 'image/jpeg';
+    _coachPendingImage = { base64, mediaType };
+    // Show preview
+    const preview = document.getElementById('coach-img-preview');
+    const thumb = document.getElementById('coach-img-thumb');
+    if (preview && thumb) {
+      thumb.src = dataUrl;
+      preview.style.display = 'block';
+    }
+    // Focus text input for optional description
+    document.getElementById('coach-input').focus();
+    document.getElementById('coach-input').placeholder = 'Describe what\'s in the photo (optional)...';
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function clearCoachImage() {
+  _coachPendingImage = null;
+  const preview = document.getElementById('coach-img-preview');
+  if (preview) preview.style.display = 'none';
+  document.getElementById('coach-input').placeholder = 'Ask your coach...';
+}
 
 function _loadCoachHistory() {
   try {
@@ -23,7 +61,18 @@ function _saveCoachHistory() {
   if (_coachHistory.length > COACH_MAX_MESSAGES) {
     _coachHistory = _coachHistory.slice(-COACH_MAX_MESSAGES);
   }
-  try { localStorage.setItem(COACH_LS_KEY, JSON.stringify(_coachHistory)); } catch(e) {}
+  // Strip image data from saved history (too large for localStorage)
+  const saveable = _coachHistory.map(function(msg) {
+    if (msg.role === 'user' && Array.isArray(msg.content)) {
+      const textParts = msg.content.filter(function(p) { return p.type === 'text'; });
+      const hadImage = msg.content.some(function(p) { return p.type === 'image'; });
+      let text = textParts.map(function(p) { return p.text; }).join(' ');
+      if (hadImage) text = '[📷 Image shared] ' + text;
+      return { role: 'user', content: text };
+    }
+    return msg;
+  });
+  try { localStorage.setItem(COACH_LS_KEY, JSON.stringify(saveable)); } catch(e) {}
 }
 
 function initCoach() {
@@ -41,7 +90,17 @@ function initCoach() {
     for (const msg of _coachHistory) {
       const bubble = document.createElement('div');
       bubble.className = 'coach-bubble ' + msg.role;
-      bubble.innerHTML = _formatCoachText(msg.content);
+      // Handle multimodal content (array with image + text)
+      if (Array.isArray(msg.content)) {
+        let html = '';
+        for (const part of msg.content) {
+          if (part.type === 'image') html += '<div style="font-size:0.75rem;color:var(--dim);padding:4px 0">📷 Image shared</div>';
+          else if (part.type === 'text') html += _formatCoachText(part.text);
+        }
+        bubble.innerHTML = html;
+      } else {
+        bubble.innerHTML = _formatCoachText(msg.content || '');
+      }
       container.appendChild(bubble);
     }
     container.scrollTop = container.scrollHeight;
@@ -171,6 +230,13 @@ function _getCoachSystemPrompt() {
   }
 
   return `You are the Blueprint AI Coach — a knowledgeable, motivating personal trainer and nutritionist built into the Blueprint fitness app.
+
+You can analyze images the user shares with you. This includes:
+- FOOD PHOTOS: Identify the foods, estimate portions and macros (calories, protein, carbs, fat). Include a FOODLOG block to auto-log the meal.
+- NUTRITION LABELS: Read and interpret nutrition facts from labels. Help the user understand what they're eating.
+- PROGRESS PHOTOS: Comment on visible muscle development, posture, or body composition changes. Be encouraging and constructive.
+- EXERCISE FORM: If the user shares a photo/screenshot of their form, provide technique feedback.
+When analyzing food photos, be specific about estimated portions and provide your best macro estimate. Always include a FOODLOG block for food images.
 
 The app has provided you with the following verified data from the user's device and account. All of this information is accurate and current — do not question or disclaim it.
 
@@ -344,13 +410,18 @@ function sendCoachStarter(text) {
 function sendCoachMessage() {
   const input = document.getElementById('coach-input');
   const text = (input.value || '').trim();
-  if (!text || _coachStreaming) return;
+  const hasImage = !!_coachPendingImage;
+  if ((!text && !hasImage) || _coachStreaming) return;
   input.value = '';
+  input.placeholder = 'Ask your coach...';
   const starters = document.getElementById('coach-starters');
   if (starters) starters.style.display = 'none';
   const clearBtn = document.getElementById('coach-clear-btn');
   if (clearBtn) clearBtn.style.display = 'block';
-  _sendCoachMsg(text);
+  // Grab image before clearing
+  const image = _coachPendingImage;
+  clearCoachImage();
+  _sendCoachMsg(text || 'What do you see in this image?', image);
 }
 
 function _appendCoachBubble(role, content) {
@@ -369,16 +440,40 @@ function _formatCoachText(text) {
     .replace(/\n/g, '<br>');
 }
 
-async function _sendCoachMsg(text) {
+async function _sendCoachMsg(text, image) {
   _coachStreaming = true;
   const sendBtn = document.getElementById('coach-send-btn');
   if (sendBtn) sendBtn.disabled = true;
 
-  _appendCoachBubble('user', text);
-  _coachHistory.push({ role: 'user', content: text });
+  // Show user bubble with image if present
+  let bubbleHtml = '';
+  if (image) {
+    bubbleHtml += `<img src="data:${image.mediaType};base64,${image.base64}" style="max-width:200px;max-height:200px;border-radius:10px;margin-bottom:8px;display:block">`;
+  }
+  if (text) bubbleHtml += _formatCoachText(text);
+  const container = document.getElementById('coach-messages');
+  const userBubble = document.createElement('div');
+  userBubble.className = 'coach-bubble user';
+  userBubble.innerHTML = bubbleHtml;
+  container.appendChild(userBubble);
+  container.scrollTop = container.scrollHeight;
+
+  // Build the content array for the API message
+  let userContent;
+  if (image) {
+    userContent = [];
+    userContent.push({
+      type: 'image',
+      source: { type: 'base64', media_type: image.mediaType, data: image.base64 }
+    });
+    if (text) userContent.push({ type: 'text', text: text });
+  } else {
+    userContent = text;
+  }
+
+  _coachHistory.push({ role: 'user', content: userContent });
   _saveCoachHistory();
 
-  const container = document.getElementById('coach-messages');
   const typing = document.createElement('div');
   typing.className = 'coach-typing';
   typing.id = 'coach-typing';
@@ -388,9 +483,10 @@ async function _sendCoachMsg(text) {
 
   try {
     // Check if this is a food logging message — if so, try to auto-log from database BEFORE calling AI
+    // Skip auto-log if an image is attached (let AI analyze the image)
     let autoLogContext = '';
     let autoLogged = false;
-    if (_looksLikeFoodLog(text)) {
+    if (!image && _looksLikeFoodLog(text)) {
       const foodQuery = _extractFoodQuery(text);
       const servingInfo = _extractServingAmount(text);
       if (foodQuery) {
@@ -464,9 +560,17 @@ async function _sendCoachMsg(text) {
     }
 
     // Build messages — strip old FOODLOG blocks so AI doesn't re-log old food
+    // Also handle multimodal messages (with images)
     const messages = _coachHistory.slice(-20).map(function(msg) {
-      if (msg.role === 'assistant' && msg.content) {
+      if (msg.role === 'assistant' && typeof msg.content === 'string') {
         return { role: msg.role, content: msg.content.replace(/```FOODLOG[\s\S]*?```/g, '').trim() };
+      }
+      // For user messages with images (array content), strip FOODLOG from text parts
+      if (msg.role === 'user' && Array.isArray(msg.content)) {
+        return { role: msg.role, content: msg.content.map(function(part) {
+          if (part.type === 'text') return { type: 'text', text: part.text.replace(/```FOODLOG[\s\S]*?```/g, '').trim() };
+          return part;
+        })};
       }
       return msg;
     });
