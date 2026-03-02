@@ -474,11 +474,16 @@ function updateWaterGoal(val) {
   const oz = parseInt(val);
   if (!oz || oz < 16) return;
   lsSet('fs_water_goal', oz);
+  lsSet('fs_water_goal_custom', true);
   renderWater();
 }
 
 function getWaterGoal() {
-  return lsGet('fs_water_goal') || 64;
+  const stored = lsGet('fs_water_goal');
+  if (stored) return stored;
+  // Auto-calculate from bodyweight if available
+  if (USER && USER.weight) return Math.min(Math.round(USER.weight / 2), 128);
+  return 64;
 }
 
 function toggleCustomWater() {
@@ -557,12 +562,14 @@ function renderDashWater() {
   const ozEl = document.getElementById('dash-water-oz');
   const pctEl = document.getElementById('dash-water-pct');
   const cupsEl = document.getElementById('dash-water-cups');
+  const goalEl = document.getElementById('dash-water-goal');
 
   if (ringEl) ringEl.style.strokeDashoffset = offset;
   if (ozEl) ozEl.textContent = oz;
+  if (goalEl) goalEl.textContent = WATER_GOAL + ' oz / day';
   if (pctEl) {
     if (pct >= 1) pctEl.textContent = '✓ Goal reached!';
-    else pctEl.textContent = pctInt + '% of ' + WATER_GOAL + ' oz';
+    else pctEl.textContent = pctInt + '%';
   }
   if (cupsEl) {
     const cups = Math.floor(oz / 8);
@@ -570,6 +577,24 @@ function renderDashWater() {
     cupsEl.innerHTML = Array.from({length: totalCups}, (_,i) =>
       `<div class="water-cup ${i < cups ? 'filled' : 'empty'}"></div>`
     ).join('');
+  }
+}
+
+function toggleDashCustomWater() {
+  const row = document.getElementById('dash-water-custom-row');
+  if (!row) return;
+  const showing = row.style.display === 'flex';
+  row.style.display = showing ? 'none' : 'flex';
+  if (!showing) document.getElementById('dash-water-custom-input').focus();
+}
+
+function addDashCustomWater() {
+  const input = document.getElementById('dash-water-custom-input');
+  const oz = parseInt(input.value);
+  if (oz > 0) {
+    addWater(oz);
+    input.value = '';
+    toggleDashCustomWater();
   }
 }
 
