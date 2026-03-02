@@ -1137,3 +1137,10 @@ input::placeholder { color: var(--dim) !important; }
   background-clip: unset !important;
   color: #111 !important;
 }
+
+/* Macro Ring Cards */
+.macro-ring-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 6px 8px; text-align:center; }
+.macro-ring-wrap { position:relative; display:inline-block; }
+.macro-ring-val { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:0.85rem; color:var(--white); line-height:1; }
+.macro-ring-label { font-size:0.55rem; font-weight:700; letter-spacing:1.5px; color:var(--dim); margin-top:4px; text-transform:uppercase; }
+.macro-ring-tgt { font-size:0.62rem; color:var(--dim); margin-top:1px; }
