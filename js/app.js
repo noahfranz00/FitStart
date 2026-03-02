@@ -366,7 +366,18 @@ function selectSplit(btn) {
 function selectTimeline(btn) {
   document.querySelectorAll('.tl-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  selectedWeeks = parseInt(btn.dataset.weeks);
+  const customRow = document.getElementById('custom-weeks-row');
+  if (btn.dataset.weeks === 'custom') {
+    if (customRow) customRow.style.display = 'block';
+    selectedWeeks = parseInt(document.getElementById('custom-weeks-input').value) || 8;
+  } else if (btn.dataset.weeks === '0') {
+    // Maintain mode — set weeks to 0 which triggers maintain in calcNutrition
+    if (customRow) customRow.style.display = 'none';
+    selectedWeeks = 0;
+  } else {
+    if (customRow) customRow.style.display = 'none';
+    selectedWeeks = parseInt(btn.dataset.weeks);
+  }
 }
 
 function initDayPicker() {
@@ -421,7 +432,7 @@ function calcNutrition(weightLbs, goalLbs, weeks, gender, age, heightCm, activit
   const tdee = Math.round(bmr * multiplier);
 
   const diff = weightLbs - goalLbs; // positive = lose, negative = gain
-  const mode = diff > 2 ? 'lose' : diff < -2 ? 'gain' : 'maintain';
+  const mode = weeks === 0 ? 'maintain' : (diff > 2 ? 'lose' : diff < -2 ? 'gain' : 'maintain');
 
   let calories, surplus, deficit, weeklyChange;
 
@@ -543,13 +554,13 @@ async function buildPlan(selDays) {
   const injuryStr = u.injuries || 'None';
   const splitLabel = { ppl:'Push/Pull/Legs', ul:'Upper/Lower', fb:'Full Body', ai:'AI Optimized (choose best for me)' }[u.split] || 'Push/Pull/Legs';
   const gymDaysStr = selDays.join(', ');
-  const modeStr = n.mode === 'lose' ? 'fat loss' : n.mode === 'gain' ? 'muscle gain (lean bulk)' : 'body recomposition';
+  const modeStr = n.mode === 'lose' ? 'fat loss' : n.mode === 'gain' ? 'muscle gain (lean bulk)' : 'maintenance (body recomposition)';
 
   const systemPrompt = `You are an elite strength coach. Respond ONLY with a single valid JSON object. No markdown, no code blocks, no explanation. Raw JSON only. Keep ALL strings as short as possible.`;
 
   const exPerSession = u.tier === 'beginner' ? '3-4' : u.tier === 'intermediate' ? '4-5' : '5-6';
   const userPrompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
-Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks}wk.
+Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks === 0 ? 'ongoing/maintenance' : u.weeks + 'wk'}.
 
 Return ONLY this JSON structure:
 {"planName":"short name","tagline":"short","philosophy":"1 sentence","schedule":[{"day":"Monday","type":"workout","badge":"Push","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
@@ -639,7 +650,7 @@ CRITICAL RULES:
     protein_target: nu.protein + 'g/day',
     weekly_loss: '~' + nu.weeklyChange + ' lbs/week',
     mode: nu.mode,
-    timeline: u.weeks + ' weeks',
+    timeline: u.weeks === 0 ? 'Ongoing (Maintain)' : u.weeks + ' weeks',
     workout_philosophy: parsed.philosophy,
     weekly_schedule: schedule
   };
@@ -660,7 +671,7 @@ function renderResults(plan) {
   const myplanBanner = document.getElementById('myplan-banner');
   if (myplanBanner) myplanBanner.innerHTML = `<div class="results-banner" style="border-radius:14px;margin-bottom:0"><div><h2>${plan.name}</h2><p>${plan.tagline}</p></div><div class="results-tier-badge">${USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1)}</div></div>`;
   document.getElementById('results-grid').innerHTML = [
-    { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', title:'YOUR GOAL', html:`<ul style="margin-top:4px;margin-left:14px"><li>Current weight: <strong>${USER.weight} lbs</strong></li><li>Goal weight: <strong>${USER.goal} lbs</strong></li><li>Timeline: <strong>${plan.timeline}</strong></li><li>${n.mode==='gain'?'Gaining':'Losing'} <strong>${Math.abs(parseFloat(n.weeklyChange))} lbs/week</strong></li></ul>` },
+    { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', title:'YOUR GOAL', html:`<ul style="margin-top:4px;margin-left:14px"><li>Current weight: <strong>${USER.weight} lbs</strong></li><li>Goal weight: <strong>${USER.goal} lbs</strong></li><li>Timeline: <strong>${plan.timeline}</strong></li>${n.mode==='maintain'?'<li>Maintaining current weight</li>':`<li>${n.mode==='gain'?'Gaining':'Losing'} <strong>${Math.abs(parseFloat(n.weeklyChange))} lbs/week</strong></li>`}</ul>` },
     { icon:'🥩', title:'NUTRITION TARGETS', html:`<p><strong>${plan.calorie_target}</strong> daily calories</p><p><strong>${plan.protein_target}</strong> protein</p><p style="margin-top:6px;color:var(--dim);font-size:0.83rem">Carbs: ${USER.nutrition.carbs}g · Fat: ${USER.nutrition.fat}g · TDEE: ${USER.nutrition.tdee} cal</p>` },
     { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', title:'TRAINING APPROACH', html:`<ul style="margin-top:4px;margin-left:14px">${(plan.workout_philosophy||plan.philosophy||'Personalized program built for your goals.').split('. ').filter(s=>s.trim()).map(s=>`<li style="margin-bottom:6px">${s.trim().replace(/\.$/,'')}</li>`).join('')}</ul>` },
   ].map(c=>`<div class="r-card"><div class="r-card-icon">${c.icon}</div><h3>${c.title}</h3>${c.html}</div>`).join('');
