@@ -507,21 +507,27 @@ function addCustomWater() {
 }
 
 function addWater(oz) {
-  const current = getWaterOz(nutDay);
-  setWaterOz(nutDay, current + oz);
-  renderWater();
+  // Always add to today when called from dashboard buttons
+  const dayIdx = TODAY_IDX;
+  const current = getWaterOz(dayIdx);
+  setWaterOz(dayIdx, current + oz);
+  // Sync nutDay if viewing today in nutrition
+  if (nutDay === TODAY_IDX) renderWater();
+  renderDashWater();
 }
 
 function subtractWater(oz) {
   const current = getWaterOz(TODAY_IDX);
   setWaterOz(TODAY_IDX, Math.max(0, current - oz));
-  renderWater();
+  if (nutDay === TODAY_IDX) renderWater();
+  renderDashWater();
 }
 
 function undoWater() {
   const current = getWaterOz(nutDay);
   setWaterOz(nutDay, Math.max(0, current - 8));
   renderWater();
+  if (nutDay === TODAY_IDX) renderDashWater();
 }
 
 function renderWater() {
