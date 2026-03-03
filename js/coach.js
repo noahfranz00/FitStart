@@ -108,6 +108,9 @@ function initCoach() {
     if (starters) starters.style.display = '';
     if (clearBtn) clearBtn.style.display = 'none';
   }
+
+  // Flush any queued proactive messages and clear the notification dot
+  if (typeof _flushProactiveMessages === 'function') _flushProactiveMessages();
 }
 
 // Handle iOS keyboard: when keyboard opens, visualViewport shrinks. 
@@ -956,3 +959,327 @@ function _processFoodLog(data) {
   }
 }
 
+// ═══════════════════════════════════════════
+// PROACTIVE COACH ENGINE
+// ═══════════════════════════════════════════
+
+const PROACTIVE_LS_KEY = 'fs_proactive_msgs';
+const PROACTIVE_LAST_KEY = 'fs_proactive_last';
+
+// Trigger types and their cooldowns (ms)
+const PROACTIVE_COOLDOWNS = {
+  post_workout:     0,           // Always fires after a workout
+  missed_workout:   20 * 60 * 60 * 1000, // Once per 20h
+  morning_primer:   20 * 60 * 60 * 1000, // Once per 20h
+  streak_milestone: 7 * 24 * 60 * 60 * 1000, // Once per week per milestone
+  low_protein:      20 * 60 * 60 * 1000, // Once per 20h
+};
+
+function _getProactiveLast() {
+  try { return JSON.parse(localStorage.getItem(PROACTIVE_LAST_KEY)) || {}; } catch(e) { return {}; }
+}
+function _setProactiveLast(key) {
+  const all = _getProactiveLast();
+  all[key] = Date.now();
+  try { localStorage.setItem(PROACTIVE_LAST_KEY, JSON.stringify(all)); } catch(e) {}
+}
+function _proactiveCooldownOk(key) {
+  const cooldown = PROACTIVE_COOLDOWNS[key] || (24 * 60 * 60 * 1000);
+  const last = _getProactiveLast();
+  return !last[key] || (Date.now() - last[key]) > cooldown;
+}
+
+// Queue a proactive message — stores it and shows notification dot
+function _queueProactiveMessage(msg, triggerKey) {
+  const msgs = _getProactiveQueue();
+  msgs.push({ text: msg, ts: Date.now(), trigger: triggerKey, read: false });
+  // Keep last 10
+  const trimmed = msgs.slice(-10);
+  try { localStorage.setItem(PROACTIVE_LS_KEY, JSON.stringify(trimmed)); } catch(e) {}
+  _updateCoachNotifDot();
+  // If coach is currently open, inject the bubble live
+  const coachView = document.getElementById('view-coach');
+  if (coachView && coachView.classList.contains('active')) {
+    _injectProactiveBubble(msg);
+    _markProactiveRead();
+  }
+}
+
+function _getProactiveQueue() {
+  try { return JSON.parse(localStorage.getItem(PROACTIVE_LS_KEY)) || []; } catch(e) { return []; }
+}
+
+function _markProactiveRead() {
+  const msgs = _getProactiveQueue();
+  msgs.forEach(m => m.read = true);
+  try { localStorage.setItem(PROACTIVE_LS_KEY, JSON.stringify(msgs)); } catch(e) {}
+  _updateCoachNotifDot();
+}
+
+function _updateCoachNotifDot() {
+  const msgs = _getProactiveQueue();
+  const unread = msgs.filter(m => !m.read).length;
+  // Update sidebar dot
+  let dot = document.getElementById('coach-notif-dot');
+  let mobDot = document.getElementById('coach-notif-dot-mob');
+  if (unread > 0) {
+    if (!dot) {
+      // Find sidebar coach button and add dot
+      const coachSbBtn = document.querySelector('.sb-btn[onclick*="\'coach\'"]');
+      if (coachSbBtn) {
+        dot = document.createElement('div');
+        dot.id = 'coach-notif-dot';
+        dot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:var(--gold);position:absolute;top:6px;right:6px;animation:pulse 2s ease infinite;pointer-events:none';
+        coachSbBtn.style.position = 'relative';
+        coachSbBtn.appendChild(dot);
+      }
+    }
+    if (!mobDot) {
+      const mobCoach = document.getElementById('mob-tab-coach');
+      if (mobCoach) {
+        mobDot = document.createElement('div');
+        mobDot.id = 'coach-notif-dot-mob';
+        mobDot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:var(--gold);position:absolute;top:4px;right:4px;animation:pulse 2s ease infinite;pointer-events:none';
+        mobCoach.style.position = 'relative';
+        mobCoach.appendChild(mobDot);
+      }
+    }
+    if (dot) dot.style.display = '';
+    if (mobDot) mobDot.style.display = '';
+  } else {
+    if (dot) dot.style.display = 'none';
+    if (mobDot) mobDot.style.display = 'none';
+  }
+}
+
+function _injectProactiveBubble(text) {
+  const container = document.getElementById('coach-messages');
+  if (!container) return;
+  const bubble = document.createElement('div');
+  bubble.className = 'coach-bubble assistant proactive-bubble';
+  bubble.innerHTML = _formatCoachText(text);
+  container.appendChild(bubble);
+  container.scrollTop = container.scrollHeight;
+  // Also push to history so it persists
+  _coachHistory.push({ role: 'assistant', content: text });
+  _saveCoachHistory();
+}
+
+// Called when coach view opens — flush any queued unread messages
+function _flushProactiveMessages() {
+  const msgs = _getProactiveQueue();
+  const unread = msgs.filter(m => !m.read);
+  if (!unread.length) return;
+  // Only show messages from the last 24h
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  unread.filter(m => m.ts > cutoff).forEach(m => {
+    _injectProactiveBubble(m.text);
+  });
+  _markProactiveRead();
+}
+
+// ── TRIGGER 1: Post-Workout Message ──
+async function triggerPostWorkoutMessage(workoutName, prList, totalVolume, durationMs) {
+  if (!USER) return;
+  _setProactiveLast('post_workout');
+  try {
+    const durMins = durationMs ? Math.round(durationMs / 60000) : 0;
+    const prText = prList && prList.length > 0
+      ? `PRs hit: ${prList.map(p => p.exercise + ' ' + p.weight + 'lbs×' + p.reps + (p.e1rmGain ? ' (+' + p.e1rmGain + ' e1RM)' : '')).join(', ')}.`
+      : 'No new PRs today.';
+    const ph = (typeof getTrainingPhase === 'function') ? getTrainingPhase(CURRENT_WEEK) : { name: '' };
+
+    const prompt = `You are the Blueprint AI Coach. Write a SHORT post-workout message (2-3 sentences max) for ${USER.name || 'your client'}.
+
+Workout just completed: ${workoutName}
+Duration: ${durMins} min
+Total volume: ${totalVolume ? totalVolume.toLocaleString() + ' lbs' : 'not tracked'}
+${prText}
+Phase: ${(typeof isDeloadWeek === 'function' && isDeloadWeek(CURRENT_WEEK)) ? 'DELOAD WEEK' : ph.name + ' PHASE'}
+
+Be specific, warm, coach-like. Mention at least one concrete detail from the session. End with ONE focus point for recovery or next session. No generic fluff. Don't use the word "incredible" or "amazing".`;
+
+    const reply = await callClaude([{ role: 'user', content: prompt }], { max_tokens: 150 });
+    if (reply) _queueProactiveMessage(reply, 'post_workout');
+  } catch(e) { console.log('Post-workout message error:', e); }
+}
+
+// ── TRIGGER 2: Missed Workout Nudge (evening check) ──
+async function triggerMissedWorkoutCheck() {
+  if (!USER) return;
+  if (!_proactiveCooldownOk('missed_workout')) return;
+
+  const now = new Date();
+  const hour = now.getHours();
+  // Only fire 7pm–10pm
+  if (hour < 19 || hour >= 22) return;
+
+  const isGymDay = (typeof GYM_DAYS !== 'undefined') && GYM_DAYS.includes(TODAY_IDX);
+  if (!isGymDay) return;
+
+  const todayDone = wktDone && wktDone.has(TODAY_IDX);
+  if (todayDone) return;
+
+  _setProactiveLast('missed_workout');
+  try {
+    const todayWorkout = (typeof DAY_WORKOUTS !== 'undefined') ? DAY_WORKOUTS[TODAY_IDX] : null;
+    const workoutName = todayWorkout ? todayWorkout.name : 'your workout';
+    const ph = (typeof getTrainingPhase === 'function') ? getTrainingPhase(CURRENT_WEEK) : { name: '' };
+
+    // Count missed days this week
+    const workoutDates = (typeof getWorkoutDates === 'function') ? getWorkoutDates() : new Set();
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+    let doneThisWeek = 0;
+    workoutDates.forEach(d => { if (new Date(d + 'T00:00:00') >= weekStart) doneThisWeek++; });
+    const weekGoal = (typeof GYM_DAYS !== 'undefined') ? GYM_DAYS.length : 3;
+
+    const prompt = `You are the Blueprint AI Coach. Write a SHORT missed-workout nudge (2 sentences) for ${USER.name || 'your client'}.
+
+It's ${hour >= 20 ? 'late evening' : 'evening'}, they haven't done their scheduled ${workoutName} today.
+Week progress: ${doneThisWeek}/${weekGoal} workouts done so far.
+Phase: ${(typeof isDeloadWeek === 'function' && isDeloadWeek(CURRENT_WEEK)) ? 'DELOAD WEEK (reduced volume — especially easy to get in)' : ph.name + ' PHASE'}
+
+Be honest but not guilt-trippy. Acknowledge it's late, offer a practical option (shorter session, tomorrow, etc). Sound like a real trainer texting them — not a push notification. 2 sentences max.`;
+
+    const reply = await callClaude([{ role: 'user', content: prompt }], { max_tokens: 100 });
+    if (reply) _queueProactiveMessage(reply, 'missed_workout');
+  } catch(e) { console.log('Missed workout check error:', e); }
+}
+
+// ── TRIGGER 3: Morning Gym Day Primer ──
+async function triggerMorningPrimer() {
+  if (!USER) return;
+  if (!_proactiveCooldownOk('morning_primer')) return;
+
+  const now = new Date();
+  const hour = now.getHours();
+  // Only 6am–11am
+  if (hour < 6 || hour >= 11) return;
+
+  const isGymDay = (typeof GYM_DAYS !== 'undefined') && GYM_DAYS.includes(TODAY_IDX);
+  if (!isGymDay) return;
+
+  const todayDone = wktDone && wktDone.has(TODAY_IDX);
+  if (todayDone) return;
+
+  _setProactiveLast('morning_primer');
+  try {
+    const todayWorkout = (typeof DAY_WORKOUTS !== 'undefined') ? DAY_WORKOUTS[TODAY_IDX] : null;
+    const workoutName = todayWorkout ? todayWorkout.name : 'your workout';
+    const exercises = todayWorkout && todayWorkout.exercises ? todayWorkout.exercises.slice(0, 3).map(e => e.name).join(', ') : '';
+    const ph = (typeof getTrainingPhase === 'function') ? getTrainingPhase(CURRENT_WEEK) : { name: '' };
+
+    // Check yesterday's protein
+    const mealData = lsGet('fs_mealLogs') || {};
+    const yIdx = TODAY_IDX > 0 ? TODAY_IDX - 1 : 0;
+    const yCals = (mealData[yIdx] || []);
+    let yPro = 0;
+    if (typeof getMealCatEntries === 'function' && typeof MEAL_CATS !== 'undefined') {
+      for (const cat of MEAL_CATS) {
+        const entries = getMealCatEntries(yIdx, cat.id);
+        entries.forEach(e => { yPro += (e.pro || 0); });
+      }
+    }
+    const proTarget = (typeof TARGETS !== 'undefined') ? TARGETS.pro : 150;
+
+    const prompt = `You are the Blueprint AI Coach. Write a morning pre-workout message (2 sentences) for ${USER.name || 'your client'}.
+
+Today's workout: ${workoutName}${exercises ? ' — ' + exercises : ''}
+Phase: ${(typeof isDeloadWeek === 'function' && isDeloadWeek(CURRENT_WEEK)) ? 'DELOAD WEEK — lighter loads, focus on movement quality' : ph.name + ' PHASE: ' + ph.intensityLabel}
+${yPro > 0 ? 'Yesterday protein: ' + yPro + 'g (target: ' + proTarget + 'g)' + (yPro < proTarget * 0.8 ? ' — was low, remind them to hit protein today' : '') : ''}
+
+Sound like a trainer texting before a session — energized but not cheesy. Mention what muscle groups they're hitting. One tactical tip for the phase they're in. 2 sentences max.`;
+
+    const reply = await callClaude([{ role: 'user', content: prompt }], { max_tokens: 100 });
+    if (reply) _queueProactiveMessage(reply, 'morning_primer');
+  } catch(e) { console.log('Morning primer error:', e); }
+}
+
+// ── TRIGGER 4: Streak Milestone ──
+async function triggerStreakMilestone(streak) {
+  if (!USER) return;
+  const milestones = [3, 7, 14, 21, 30, 50, 75, 100];
+  if (!milestones.includes(streak)) return;
+
+  const milestoneKey = 'streak_' + streak;
+  const last = _getProactiveLast();
+  if (last[milestoneKey]) return; // Only fire once per milestone ever
+  _setProactiveLast(milestoneKey);
+
+  try {
+    const prompt = `You are the Blueprint AI Coach. Write a streak milestone message (2 sentences) for ${USER.name || 'your client'}.
+
+They just hit a ${streak}-day workout streak. Goal: ${USER.nutrition?.mode === 'lose' ? 'fat loss' : 'muscle gain'}.
+
+Celebrate genuinely but briefly. Make it feel earned, not generic. Reference the actual number. 2 sentences.`;
+
+    const reply = await callClaude([{ role: 'user', content: prompt }], { max_tokens: 80 });
+    if (reply) _queueProactiveMessage('🔥 ' + reply, milestoneKey);
+  } catch(e) { console.log('Streak milestone error:', e); }
+}
+
+// ── TRIGGER 5: Low Protein End-of-Day ──
+async function triggerLowProteinNudge() {
+  if (!USER) return;
+  if (!_proactiveCooldownOk('low_protein')) return;
+
+  const now = new Date();
+  const hour = now.getHours();
+  // Only 6pm–9pm
+  if (hour < 18 || hour >= 21) return;
+
+  const proTarget = (typeof TARGETS !== 'undefined') ? TARGETS.pro : 150;
+  let todayPro = 0;
+  if (typeof getMealCatEntries === 'function' && typeof MEAL_CATS !== 'undefined' && typeof TODAY_IDX !== 'undefined') {
+    for (const cat of MEAL_CATS) {
+      const entries = getMealCatEntries(TODAY_IDX, cat.id);
+      entries.forEach(e => { todayPro += (e.pro || 0); });
+    }
+  }
+
+  // Only fire if logged some food but protein is under 60% of target
+  if (todayPro === 0) return; // No food logged — don't nudge
+  if (todayPro >= proTarget * 0.7) return; // Doing fine
+
+  _setProactiveLast('low_protein');
+  try {
+    const remaining = proTarget - todayPro;
+    const prompt = `You are the Blueprint AI Coach. Write a protein nudge (1-2 sentences) for ${USER.name || 'your client'}.
+
+They've logged ${todayPro}g protein today against a target of ${proTarget}g. It's ${hour >= 20 ? 'late evening' : 'evening'}.
+Remaining: ${remaining}g to hit target.
+
+Be practical — suggest a specific high-protein food or quick option they could still eat. Don't lecture. 1-2 sentences.`;
+
+    const reply = await callClaude([{ role: 'user', content: prompt }], { max_tokens: 80 });
+    if (reply) _queueProactiveMessage(reply, 'low_protein');
+  } catch(e) { console.log('Low protein nudge error:', e); }
+}
+
+// ── MASTER CHECK: run all ambient triggers ──
+// Called from initDashboard once per app load
+async function runProactiveCoachChecks() {
+  if (!USER) return;
+  // Stagger slightly so they don't all fire simultaneously
+  setTimeout(() => triggerMorningPrimer(), 2000);
+  setTimeout(() => triggerMissedWorkoutCheck(), 4000);
+  setTimeout(() => triggerLowProteinNudge(), 6000);
+
+  // Check streak milestone
+  try {
+    const workoutDates = (typeof getWorkoutDates === 'function') ? getWorkoutDates() : new Set();
+    const now = new Date();
+    let streak = 0;
+    for (let i = 0; i < 120; i++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      if (workoutDates.has(key)) streak++;
+      else if (i > 0) break;
+    }
+    if (streak > 0) setTimeout(() => triggerStreakMilestone(streak), 1000);
+  } catch(e) {}
+
+  // Restore notification dot state
+  setTimeout(() => _updateCoachNotifDot(), 500);
+}
