@@ -5,61 +5,41 @@
 // Dependencies: All globals from app.js, scoring.js functions
 
 function dashNav(view, btn) {
-  // Deactivate all views cleanly — no inline style overrides that fight CSS
+  // Hide all views cleanly — no inline style pollution
   document.querySelectorAll('.view').forEach(v => {
-    if (v.id !== 'view-' + view) {
-      v.classList.remove('active');
-      v.style.opacity = '';
-      v.style.transform = '';
-      v.style.transition = '';
-    }
+    v.classList.remove('active');
+    v.style.cssText = '';
   });
   document.querySelectorAll('.sb-btn').forEach(b => b.classList.remove('active'));
 
   const targetView = document.getElementById('view-' + view);
   if (!targetView) return;
-
-  // Animate in — only opacity/transform, never touch display or flex properties
-  targetView.style.opacity = '0';
-  targetView.style.transform = 'translateY(8px)';
-  targetView.style.transition = 'none';
   targetView.classList.add('active');
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    targetView.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-    targetView.style.opacity = '1';
-    targetView.style.transform = 'translateY(0)';
-    setTimeout(() => {
-      targetView.style.opacity = '';
-      targetView.style.transform = '';
-      targetView.style.transition = '';
-    }, 220);
-  }));
 
   if (btn) btn.classList.add('active');
 
-  // Toggle coach-active class on main-content for full-screen coach layout
+  // Coach gets its own full-screen layout on mobile
   const mainContent = document.querySelector('.main-content');
   if (mainContent) {
     if (view === 'coach') mainContent.classList.add('coach-active');
     else mainContent.classList.remove('coach-active');
   }
 
-  // Sync mobile bottom tabs
-  const mobViews = ['today','week','nutrition','coach'];
-  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
-  if (mobViews.includes(view)) {
-    const mobTab = document.getElementById('mob-tab-' + view);
-    if (mobTab) mobTab.classList.add('active');
-  }
+  // Always reset scroll to top when switching views (except coach)
+  if (view !== 'coach' && mainContent) mainContent.scrollTop = 0;
 
-  if (view==='nutrition') renderNutrition();
-  if (view==='myplan') { /* already rendered on plan generation */ }
-  if (view==='week') renderWeek();
-  if (view==='progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); }
-  if (view==='today') { renderTodayWorkout(); refreshDashMacros(); renderDashWater(); }
-  if (view==='program') renderProgram();
-  if (view==='settings') renderSettingsGymDays();
-  if (view==='coach') initCoach();
+  // Sync mobile bottom tabs
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+  const mobTab = document.getElementById('mob-tab-' + view);
+  if (mobTab) mobTab.classList.add('active');
+
+  if (view === 'nutrition') renderNutrition();
+  if (view === 'week') renderWeek();
+  if (view === 'progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); renderStrengthTrends(); }
+  if (view === 'today') { renderTodayWorkout(); refreshDashMacros(); renderDashWater(); }
+  if (view === 'program') renderProgram();
+  if (view === 'settings') renderSettingsGymDays();
+  if (view === 'coach') initCoach();
 }
 
 
