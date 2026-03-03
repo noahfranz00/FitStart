@@ -5,46 +5,17 @@
 // Dependencies: All globals from app.js, scoring.js functions
 
 function dashNav(view, btn) {
-  const currentActive = document.querySelector('.view.active');
-  const targetView = document.getElementById('view-'+view);
-  if (!targetView) return;
-
-  // Slide direction based on nav order
-  const navOrder = ['today','week','nutrition','coach','progress','program','myplan','settings'];
-  const fromView = currentActive ? (currentActive.id.replace('view-','')) : null;
-  const fromIdx = navOrder.indexOf(fromView);
-  const toIdx = navOrder.indexOf(view);
-  const direction = (toIdx >= fromIdx) ? 1 : -1;
-
-  // Exit current view
-  if (currentActive && currentActive !== targetView) {
-    currentActive.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
-    currentActive.style.opacity = '0';
-    currentActive.style.transform = 'translateX(' + (direction * -30) + 'px)';
-    setTimeout(() => {
-      currentActive.classList.remove('active');
-      currentActive.style.cssText = '';
-    }, 180);
-  }
-
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
-
-  // Enter new view
-  targetView.style.cssText = 'display:block;opacity:0;transform:translateX(' + (direction * 30) + 'px);transition:none';
-  targetView.classList.add('active');
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    targetView.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
-    targetView.style.opacity = '1';
-    targetView.style.transform = 'translateX(0)';
-    setTimeout(() => { targetView.style.cssText = ''; }, 240);
-  }));
-
+  document.getElementById('view-'+view).classList.add('active');
   if (btn) btn.classList.add('active');
+  // Toggle coach-active class on main-content for full-screen coach layout
   const mainContent = document.querySelector('.main-content');
   if (mainContent) {
     if (view === 'coach') mainContent.classList.add('coach-active');
     else mainContent.classList.remove('coach-active');
   }
+  // Sync mobile bottom tabs
   const mobViews = ['today','week','nutrition','coach'];
   document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
   if (mobViews.includes(view)) {
@@ -54,7 +25,7 @@ function dashNav(view, btn) {
   if (view==='nutrition') renderNutrition();
   if (view==='myplan') { /* already rendered on plan generation */ }
   if (view==='week') renderWeek();
-  if (view==='progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); renderProgressPhotos(); _renderWeeklyReportCard(null, false); }
+  if (view==='progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); renderStrengthTrends(); }
   if (view==='today') { renderTodayWorkout(); refreshDashMacros(); renderDashWater(); }
   if (view==='program') renderProgram();
   if (view==='settings') renderSettingsGymDays();
@@ -1793,6 +1764,120 @@ function renderStreak() {
   if (wktCountEl) wktCountEl.textContent = monthCount;
 }
 
+// ═══════════════════════════════════════════
+// STRENGTH TRENDS — Progressive Overload Engine UI
+// ═══════════════════════════════════════════
+function renderStrengthTrends() {
+  const container = document.getElementById('strength-trends-container');
+  if (!container) return;
+
+  const trends = getAllStrengthTrends();
+
+  if (!trends.length) {
+    container.innerHTML = `<div style="text-align:center;padding:24px 0;color:var(--dim);font-size:0.82rem">
+      Complete workouts to start tracking your strength trends.
+    </div>`;
+    return;
+  }
+
+  // Summary row — top-line stats
+  const totalPRs = trends.filter(t => t.gainLbs > 0).length;
+  const bestGainer = trends.reduce((best, t) => t.gainPct > (best ? best.gainPct : -Infinity) ? t : best, null);
+  const totalExercises = trends.length;
+
+  container.innerHTML = `
+    <div class="st-summary-strip">
+      <div class="st-summary-stat">
+        <div class="st-summary-val">${totalExercises}</div>
+        <div class="st-summary-label">Exercises Tracked</div>
+      </div>
+      <div class="st-summary-stat">
+        <div class="st-summary-val" style="color:var(--green)">${totalPRs}</div>
+        <div class="st-summary-label">Exercises Improved</div>
+      </div>
+      ${bestGainer ? `<div class="st-summary-stat">
+        <div class="st-summary-val" style="color:var(--gold)">+${Math.round(bestGainer.gainPct)}%</div>
+        <div class="st-summary-label">Best Gain</div>
+      </div>` : ''}
+    </div>
+    <div id="st-exercise-list"></div>`;
+
+  const listEl = document.getElementById('st-exercise-list');
+
+  trends.forEach(t => {
+    const isImproving = t.gainLbs > 0;
+    const isFlat = t.gainLbs === 0;
+    const trendColor = isImproving ? 'var(--green)' : isFlat ? 'var(--gold)' : '#ef4444';
+    const trendArrow = isImproving ? '▲' : isFlat ? '→' : '▼';
+    const gainStr = isImproving ? `+${t.gainLbs} lbs (+${Math.round(t.gainPct)}%)` : isFlat ? 'Holding steady' : `${t.gainLbs} lbs (${Math.round(t.gainPct)}%)`;
+
+    // Mini sparkline SVG
+    const sparkline = _buildSparklineSVG(t.trend, trendColor);
+
+    const card = document.createElement('div');
+    card.className = 'st-ex-card';
+    card.innerHTML = `
+      <div class="st-ex-header">
+        <div class="st-ex-name">${t.name}</div>
+        <div class="st-ex-sessions">${t.sessions} session${t.sessions !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="st-ex-body">
+        <div class="st-ex-stats">
+          <div class="st-ex-stat-block">
+            <div class="st-ex-big-num">${t.latest}<span class="st-ex-unit">lbs</span></div>
+            <div class="st-ex-stat-label">Current E1RM</div>
+          </div>
+          <div class="st-ex-stat-block">
+            <div class="st-ex-big-num" style="color:var(--gold)">${t.pr}<span class="st-ex-unit">lbs</span></div>
+            <div class="st-ex-stat-label">All-Time PR</div>
+          </div>
+          <div class="st-ex-stat-block">
+            <div class="st-ex-big-num" style="color:${trendColor};font-size:0.9rem">${trendArrow} ${gainStr}</div>
+            <div class="st-ex-stat-label">Since First Session</div>
+          </div>
+        </div>
+        <div class="st-ex-chart">${sparkline}</div>
+      </div>`;
+    listEl.appendChild(card);
+  });
+}
+
+function _buildSparklineSVG(trend, color) {
+  if (trend.length < 2) {
+    // Single point — just show a dot
+    return `<svg width="100%" height="48" viewBox="0 0 120 48" preserveAspectRatio="none">
+      <circle cx="60" cy="24" r="4" fill="${color}" opacity="0.8"/>
+    </svg>`;
+  }
+  const vals = trend.map(t => t.e1rm);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  const W = 120, H = 44, PAD = 4;
+  const xs = vals.map((_, i) => PAD + (i / (vals.length - 1)) * (W - PAD * 2));
+  const ys = vals.map(v => PAD + (1 - (v - min) / range) * (H - PAD * 2));
+
+  const linePts = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const fillPts = linePts + ` L${xs[xs.length-1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`;
+
+  // Mark the PR point
+  const prVal = Math.max(...vals);
+  const prIdx = vals.lastIndexOf(prVal);
+  const prDot = prIdx >= 0 ? `<circle cx="${xs[prIdx].toFixed(1)}" cy="${ys[prIdx].toFixed(1)}" r="3.5" fill="${color}" stroke="#0a0a0a" stroke-width="1.5"/>` : '';
+
+  return `<svg width="100%" height="48" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="sg-${Math.random().toString(36).slice(2,6)}" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${fillPts}" fill="url(#sg-${Math.random().toString(36).slice(2,6)})" opacity="0.5"/>
+    <path d="${linePts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${prDot}
+  </svg>`;
+}
+
 // ── MY PROGRAM ──
 function renderProgram() {
   if (!generatedPlan) return;
@@ -1827,135 +1912,7 @@ function renderProgram() {
 
 function toggleWeekRow(id) { const r=document.getElementById(id); if(r) r.style.display=r.style.display==='block'?'none':'block'; }
 
-// ═══════════════════════════════════════════
-// PROGRESS PHOTOS
-// ═══════════════════════════════════════════
-function renderProgressPhotos() {
-  const container = document.getElementById('progress-photos-gallery');
-  if (!container) return;
-  const photos = lsGet('fs_progress_photos') || [];
-  if (photos.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--dim);font-size:0.82rem">No photos yet. Take your first progress photo to track your transformation.</div>';
-    const compareBtn = document.getElementById('pp-compare-btn');
-    if (compareBtn) compareBtn.style.display = 'none';
-    return;
-  }
-  const compareBtn = document.getElementById('pp-compare-btn');
-  if (compareBtn) compareBtn.style.display = photos.length >= 2 ? '' : 'none';
-
-  container.innerHTML = photos.slice().reverse().map((p, i) => {
-    const realIdx = photos.length - 1 - i;
-    const d = new Date(p.date);
-    const label = d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
-    return `<div class="pp-thumb" onclick="openPhotoViewer(${realIdx})" title="${label}">
-      <img src="${p.data}" alt="${label}" style="width:100%;height:100%;object-fit:cover;border-radius:10px">
-      <div class="pp-date">${label}</div>
-    </div>`;
-  }).join('');
-}
-
-function openProgressPhotoCapture() {
-  const input = document.getElementById('progress-photo-input');
-  if (input) input.click();
-}
-
-async function handleProgressPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    // Compress/resize to max 800px
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const maxW = 800;
-      let w = img.width, h = img.height;
-      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const compressed = canvas.toDataURL('image/jpeg', 0.75);
-      const photos = lsGet('fs_progress_photos') || [];
-      photos.push({ date: new Date().toISOString().split('T')[0], data: compressed });
-      lsSet('fs_progress_photos', photos);
-      renderProgressPhotos();
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
-}
-
-function openPhotoViewer(idx) {
-  const photos = lsGet('fs_progress_photos') || [];
-  const photo = photos[idx];
-  if (!photo) return;
-  const modal = document.getElementById('photo-viewer-modal');
-  const img = document.getElementById('photo-viewer-img');
-  const dateEl = document.getElementById('photo-viewer-date');
-  const delBtn = document.getElementById('photo-viewer-del');
-  if (!modal || !img) return;
-  const d = new Date(photo.date);
-  img.src = photo.data;
-  dateEl.textContent = d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
-  delBtn.onclick = function() {
-    if (!confirm('Delete this progress photo?')) return;
-    photos.splice(idx, 1);
-    lsSet('fs_progress_photos', photos);
-    closePhotoViewer();
-    renderProgressPhotos();
-  };
-  modal.style.display = 'flex';
-}
-
-function closePhotoViewer() {
-  const modal = document.getElementById('photo-viewer-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-function openPhotoComparison() {
-  const photos = lsGet('fs_progress_photos') || [];
-  if (photos.length < 2) return;
-  const modal = document.getElementById('photo-compare-modal');
-  if (!modal) return;
-  // Default: first and last
-  _renderCompareSelectors(photos);
-  modal.style.display = 'flex';
-}
-
-function closePhotoComparison() {
-  const modal = document.getElementById('photo-compare-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-function _renderCompareSelectors(photos) {
-  const leftSel = document.getElementById('compare-left-sel');
-  const rightSel = document.getElementById('compare-right-sel');
-  if (!leftSel || !rightSel) return;
-  const opts = photos.map((p, i) => {
-    const d = new Date(p.date);
-    return `<option value="${i}">${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</option>`;
-  }).join('');
-  leftSel.innerHTML = opts;
-  rightSel.innerHTML = opts;
-  leftSel.value = 0;
-  rightSel.value = photos.length - 1;
-  _updateCompareImages(photos);
-  leftSel.onchange = rightSel.onchange = () => _updateCompareImages(photos);
-}
-
-function _updateCompareImages(photos) {
-  const leftSel = document.getElementById('compare-left-sel');
-  const rightSel = document.getElementById('compare-right-sel');
-  const leftImg = document.getElementById('compare-img-left');
-  const rightImg = document.getElementById('compare-img-right');
-  if (!leftSel || !rightSel || !leftImg || !rightImg) return;
-  const l = photos[parseInt(leftSel.value)];
-  const r = photos[parseInt(rightSel.value)];
-  if (l) { leftImg.src = l.data; leftImg.style.display = ''; }
-  if (r) { rightImg.src = r.data; rightImg.style.display = ''; }
-}
-
-
+// ── SETTINGS ──
 function renderSettingsGymDays() {
   const container = document.getElementById('settings-gym-days'); if (!container) return;
   container.innerHTML = '';
@@ -2117,13 +2074,9 @@ function loadExercise(idx) {
 
   document.getElementById('wo-ex-title').textContent = ex.name;
   const _badgeEl = document.getElementById('wo-ex-badge');
-  // Apply phase rep range if not a deload
-  const _phModBadge = getPhaseExerciseModifier(CURRENT_WEEK);
-  const _phSets = isDeloadWeek(CURRENT_WEEK) ? Math.max(2, Math.round(ex.sets * 0.6)) : (_phModBadge.setMult !== 1.0 ? Math.max(3, Math.round(ex.sets * _phModBadge.setMult)) : ex.sets);
-  const _phReps = (!isDeloadWeek(CURRENT_WEEK) && _phModBadge.repRange) ? _phModBadge.repRange : ex.reps;
   _badgeEl.innerHTML = 
     `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">` +
-    `<span>${_phSets} × ${_phReps}</span>` +
+    `<span>${ex.sets} × ${ex.reps}</span>` +
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11" style="opacity:0.6;flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
     `</div>` +
     `<span style="font-size:0.6rem;opacity:0.7;letter-spacing:0.5px">REST ${ex.rest}s</span>`;
@@ -2161,13 +2114,8 @@ function loadExercise(idx) {
     renderDemoPlaceholder(framesEl, ex.name, ex.muscles || db.muscles);
   }
 
-  // Initialize dynamic set count if not set — use phase-adjusted count
-  if (!woExtraSets[idx]) {
-    const _initPhMod = getPhaseExerciseModifier(CURRENT_WEEK);
-    woExtraSets[idx] = isDeloadWeek(CURRENT_WEEK)
-      ? Math.max(2, Math.round(ex.sets * 0.6))
-      : (_initPhMod.setMult !== 1.0 ? Math.max(3, Math.round(ex.sets * _initPhMod.setMult)) : ex.sets);
-  }
+  // Initialize dynamic set count if not set
+  if (!woExtraSets[idx]) woExtraSets[idx] = ex.sets;
   renderSetsTable(idx, ex);
 
   // Rest timer button
@@ -2195,57 +2143,21 @@ function loadExercise(idx) {
 function renderSetsTable(idx, ex) {
   const tbody = document.getElementById('sets-tbody');
   if (!tbody) return;
-  // Apply phase-based periodization modifiers
-  const _phMod = getPhaseExerciseModifier(CURRENT_WEEK);
+  // Apply deload week volume reduction (60% of normal sets, min 2)
   let baseSets = ex.sets;
-  if (isDeloadWeek(CURRENT_WEEK)) {
-    baseSets = Math.max(2, Math.round(baseSets * 0.6));
-  } else if (_phMod.setMult && _phMod.setMult !== 1.0) {
-    baseSets = Math.max(3, Math.round(baseSets * _phMod.setMult));
-  }
+  if (isDeloadWeek(CURRENT_WEEK)) baseSets = Math.max(2, Math.round(baseSets * 0.6));
   const numSets = woExtraSets[idx] || baseSets;
   tbody.innerHTML = '';
 
   // Look up previous session for THIS exercise by NAME (not index)
   let prevSets = [];
-  let prevSessionDate = null;
   try {
     const exlogs = getExLogs();
     const sessions = exlogs[ex.name] || [];
     const today = todayDateStr();
     const prevSession = sessions.find(s => s.date !== today);
-    if (prevSession && prevSession.sets) {
-      prevSets = prevSession.sets;
-      prevSessionDate = prevSession.date;
-    }
+    if (prevSession && prevSession.sets) prevSets = prevSession.sets;
   } catch(e) {}
-
-  // ── LAST SESSION PANEL ──
-  // Render a prominent "LAST SESSION" card above the sets table
-  let lastSessionPanel = document.getElementById('last-session-panel');
-  if (!lastSessionPanel) {
-    lastSessionPanel = document.createElement('div');
-    lastSessionPanel.id = 'last-session-panel';
-    const tableWrap = tbody.closest('table') || tbody.parentElement;
-    if (tableWrap && tableWrap.parentElement) {
-      tableWrap.parentElement.insertBefore(lastSessionPanel, tableWrap);
-    }
-  }
-  if (prevSets.length > 0 && prevSets.some(s => s && s.weight)) {
-    const dateLabel = prevSessionDate ? (() => {
-      const d = new Date(prevSessionDate + 'T00:00:00');
-      return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    })() : 'Last time';
-    const setsHTML = prevSets.slice(0, numSets).map((ps, i) => {
-      if (!ps || (!ps.weight && !ps.reps)) return `<div class="lsp-set"><span class="lsp-set-num">S${i+1}</span><span class="lsp-set-val">—</span></div>`;
-      return `<div class="lsp-set"><span class="lsp-set-num">S${i+1}</span><span class="lsp-set-val">${ps.weight}<span class="lsp-unit">lbs</span> × ${ps.reps}</span></div>`;
-    }).join('');
-    lastSessionPanel.innerHTML = `<div class="last-session-card"><div class="lsc-header"><span class="lsc-label">⏱ LAST SESSION</span><span class="lsc-date">${dateLabel}</span></div><div class="lsc-sets">${setsHTML}</div></div>`;
-    lastSessionPanel.style.display = '';
-  } else {
-    lastSessionPanel.innerHTML = '';
-    lastSessionPanel.style.display = 'none';
-  }
 
   for (let s=0; s<numSets; s++) {
     const isSaved = woSets[idx] && woSets[idx][s];
@@ -2253,8 +2165,11 @@ function renderSetsTable(idx, ex) {
     // Only show saved values if the set was actually completed THIS session
     const valW = isDone && (woSets[idx][s].weight != null) ? String(woSets[idx][s].weight) : '';
     const valR = isDone && (woSets[idx][s].reps != null) ? String(woSets[idx][s].reps) : '';
+    // Previous data from the SAME exercise name
+    const prev = prevSets[s] || null;
+    const prevHint = (prev && prev.weight && prev.reps) ? '<div style="font-size:0.7rem;color:var(--off);margin-top:3px;font-family:\'DM Mono\',monospace">Last: ' + prev.weight + 'lbs × ' + prev.reps + '</div>' : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div></td>'+
+    tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div>' + prevHint + '</td>'+
       '<td class="set-cell-weight"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="decimal" value="'+escapeAttr(valW)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
       '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="number" inputmode="numeric" value="'+escapeAttr(valR)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
       '<td><button class="set-check '+(isDone?'done':'')+'" id="sd-'+idx+'-'+s+'" '+(isDone?'disabled':'')+' onclick="completeSet('+idx+','+s+','+ex.rest+')" title="Mark done">✓</button></td>'+
@@ -2304,6 +2219,47 @@ function autoSaveSet(exIdx, setIdx, restSecs) {
     persistWorkoutDraft();
     if (weight && reps) saveSet(woDay, exIdx, setIdx, weight, reps);
   }
+}
+
+function _showPRToast(exName, weight, reps, newE1RM, e1rmGain) {
+  // Remove any existing PR toast
+  const existing = document.getElementById('pr-toast');
+  if (existing) existing.remove();
+
+  const gainText = e1rmGain > 0 ? `+${e1rmGain} lbs e1RM` : `${newE1RM} lbs e1RM`;
+
+  const toast = document.createElement('div');
+  toast.id = 'pr-toast';
+  toast.style.cssText = `
+    position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);
+    z-index:10000;
+    background:linear-gradient(135deg,#1a1500,#2a2000);
+    border:1px solid rgba(212,165,32,0.6);
+    border-radius:16px;padding:14px 20px;
+    box-shadow:0 8px 32px rgba(212,165,32,0.25), 0 0 0 1px rgba(212,165,32,0.1);
+    display:flex;align-items:center;gap:12px;
+    min-width:260px;max-width:90vw;
+    transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s ease;
+    opacity:0;
+  `;
+  toast.innerHTML = `
+    <div style="font-size:1.6rem;line-height:1;filter:drop-shadow(0 0 8px rgba(212,165,32,0.8))">🏆</div>
+    <div style="flex:1">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.75rem;letter-spacing:2.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2px">PERSONAL RECORD</div>
+      <div style="font-size:0.92rem;color:#fff;font-weight:700;line-height:1.3">${exName}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.8rem;color:rgba(255,255,255,0.7);margin-top:2px">${weight}lbs × ${reps} · <span style="color:var(--gold)">${gainText}</span></div>
+    </div>`;
+
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    toast.style.opacity = '1';
+  }));
+  setTimeout(() => {
+    toast.style.transform = 'translateX(-50%) translateY(-80px)';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 400);
+  }, 3500);
 }
 
 function isPR(exIdx, setIdx, weight, reps) {
@@ -2372,13 +2328,23 @@ function completeSet(exIdx, setIdx, restSecs) {
   var pr = isPR(exIdx, setIdx, weight, reps);
   if (pr) {
     var exName = woWorkout.exercises[exIdx] ? woWorkout.exercises[exIdx].name : 'Exercise';
-    woPRs.push({ exercise: exName, weight: weight, reps: reps, set: setIdx + 1 });
+    // Calculate how much the e1RM improved
+    var newE1RM = calcE1RM(weight, reps);
+    var prevTrend = getStrengthTrend(exName);
+    var prevBestE1RM = prevTrend.length > 0 ? Math.max(...prevTrend.map(t => t.e1rm)) : 0;
+    var e1rmGain = prevBestE1RM > 0 ? newE1RM - prevBestE1RM : 0;
+    woPRs.push({ exercise: exName, weight: weight, reps: reps, set: setIdx + 1, newE1RM, prevE1RM: prevBestE1RM, e1rmGain });
+
+    // Flash the row gold
     var row = btn.closest('tr');
     if (row) {
-      row.style.background = 'rgba(212,165,32,0.12)';
+      row.style.background = 'rgba(212,165,32,0.18)';
       row.style.transition = 'background 0.3s';
-      setTimeout(function(){ row.style.background = ''; }, 2000);
+      setTimeout(function(){ row.style.background = ''; }, 2500);
     }
+
+    // Show a prominent PR toast
+    _showPRToast(exName, weight, reps, newE1RM, e1rmGain);
   }
 
   // Auto-start rest timer if not last set
