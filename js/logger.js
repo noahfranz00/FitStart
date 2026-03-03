@@ -1933,44 +1933,40 @@ function saveSettings() {
   const newGoal   = parseFloat(document.getElementById('s-goal').value);
   if (newName && USER) USER.name = newName;
   if (newWeight && USER) {
-    USER.weight = newWeight;
-    // Recalculate macros if weight changed meaningfully (>1 lb diff)
     const prevWeight = parseFloat(USER.weight) || newWeight;
+    USER.weight = newWeight;
     if (Math.abs(prevWeight - newWeight) > 0.5) {
       const n = calcNutrition(newWeight, newGoal || USER.goal, USER.weeks || 12, USER.gender || 'Male', USER.age || 30, USER.heightCm || 175, USER.activity || 'moderate');
       USER.nutrition = n;
-      TARGETS.cal  = n.calories;
-      TARGETS.pro  = n.protein;
-      TARGETS.carb = n.carbs;
-      TARGETS.fat  = n.fat;
-      document.getElementById('s-cal').value  = n.calories;
-      document.getElementById('s-pro').value  = n.protein;
-      document.getElementById('s-carb').value = n.carbs;
-      document.getElementById('s-fat').value  = n.fat;
+      TARGETS.cal = n.calories; TARGETS.pro = n.protein; TARGETS.carb = n.carbs; TARGETS.fat = n.fat;
+      document.getElementById('s-cal').value = n.calories; document.getElementById('s-pro').value = n.protein;
+      document.getElementById('s-carb').value = n.carbs; document.getElementById('s-fat').value = n.fat;
     }
   }
   if (newGoal && USER) USER.goal = newGoal;
   lsSet('fs_user', USER);
 
-  // Also allow manual override of macro targets
+  // Save gym days
+  const gymDayEls = document.querySelectorAll('#settings-gym-days [data-idx]');
+  if (gymDayEls.length > 0) {
+    const newGymDays = [];
+    gymDayEls.forEach(el => { if (el.dataset.active === '1') newGymDays.push(parseInt(el.dataset.idx)); });
+    if (newGymDays.length > 0) {
+      GYM_DAYS.length = 0;
+      newGymDays.forEach(d => GYM_DAYS.push(d));
+      if (USER) USER.gymDays = GYM_DAYS.slice();
+      lsSet('fs_gym_days', GYM_DAYS.slice());
+      if (typeof buildDayWorkouts === 'function') buildDayWorkouts();
+      renderWeek();
+    }
+  }
+
+  // Allow manual override of macro targets
   TARGETS.cal  = parseInt(document.getElementById('s-cal').value)  || TARGETS.cal;
   TARGETS.pro  = parseInt(document.getElementById('s-pro').value)  || TARGETS.pro;
   TARGETS.carb = parseInt(document.getElementById('s-carb').value) || TARGETS.carb;
   TARGETS.fat  = parseInt(document.getElementById('s-fat').value)  || TARGETS.fat;
   refreshDashMacros(); renderMacros(); saveToStorage();
-
-  // Save gym days from toggled buttons
-  const gymDayEls = document.querySelectorAll('#settings-gym-days [data-idx]');
-  if (gymDayEls.length > 0) {
-    const newGymDays = [];
-    gymDayEls.forEach(el => {
-      if (el.dataset.active === '1') newGymDays.push(parseInt(el.dataset.idx));
-    });
-    if (newGymDays.length > 0) {
-      GYM_DAYS.length = 0;
-      newGymDays.forEach(d => GYM_DAYS.push(d));
-    }
-  }
 
   const btn = document.getElementById('save-btn'), orig = btn.textContent;
   btn.textContent='✓ SAVED'; btn.style.background='var(--gold-dim)'; btn.style.color='var(--gold)'; btn.style.border='1px solid rgba(212,165,32,0.3)';
