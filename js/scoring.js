@@ -89,8 +89,9 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
 
   // PR rows
   var prRows = (prs || []).map(function(p) {
+    var gainStr = (p.e1rmGain && p.e1rmGain > 0) ? ' <span style="font-size:0.72rem;color:#D4A520;font-weight:700;letter-spacing:0.5px">+' + p.e1rmGain + ' e1RM</span>' : '';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.08)">' +
-      '<span style="font-size:0.95rem;color:#fff;font-weight:600">' + p.exercise + '</span>' +
+      '<div><span style="font-size:0.95rem;color:#fff;font-weight:600">' + p.exercise + '</span>' + gainStr + '</div>' +
       '<span style="font-family:\'DM Mono\',monospace;font-size:0.88rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700">' + p.weight + ' lbs × ' + p.reps + ' <span style="font-size:0.7rem;vertical-align:middle;letter-spacing:1px">▲ PR</span></span></div>';
   }).join('');
 
@@ -272,5 +273,3 @@ function _fallbackShareText(card) {
     });
   }
 }
-
-
