@@ -1146,27 +1146,42 @@ input::placeholder { color: var(--dim) !important; }
 .macro-ring-tgt { font-size:0.62rem; color:var(--dim); margin-top:1px; }
 
 /* ═══════════════════════════════════════════
-   PROACTIVE COACH STYLES
+   WORKOUT PREVIEW MODAL
    ═══════════════════════════════════════════ */
-
-/* Proactive coach bubble — distinct from regular assistant bubbles */
-.coach-bubble.proactive-bubble {
-  background: linear-gradient(135deg, rgba(212,165,32,0.1), rgba(212,165,32,0.04)) !important;
-  border: 1px solid rgba(212,165,32,0.25) !important;
-  position: relative;
+.wpr-ex-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--dark);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
 }
-.coach-bubble.proactive-bubble::before {
-  content: '⚡';
-  position: absolute;
-  top: -8px;
-  left: 12px;
-  font-size: 0.7rem;
-  background: var(--black);
-  padding: 0 4px;
+.wpr-ex-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  color: var(--dim);
+  width: 18px;
+  flex-shrink: 0;
+  padding-top: 1px;
 }
-
-/* Coach notification dot (pulsing) */
-#coach-notif-dot,
-#coach-notif-dot-mob {
-  box-shadow: 0 0 6px rgba(212,165,32,0.7);
+.wpr-ex-info { flex: 1; }
+.wpr-ex-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 3px;
+}
+.wpr-ex-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wpr-prev {
+  color: var(--blue);
+  font-size: 0.65rem;
 }
