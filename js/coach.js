@@ -1000,7 +1000,7 @@ function _queueProactiveMessage(msg, triggerKey) {
   // If coach is currently open, inject the bubble live
   const coachView = document.getElementById('view-coach');
   if (coachView && coachView.classList.contains('active')) {
-    _injectProactiveBubble(msg);
+    _injectProactiveBubble(msg, false);
     _markProactiveRead();
   }
 }
@@ -1052,17 +1052,25 @@ function _updateCoachNotifDot() {
   }
 }
 
-function _injectProactiveBubble(text) {
+function _injectProactiveBubble(text, skipHistory) {
   const container = document.getElementById('coach-messages');
   if (!container) return;
+  // Hide starters if visible
+  const starters = document.getElementById('coach-starters');
+  if (starters) starters.style.display = 'none';
+  const clearBtn = document.getElementById('coach-clear-btn');
+  if (clearBtn) clearBtn.style.display = 'block';
   const bubble = document.createElement('div');
   bubble.className = 'coach-bubble assistant proactive-bubble';
-  bubble.innerHTML = _formatCoachText(text);
+  bubble.style.cssText = 'border-color:rgba(212,165,32,0.22);background:rgba(212,165,32,0.06)';
+  bubble.innerHTML = '⚡ ' + _formatCoachText(text);
   container.appendChild(bubble);
   container.scrollTop = container.scrollHeight;
-  // Also push to history so it persists
-  _coachHistory.push({ role: 'assistant', content: text });
-  _saveCoachHistory();
+  // Only add to history if not already persisted there
+  if (!skipHistory) {
+    _coachHistory.push({ role: 'assistant', content: text });
+    _saveCoachHistory();
+  }
 }
 
 // Called when coach view opens — flush any queued unread messages
@@ -1072,8 +1080,12 @@ function _flushProactiveMessages() {
   if (!unread.length) return;
   // Only show messages from the last 24h
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  // Check which ones are already in chat history (don't re-render them)
+  const historyTexts = new Set(_coachHistory.map(m => typeof m.content === 'string' ? m.content.trim() : ''));
   unread.filter(m => m.ts > cutoff).forEach(m => {
-    _injectProactiveBubble(m.text);
+    if (!historyTexts.has(m.text.trim())) {
+      _injectProactiveBubble(m.text, false);
+    }
   });
   _markProactiveRead();
 }
