@@ -575,16 +575,6 @@ self.addEventListener('fetch', e => {
     <div class="view" id="view-progress">
       <div class="page-header"><div class="page-title">PROGRESS</div><div class="page-sub">Your stats over time</div></div>
 
-      <!-- WEEKLY AI CHECK-IN -->
-      <div class="prog-card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(212,165,32,0.06),rgba(212,165,32,0.01));border-color:rgba(212,165,32,0.25)">
-        <div id="weekly-report-card">
-          <div style="text-align:center;padding:10px 0">
-            <div style="font-size:0.82rem;color:var(--dim);margin-bottom:12px">No report yet. Generate your first weekly check-in.</div>
-            <button onclick="_generateWeeklyProgressReport(0,0,0,true)" style="padding:10px 22px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:9px;color:#111;font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">GENERATE CHECK-IN</button>
-          </div>
-        </div>
-      </div>
-
       <!-- STAT STRIP -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
         <div class="prog-card" style="padding:14px;text-align:center">
@@ -634,17 +624,15 @@ self.addEventListener('fetch', e => {
         </div>
       </div>
 
-      <!-- PROGRESS PHOTOS -->
+      <!-- STRENGTH TRENDS -->
       <div class="prog-card" style="margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div class="pc-title">PROGRESS PHOTOS</div>
-          <div style="display:flex;gap:8px">
-            <button id="pp-compare-btn" onclick="openPhotoComparison()" style="display:none;padding:7px 14px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:8px;color:var(--blue);font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer">COMPARE</button>
-            <button onclick="openProgressPhotoCapture()" style="padding:7px 14px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:8px;color:#111;font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer">+ TAKE PHOTO</button>
-          </div>
+          <div class="pc-title">STRENGTH TRENDS</div>
+          <div style="font-size:0.65rem;font-family:'DM Mono',monospace;color:var(--dim)">Estimated 1-Rep Max</div>
         </div>
-        <input type="file" id="progress-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleProgressPhoto(this)">
-        <div id="progress-photos-gallery" class="pp-gallery"></div>
+        <div id="strength-trends-container">
+          <div style="text-align:center;padding:24px 0;color:var(--dim);font-size:0.82rem">Complete workouts to track your strength trends.</div>
+        </div>
       </div>
 
     </div>
@@ -1192,34 +1180,6 @@ self.addEventListener('fetch', e => {
 <script src="js/logger.js"></script>
 <script src="js/coach.js"></script>
 <script>_bootApp();</script>
-
-<!-- PHOTO VIEWER MODAL -->
-<div id="photo-viewer-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:9000;flex-direction:column;align-items:center;justify-content:center;padding:20px">
-  <div style="position:relative;width:100%;max-width:500px;max-height:80vh;display:flex;flex-direction:column;align-items:center">
-    <button onclick="closePhotoViewer()" style="position:absolute;top:-44px;right:0;background:none;border:none;color:var(--white);font-size:1.5rem;cursor:pointer;line-height:1">✕</button>
-    <img id="photo-viewer-img" src="" alt="Progress photo" style="width:100%;max-height:60vh;object-fit:contain;border-radius:12px">
-    <div id="photo-viewer-date" style="margin-top:12px;font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--off)"></div>
-    <button id="photo-viewer-del" style="margin-top:14px;padding:8px 20px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#ef4444;font-size:0.8rem;cursor:pointer">Delete Photo</button>
-  </div>
-</div>
-
-<!-- PHOTO COMPARISON MODAL -->
-<div id="photo-compare-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9000;flex-direction:column;overflow-y:auto">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
-    <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">COMPARE PHOTOS</span>
-    <button onclick="closePhotoComparison()" style="background:none;border:none;color:var(--dim);font-size:1.3rem;cursor:pointer">✕</button>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px">
-    <div>
-      <select id="compare-left-sel" style="width:100%;padding:8px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:10px;outline:none"></select>
-      <img id="compare-img-left" src="" alt="Before" style="width:100%;border-radius:10px;object-fit:cover">
-    </div>
-    <div>
-      <select id="compare-right-sel" style="width:100%;padding:8px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'DM Mono',monospace;font-size:0.75rem;margin-bottom:10px;outline:none"></select>
-      <img id="compare-img-right" src="" alt="After" style="width:100%;border-radius:10px;object-fit:cover">
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
