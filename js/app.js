@@ -956,6 +956,54 @@ function _getOverloadSuggestion(exName) {
   }
 }
 
+// ═══════════════════════════════════════════
+// PROGRESSIVE OVERLOAD ENGINE
+// ═══════════════════════════════════════════
+
+// Epley formula: estimated 1RM from weight × reps
+function calcE1RM(weight, reps) {
+  const w = parseFloat(weight), r = parseInt(reps);
+  if (!w || !r) return 0;
+  if (r === 1) return w;
+  return Math.round(w * (1 + r / 30));
+}
+
+// Get the best estimated 1RM per session for an exercise, sorted oldest→newest
+function getStrengthTrend(exName) {
+  const exlogs = getExLogs();
+  const sessions = exlogs[exName] || [];
+  if (!sessions.length) return [];
+  // Sessions stored newest-first, so reverse for chronological order
+  return sessions.slice().reverse().map(session => {
+    let best1RM = 0;
+    (session.sets || []).forEach(s => {
+      if (s && s.weight && s.reps) {
+        const e = calcE1RM(s.weight, s.reps);
+        if (e > best1RM) best1RM = e;
+      }
+    });
+    return { date: session.date, e1rm: best1RM };
+  }).filter(s => s.e1rm > 0);
+}
+
+// Get all exercises with at least 2 sessions, sorted by most recent activity
+function getAllStrengthTrends() {
+  const exlogs = getExLogs();
+  const results = [];
+  Object.keys(exlogs).forEach(exName => {
+    const trend = getStrengthTrend(exName);
+    if (trend.length < 1) return;
+    const latest = trend[trend.length - 1];
+    const first = trend[0];
+    const gainLbs = latest.e1rm - first.e1rm;
+    const gainPct = first.e1rm > 0 ? ((gainLbs / first.e1rm) * 100) : 0;
+    const pr = Math.max(...trend.map(t => t.e1rm));
+    results.push({ name: exName, trend, latest: latest.e1rm, first: first.e1rm, gainLbs, gainPct, pr, sessions: trend.length });
+  });
+  // Sort by most sessions then most recent
+  return results.sort((a, b) => b.sessions - a.sessions);
+}
+
 // Helper: get fresh exercise list for a workout name + tier (used by plan auto-update)
 function _getFreshExercises(workoutName, tier) {
   const workoutExercises = {
@@ -1249,151 +1297,36 @@ function _runAdaptiveCheck() {
 }
 
 // ── WEEKLY AI PROGRESS REPORT ──
-async function _generateWeeklyProgressReport(weightChange, recentVol, olderVol, forceRefresh) {
+async function _generateWeeklyProgressReport(weightChange, recentVol, olderVol) {
   if (!USER) return;
-  // Show loading state in progress view card immediately
-  _renderWeeklyReportCard(null, true);
   try {
     const workoutDates = new Set(lsGet('fs_workout_dates') || []);
     const ph = getTrainingPhase(CURRENT_WEEK);
     const deload = isDeloadWeek(CURRENT_WEEK);
     const volChange = olderVol > 0 ? ((recentVol - olderVol) / olderVol * 100).toFixed(0) : 'N/A';
+    const prompt = `Generate a concise weekly fitness progress report for ${USER.name || 'this user'}.
 
-    // Workouts this week vs plan
-    const now = new Date();
-    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
-    let wktThisWeek = 0;
-    workoutDates.forEach(d => { if (new Date(d+'T00:00:00') >= weekStart) wktThisWeek++; });
-    const plannedDays = (typeof GYM_DAYS !== 'undefined') ? GYM_DAYS.length : 3;
-    const completionRate = plannedDays > 0 ? Math.round((wktThisWeek / plannedDays) * 100) : 0;
+Data:
+- Program: Week ${CURRENT_WEEK} of ${TOTAL_WEEKS}, ${deload ? 'DELOAD WEEK' : ph.name + ' PHASE'}
+- Goal: ${USER.nutrition?.mode === 'lose' ? 'Weight loss' : 'Muscle gain'} (current: ${USER.weight}lbs, target: ${USER.goal}lbs)
+- Weekly weight change: ${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} lbs
+- Training volume change (recent vs 2wks prior): ${volChange !== 'N/A' ? volChange + '%' : 'insufficient data'}
+- Workouts completed: ${workoutDates.size} total
+- Daily calorie target: ${TARGETS.cal} cal / ${TARGETS.pro}g protein
 
-    // Nutrition this week
-    const mealData = lsGet('fs_mealLogs') || {};
-    let weekCalTotal = 0, weekProTotal = 0, weekDaysLogged = 0;
-    for (let dIdx = 0; dIdx < 7; dIdx++) {
-      const dayMeals = mealData[dIdx] || [];
-      const dayCal = dayMeals.reduce((a,f) => a + (f.cal||0), 0);
-      const dayPro = dayMeals.reduce((a,f) => a + (f.pro||0), 0);
-      if (dayCal > 0) { weekCalTotal += dayCal; weekProTotal += dayPro; weekDaysLogged++; }
-    }
-    const avgCal = weekDaysLogged > 0 ? Math.round(weekCalTotal / weekDaysLogged) : 0;
-    const avgPro = weekDaysLogged > 0 ? Math.round(weekProTotal / weekDaysLogged) : 0;
-    const calAdherence = TARGETS.cal > 0 && avgCal > 0 ? Math.round((avgCal / TARGETS.cal) * 100) : null;
-    const proAdherence = TARGETS.pro > 0 && avgPro > 0 ? Math.round((avgPro / TARGETS.pro) * 100) : null;
+Write 3-4 sentences covering: 1) progress assessment, 2) what to focus on this week, 3) one specific, actionable tip. Be direct and motivating. Reference their actual numbers. No fluff.`;
 
-    // Weight trend
-    const wlog = lsGet('fs_weight_log') || [];
-    const sortedW = [...wlog].sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const latestW = sortedW[sortedW.length-1];
-    const startW = sortedW[0];
-    const totalChange = (latestW && startW) ? (latestW.lbs - startW.lbs).toFixed(1) : null;
-
-    // PRs this week
-    let prCount = 0;
-    const exlogs = lsGet('fs_exlogs') || {};
-    Object.values(exlogs).forEach(sessions => {
-      if (!Array.isArray(sessions) || sessions.length < 2) return;
-      const recent = sessions[0];
-      if (!recent || !recent.date) return;
-      const recDate = new Date(recent.date+'T00:00:00');
-      if (recDate >= weekStart) prCount++;
-    });
-
-    const prompt = `You are a direct, knowledgeable personal trainer writing a weekly check-in for ${USER.name || 'your client'}.
-
-This week's data:
-- Program: Week ${CURRENT_WEEK} of ${TOTAL_WEEKS} · ${deload ? 'DELOAD WEEK' : ph.name + ' PHASE (' + ph.intensityLabel + ')'}
-- Goal: ${USER.nutrition?.mode === 'lose' ? 'Fat loss' : 'Muscle gain'} · Starting: ${USER.weight}lbs → Target: ${USER.goal}lbs
-- Workouts completed: ${wktThisWeek}/${plannedDays} (${completionRate}% of plan)
-- PRs / personal records hit this week: ${prCount}
-${avgCal > 0 ? '- Average calories: ' + avgCal + ' (target: ' + TARGETS.cal + ') — ' + calAdherence + '% adherence' : '- Nutrition: no meals logged this week'}
-${avgPro > 0 ? '- Average protein: ' + avgPro + 'g (target: ' + TARGETS.pro + 'g) — ' + proAdherence + '% adherence' : ''}
-${totalChange !== null ? '- Total weight change since day 1: ' + (totalChange > 0 ? '+' : '') + totalChange + 'lbs' : ''}
-${weightChange && weightChange !== 0 ? '- Weight change this week: ' + (weightChange > 0 ? '+' : '') + (weightChange.toFixed ? weightChange.toFixed(1) : weightChange) + 'lbs' : ''}
-${volChange !== 'N/A' ? '- Training volume vs 2 weeks ago: ' + volChange + '%' : ''}
-
-Write a 4-5 sentence weekly check-in. Be a real coach — encouraging but honest. Celebrate wins, call out gaps without shame, give one specific focus for next week. Use their name. Reference their actual numbers. No bullet points, just a paragraph.`;
-
-    const report = await callClaude([{ role: 'user', content: prompt }], { max_tokens: 400 });
+    const report = await callClaude([{ role: 'user', content: prompt }], { max_tokens: 300 });
     if (report) {
-      const reportData = {
-        text: report,
-        ts: Date.now(),
-        week: CURRENT_WEEK,
-        stats: { wktThisWeek, plannedDays, completionRate, avgCal, avgPro, calAdherence, proAdherence, prCount, weightChange: weightChange && weightChange.toFixed ? +weightChange.toFixed(1) : 0 }
-      };
-      lsSet('fs_weekly_report', reportData);
+      lsSet('fs_weekly_report', report);
       lsSet('fs_weekly_report_ts', Date.now());
+      // Update insight card with report
       lsSet('fs_adaptive_insight', report);
       _showAdaptiveInsight();
-      _renderWeeklyReportCard(reportData, false);
     }
   } catch(e) {
     console.log('Weekly report error:', e);
-    _renderWeeklyReportCard(null, false);
   }
-}
-
-// Render the Weekly Report card in the Progress view
-function _renderWeeklyReportCard(reportData, isLoading) {
-  const container = document.getElementById('weekly-report-card');
-  if (!container) return;
-  const ph = getPhaseExerciseModifier(CURRENT_WEEK);
-  const phLabel = isDeloadWeek(CURRENT_WEEK) ? '⚡ DELOAD' : ph.label;
-
-  if (isLoading) {
-    container.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-      <div style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(212,165,32,0.3);border-top-color:var(--gold);animation:spin 0.8s linear infinite;flex-shrink:0"></div>
-      <span style="font-size:0.82rem;color:var(--dim)">Generating your weekly check-in…</span>
-    </div>`;
-    return;
-  }
-  if (!reportData || !reportData.text) {
-    const saved = lsGet('fs_weekly_report');
-    if (saved && saved.text) { reportData = saved; }
-    else {
-      container.innerHTML = `<div style="text-align:center;padding:10px 0">
-        <div style="font-size:0.82rem;color:var(--dim);margin-bottom:12px">No report yet. Generate your first weekly check-in.</div>
-        <button onclick="_generateWeeklyProgressReport(0,0,0,true)" style="padding:10px 22px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:9px;color:#111;font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">GENERATE CHECK-IN</button>
-      </div>`;
-      return;
-    }
-  }
-
-  const stats = reportData.stats || {};
-  const genDate = reportData.ts ? new Date(reportData.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-  const completionColor = (stats.completionRate||0) >= 100 ? 'var(--green)' : (stats.completionRate||0) >= 60 ? 'var(--gold)' : 'var(--orange)';
-  const calColor = stats.calAdherence ? (stats.calAdherence >= 90 && stats.calAdherence <= 110 ? 'var(--green)' : stats.calAdherence > 110 ? 'var(--orange)' : 'var(--dim)') : 'var(--dim)';
-  const proColor = stats.proAdherence ? (stats.proAdherence >= 90 ? 'var(--green)' : 'var(--orange)') : 'var(--dim)';
-
-  container.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:1.1rem">🧠</span>
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">WEEKLY CHECK-IN</span>
-        <span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;border:1px solid rgba(212,165,32,0.2);border-radius:4px;padding:2px 7px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${phLabel} · WK ${CURRENT_WEEK}</span>
-      </div>
-      <span style="font-size:0.65rem;color:var(--dim);font-family:'DM Mono',monospace">${genDate}</span>
-    </div>
-    ${stats.wktThisWeek !== undefined ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-      <div style="background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${completionColor}">${stats.wktThisWeek}/${stats.plannedDays}</div>
-        <div style="font-size:0.6rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase">Workouts</div>
-      </div>
-      <div style="background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${calColor}">${stats.avgCal || '—'}</div>
-        <div style="font-size:0.6rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase">Avg Kcal</div>
-      </div>
-      <div style="background:var(--dark);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${proColor}">${stats.avgPro ? stats.avgPro+'g' : '—'}</div>
-        <div style="font-size:0.6rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase">Avg Protein</div>
-      </div>
-    </div>` : ''}
-    <p style="font-size:0.83rem;color:var(--off);line-height:1.6;margin:0 0 12px">${reportData.text}</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="_generateWeeklyProgressReport(0,0,0,true)" style="padding:6px 14px;background:rgba(212,165,32,0.08);border:1px solid rgba(212,165,32,0.2);border-radius:7px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH</button>
-      <button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:6px 14px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:7px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button>
-    </div>`;
 }
 
 function _showAdaptiveInsight() {
@@ -1409,7 +1342,7 @@ function _showAdaptiveInsight() {
   }
   const phMod2 = getPhaseExerciseModifier(CURRENT_WEEK);
   const phLabel2 = isDeloadWeek(CURRENT_WEEK) ? '⚡ DELOAD' : phMod2.label;
-  card.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.1rem">🧠</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">AI INSIGHT</span><span style="font-size:0.62rem;font-weight:700;letter-spacing:1.5px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:4px;padding:2px 7px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${phLabel2} · WK ${CURRENT_WEEK}</span><button onclick="this.parentElement.parentElement.remove();lsSet('fs_adaptive_insight',null)" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem">✕</button></div><p style="font-size:0.82rem;color:var(--off);line-height:1.5;margin:0">${msg}</p><div style="margin-top:10px;display:flex;gap:8px"><button onclick="_generateWeeklyProgressReport(0,0,0,true)" style="padding:5px 12px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:6px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH REPORT</button><button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:5px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button></div>`;
+  card.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.1rem">🧠</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">AI INSIGHT</span><span style="font-size:0.62rem;font-weight:700;letter-spacing:1.5px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:4px;padding:2px 7px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${phLabel2} · WK ${CURRENT_WEEK}</span><button onclick="this.parentElement.parentElement.remove();lsSet('fs_adaptive_insight',null)" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem">✕</button></div><p style="font-size:0.82rem;color:var(--off);line-height:1.5;margin:0">${msg}</p><div style="margin-top:10px;display:flex;gap:8px"><button onclick="_generateWeeklyProgressReport(0,0,0)" style="padding:5px 12px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:6px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH REPORT</button><button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:5px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button></div>`;
 }
 
 // ── INIT (called from index.html after all modules load) ──
