@@ -25,7 +25,7 @@ function dashNav(view, btn) {
   if (view==='nutrition') renderNutrition();
   if (view==='myplan') { /* already rendered on plan generation */ }
   if (view==='week') renderWeek();
-  if (view==='progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); renderStrengthTrends(); }
+  if (view==='progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); }
   if (view==='today') { renderTodayWorkout(); refreshDashMacros(); renderDashWater(); }
   if (view==='program') renderProgram();
   if (view==='settings') renderSettingsGymDays();
@@ -1764,120 +1764,6 @@ function renderStreak() {
   if (wktCountEl) wktCountEl.textContent = monthCount;
 }
 
-// ═══════════════════════════════════════════
-// STRENGTH TRENDS — Progressive Overload Engine UI
-// ═══════════════════════════════════════════
-function renderStrengthTrends() {
-  const container = document.getElementById('strength-trends-container');
-  if (!container) return;
-
-  const trends = getAllStrengthTrends();
-
-  if (!trends.length) {
-    container.innerHTML = `<div style="text-align:center;padding:24px 0;color:var(--dim);font-size:0.82rem">
-      Complete workouts to start tracking your strength trends.
-    </div>`;
-    return;
-  }
-
-  // Summary row — top-line stats
-  const totalPRs = trends.filter(t => t.gainLbs > 0).length;
-  const bestGainer = trends.reduce((best, t) => t.gainPct > (best ? best.gainPct : -Infinity) ? t : best, null);
-  const totalExercises = trends.length;
-
-  container.innerHTML = `
-    <div class="st-summary-strip">
-      <div class="st-summary-stat">
-        <div class="st-summary-val">${totalExercises}</div>
-        <div class="st-summary-label">Exercises Tracked</div>
-      </div>
-      <div class="st-summary-stat">
-        <div class="st-summary-val" style="color:var(--green)">${totalPRs}</div>
-        <div class="st-summary-label">Exercises Improved</div>
-      </div>
-      ${bestGainer ? `<div class="st-summary-stat">
-        <div class="st-summary-val" style="color:var(--gold)">+${Math.round(bestGainer.gainPct)}%</div>
-        <div class="st-summary-label">Best Gain</div>
-      </div>` : ''}
-    </div>
-    <div id="st-exercise-list"></div>`;
-
-  const listEl = document.getElementById('st-exercise-list');
-
-  trends.forEach(t => {
-    const isImproving = t.gainLbs > 0;
-    const isFlat = t.gainLbs === 0;
-    const trendColor = isImproving ? 'var(--green)' : isFlat ? 'var(--gold)' : '#ef4444';
-    const trendArrow = isImproving ? '▲' : isFlat ? '→' : '▼';
-    const gainStr = isImproving ? `+${t.gainLbs} lbs (+${Math.round(t.gainPct)}%)` : isFlat ? 'Holding steady' : `${t.gainLbs} lbs (${Math.round(t.gainPct)}%)`;
-
-    // Mini sparkline SVG
-    const sparkline = _buildSparklineSVG(t.trend, trendColor);
-
-    const card = document.createElement('div');
-    card.className = 'st-ex-card';
-    card.innerHTML = `
-      <div class="st-ex-header">
-        <div class="st-ex-name">${t.name}</div>
-        <div class="st-ex-sessions">${t.sessions} session${t.sessions !== 1 ? 's' : ''}</div>
-      </div>
-      <div class="st-ex-body">
-        <div class="st-ex-stats">
-          <div class="st-ex-stat-block">
-            <div class="st-ex-big-num">${t.latest}<span class="st-ex-unit">lbs</span></div>
-            <div class="st-ex-stat-label">Current E1RM</div>
-          </div>
-          <div class="st-ex-stat-block">
-            <div class="st-ex-big-num" style="color:var(--gold)">${t.pr}<span class="st-ex-unit">lbs</span></div>
-            <div class="st-ex-stat-label">All-Time PR</div>
-          </div>
-          <div class="st-ex-stat-block">
-            <div class="st-ex-big-num" style="color:${trendColor};font-size:0.9rem">${trendArrow} ${gainStr}</div>
-            <div class="st-ex-stat-label">Since First Session</div>
-          </div>
-        </div>
-        <div class="st-ex-chart">${sparkline}</div>
-      </div>`;
-    listEl.appendChild(card);
-  });
-}
-
-function _buildSparklineSVG(trend, color) {
-  if (trend.length < 2) {
-    // Single point — just show a dot
-    return `<svg width="100%" height="48" viewBox="0 0 120 48" preserveAspectRatio="none">
-      <circle cx="60" cy="24" r="4" fill="${color}" opacity="0.8"/>
-    </svg>`;
-  }
-  const vals = trend.map(t => t.e1rm);
-  const min = Math.min(...vals);
-  const max = Math.max(...vals);
-  const range = max - min || 1;
-  const W = 120, H = 44, PAD = 4;
-  const xs = vals.map((_, i) => PAD + (i / (vals.length - 1)) * (W - PAD * 2));
-  const ys = vals.map(v => PAD + (1 - (v - min) / range) * (H - PAD * 2));
-
-  const linePts = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
-  const fillPts = linePts + ` L${xs[xs.length-1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`;
-
-  // Mark the PR point
-  const prVal = Math.max(...vals);
-  const prIdx = vals.lastIndexOf(prVal);
-  const prDot = prIdx >= 0 ? `<circle cx="${xs[prIdx].toFixed(1)}" cy="${ys[prIdx].toFixed(1)}" r="3.5" fill="${color}" stroke="#0a0a0a" stroke-width="1.5"/>` : '';
-
-  return `<svg width="100%" height="48" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-    <defs>
-      <linearGradient id="sg-${Math.random().toString(36).slice(2,6)}" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
-        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
-    <path d="${fillPts}" fill="url(#sg-${Math.random().toString(36).slice(2,6)})" opacity="0.5"/>
-    <path d="${linePts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    ${prDot}
-  </svg>`;
-}
-
 // ── MY PROGRAM ──
 function renderProgram() {
   if (!generatedPlan) return;
@@ -2053,6 +1939,12 @@ function finishWorkout() {
   const setsSnapshot = woSets ? JSON.parse(JSON.stringify(woSets)) : {};
   const exercisesSnapshot = woWorkout ? woWorkout.exercises.slice() : [];
 
+  // Compute total volume for proactive message
+  let _finishVol = 0;
+  Object.values(setsSnapshot).forEach(exSets => {
+    if (Array.isArray(exSets)) exSets.forEach(s => { if (s && s.done && s.weight && s.reps) _finishVol += s.weight * s.reps; });
+  });
+
   const woEl2 = document.getElementById('screen-workout');
   woEl2.classList.remove('active');
   woEl2.style.display = '';
@@ -2064,6 +1956,11 @@ function finishWorkout() {
   renderWeek();
 
   _showWorkoutSummary(workoutName, prList, durationMs, setsSnapshot, exercisesSnapshot);
+
+  // Proactive coach: fire post-workout message
+  if (typeof triggerPostWorkoutMessage === 'function') {
+    triggerPostWorkoutMessage(workoutName, prList, _finishVol, durationMs);
+  }
 }
 
 function loadExercise(idx) {
@@ -2221,47 +2118,6 @@ function autoSaveSet(exIdx, setIdx, restSecs) {
   }
 }
 
-function _showPRToast(exName, weight, reps, newE1RM, e1rmGain) {
-  // Remove any existing PR toast
-  const existing = document.getElementById('pr-toast');
-  if (existing) existing.remove();
-
-  const gainText = e1rmGain > 0 ? `+${e1rmGain} lbs e1RM` : `${newE1RM} lbs e1RM`;
-
-  const toast = document.createElement('div');
-  toast.id = 'pr-toast';
-  toast.style.cssText = `
-    position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);
-    z-index:10000;
-    background:linear-gradient(135deg,#1a1500,#2a2000);
-    border:1px solid rgba(212,165,32,0.6);
-    border-radius:16px;padding:14px 20px;
-    box-shadow:0 8px 32px rgba(212,165,32,0.25), 0 0 0 1px rgba(212,165,32,0.1);
-    display:flex;align-items:center;gap:12px;
-    min-width:260px;max-width:90vw;
-    transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s ease;
-    opacity:0;
-  `;
-  toast.innerHTML = `
-    <div style="font-size:1.6rem;line-height:1;filter:drop-shadow(0 0 8px rgba(212,165,32,0.8))">🏆</div>
-    <div style="flex:1">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.75rem;letter-spacing:2.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2px">PERSONAL RECORD</div>
-      <div style="font-size:0.92rem;color:#fff;font-weight:700;line-height:1.3">${exName}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.8rem;color:rgba(255,255,255,0.7);margin-top:2px">${weight}lbs × ${reps} · <span style="color:var(--gold)">${gainText}</span></div>
-    </div>`;
-
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    toast.style.transform = 'translateX(-50%) translateY(0)';
-    toast.style.opacity = '1';
-  }));
-  setTimeout(() => {
-    toast.style.transform = 'translateX(-50%) translateY(-80px)';
-    toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 400);
-  }, 3500);
-}
-
 function isPR(exIdx, setIdx, weight, reps) {
   const exName = woWorkout?.exercises?.[exIdx]?.name;
   if (!exName || !weight || !reps) return false;
@@ -2328,23 +2184,13 @@ function completeSet(exIdx, setIdx, restSecs) {
   var pr = isPR(exIdx, setIdx, weight, reps);
   if (pr) {
     var exName = woWorkout.exercises[exIdx] ? woWorkout.exercises[exIdx].name : 'Exercise';
-    // Calculate how much the e1RM improved
-    var newE1RM = calcE1RM(weight, reps);
-    var prevTrend = getStrengthTrend(exName);
-    var prevBestE1RM = prevTrend.length > 0 ? Math.max(...prevTrend.map(t => t.e1rm)) : 0;
-    var e1rmGain = prevBestE1RM > 0 ? newE1RM - prevBestE1RM : 0;
-    woPRs.push({ exercise: exName, weight: weight, reps: reps, set: setIdx + 1, newE1RM, prevE1RM: prevBestE1RM, e1rmGain });
-
-    // Flash the row gold
+    woPRs.push({ exercise: exName, weight: weight, reps: reps, set: setIdx + 1 });
     var row = btn.closest('tr');
     if (row) {
-      row.style.background = 'rgba(212,165,32,0.18)';
+      row.style.background = 'rgba(212,165,32,0.12)';
       row.style.transition = 'background 0.3s';
-      setTimeout(function(){ row.style.background = ''; }, 2500);
+      setTimeout(function(){ row.style.background = ''; }, 2000);
     }
-
-    // Show a prominent PR toast
-    _showPRToast(exName, weight, reps, newE1RM, e1rmGain);
   }
 
   // Auto-start rest timer if not last set
