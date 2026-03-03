@@ -956,54 +956,6 @@ function _getOverloadSuggestion(exName) {
   }
 }
 
-// ═══════════════════════════════════════════
-// PROGRESSIVE OVERLOAD ENGINE
-// ═══════════════════════════════════════════
-
-// Epley formula: estimated 1RM from weight × reps
-function calcE1RM(weight, reps) {
-  const w = parseFloat(weight), r = parseInt(reps);
-  if (!w || !r) return 0;
-  if (r === 1) return w;
-  return Math.round(w * (1 + r / 30));
-}
-
-// Get the best estimated 1RM per session for an exercise, sorted oldest→newest
-function getStrengthTrend(exName) {
-  const exlogs = getExLogs();
-  const sessions = exlogs[exName] || [];
-  if (!sessions.length) return [];
-  // Sessions stored newest-first, so reverse for chronological order
-  return sessions.slice().reverse().map(session => {
-    let best1RM = 0;
-    (session.sets || []).forEach(s => {
-      if (s && s.weight && s.reps) {
-        const e = calcE1RM(s.weight, s.reps);
-        if (e > best1RM) best1RM = e;
-      }
-    });
-    return { date: session.date, e1rm: best1RM };
-  }).filter(s => s.e1rm > 0);
-}
-
-// Get all exercises with at least 2 sessions, sorted by most recent activity
-function getAllStrengthTrends() {
-  const exlogs = getExLogs();
-  const results = [];
-  Object.keys(exlogs).forEach(exName => {
-    const trend = getStrengthTrend(exName);
-    if (trend.length < 1) return;
-    const latest = trend[trend.length - 1];
-    const first = trend[0];
-    const gainLbs = latest.e1rm - first.e1rm;
-    const gainPct = first.e1rm > 0 ? ((gainLbs / first.e1rm) * 100) : 0;
-    const pr = Math.max(...trend.map(t => t.e1rm));
-    results.push({ name: exName, trend, latest: latest.e1rm, first: first.e1rm, gainLbs, gainPct, pr, sessions: trend.length });
-  });
-  // Sort by most sessions then most recent
-  return results.sort((a, b) => b.sessions - a.sessions);
-}
-
 // Helper: get fresh exercise list for a workout name + tier (used by plan auto-update)
 function _getFreshExercises(workoutName, tier) {
   const workoutExercises = {
@@ -1154,6 +1106,10 @@ function initDashboard() {
   // ── AI Adaptive Intelligence ──
   // Runs weekly: checks weight trend, strength progress, and adjusts macros/workouts
   _runAdaptiveCheck();
+
+  // ── Proactive Coach ──
+  // Checks for morning primer, missed workout nudge, low protein, streak milestones
+  if (typeof runProactiveCoachChecks === 'function') runProactiveCoachChecks();
 
   try {
     renderTodayWorkout(); renderTodayMiniLog();
