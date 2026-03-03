@@ -5,23 +5,53 @@
 // Dependencies: All globals from app.js, scoring.js functions
 
 function dashNav(view, btn) {
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('view-'+view).classList.add('active');
+  // Deactivate all views cleanly — no inline style overrides that fight CSS
+  document.querySelectorAll('.view').forEach(v => {
+    if (v.id !== 'view-' + view) {
+      v.classList.remove('active');
+      v.style.opacity = '';
+      v.style.transform = '';
+      v.style.transition = '';
+    }
+  });
+  document.querySelectorAll('.sb-btn').forEach(b => b.classList.remove('active'));
+
+  const targetView = document.getElementById('view-' + view);
+  if (!targetView) return;
+
+  // Animate in — only opacity/transform, never touch display or flex properties
+  targetView.style.opacity = '0';
+  targetView.style.transform = 'translateY(8px)';
+  targetView.style.transition = 'none';
+  targetView.classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    targetView.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+    targetView.style.opacity = '1';
+    targetView.style.transform = 'translateY(0)';
+    setTimeout(() => {
+      targetView.style.opacity = '';
+      targetView.style.transform = '';
+      targetView.style.transition = '';
+    }, 220);
+  }));
+
   if (btn) btn.classList.add('active');
+
   // Toggle coach-active class on main-content for full-screen coach layout
   const mainContent = document.querySelector('.main-content');
   if (mainContent) {
     if (view === 'coach') mainContent.classList.add('coach-active');
     else mainContent.classList.remove('coach-active');
   }
+
   // Sync mobile bottom tabs
   const mobViews = ['today','week','nutrition','coach'];
-  document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
   if (mobViews.includes(view)) {
-    const mobTab = document.getElementById('mob-tab-'+view);
+    const mobTab = document.getElementById('mob-tab-' + view);
     if (mobTab) mobTab.classList.add('active');
   }
+
   if (view==='nutrition') renderNutrition();
   if (view==='myplan') { /* already rendered on plan generation */ }
   if (view==='week') renderWeek();
@@ -31,6 +61,7 @@ function dashNav(view, btn) {
   if (view==='settings') renderSettingsGymDays();
   if (view==='coach') initCoach();
 }
+
 
 // ── TODAY ──
 function renderTodayWorkout() {
@@ -443,13 +474,91 @@ function renderWeek() {
     const svgRestBlank = '<svg viewBox="0 0 24 24" fill="none" width="20" height="20" style="opacity:0.18"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M8 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
     const icon = isDone ? svgCheck : isGym ? svgDumbbell : svgRestBlank;
     const label = workout ? workout.name : 'Rest';
-    const clickFn = DAY_WORKOUTS[i] ? `openWorkoutEnv(${i})` : `openUnplannedWorkout(${i})`;
+    // Today + gym day → start workout. Done day → view recap. Future/past gym day → preview. Rest → unplanned.
+    let clickFn;
+    if (!workout) {
+      clickFn = `openUnplannedWorkout(${i})`;
+    } else if (isToday && !isDone) {
+      clickFn = `openWorkoutEnv(${i})`;
+    } else {
+      // Preview mode for any non-today workout day (past or future)
+      clickFn = `openWorkoutPreview(${i})`;
+    }
     return `<div class="${cls}" onclick="${clickFn}"><div class="wday-name">${DAYS_SHORT[i]}</div><div class="wday-icon">${icon}</div><div class="wday-label">${label}</div></div>`;
   }).join('');
   const doneCount = [...wktDone].length;
   document.getElementById('wk-done').textContent = doneCount;
   document.getElementById('wk-done-bar').style.width = (gymCount?doneCount/gymCount*100:0)+'%';
 }
+
+// ── WORKOUT PREVIEW MODAL (tap any non-today day to see exercises + edit) ──
+function openWorkoutPreview(dayIdx) {
+  const workout = DAY_WORKOUTS[dayIdx];
+  if (!workout) return;
+  const isDone = wktDone.has(dayIdx);
+  const isToday = dayIdx === TODAY_IDX;
+  const ph = getTrainingPhase(CURRENT_WEEK);
+  const deload = isDeloadWeek(CURRENT_WEEK);
+  const phLabel = deload ? '⚡ DELOAD WEEK' : ph.name + ' PHASE';
+
+  // Build exercise rows with phase-adjusted sets/reps
+  const exRows = workout.exercises.map((ex, i) => {
+    const phMod = getPhaseExerciseModifier(CURRENT_WEEK);
+    const adjSets = deload ? Math.max(2, Math.round(ex.sets * 0.6)) : (phMod.setMult !== 1.0 ? Math.max(3, Math.round(ex.sets * phMod.setMult)) : ex.sets);
+    const adjReps = (!deload && phMod.repRange) ? phMod.repRange : ex.reps;
+    // Show last session data if available
+    const exlogs = getExLogs();
+    const sessions = exlogs[ex.name] || [];
+    const today = todayDateStr();
+    const prevSession = sessions.find(s => s.date !== today);
+    let prevText = '';
+    if (prevSession && prevSession.sets) {
+      const best = prevSession.sets.filter(Boolean).reduce((b, s) => (s.weight > (b ? b.weight : 0) ? s : b), null);
+      if (best) prevText = `<span class="wpr-prev">Last: ${best.weight}lbs × ${best.reps}</span>`;
+    }
+    return `<div class="wpr-ex-row">
+      <div class="wpr-ex-num">${i+1}</div>
+      <div class="wpr-ex-info">
+        <div class="wpr-ex-name">${ex.name}</div>
+        <div class="wpr-ex-meta">${adjSets} sets · ${adjReps} reps · ${ex.rest}s rest ${prevText}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const modal = document.getElementById('workout-preview-modal');
+  if (!modal) return;
+  document.getElementById('wpr-title').textContent = workout.name.toUpperCase();
+  document.getElementById('wpr-day').textContent = DAYS_FULL[dayIdx] + ' · ' + phLabel;
+  document.getElementById('wpr-ex-list').innerHTML = exRows;
+
+  const startBtn = document.getElementById('wpr-start-btn');
+  if (isDone) {
+    startBtn.textContent = '✓ COMPLETED';
+    startBtn.disabled = true;
+    startBtn.style.opacity = '0.5';
+    startBtn.style.cursor = 'default';
+  } else {
+    startBtn.textContent = isToday ? 'START WORKOUT' : 'START ANYWAY';
+    startBtn.disabled = false;
+    startBtn.style.opacity = '1';
+    startBtn.style.cursor = 'pointer';
+    startBtn.onclick = () => { closeWorkoutPreview(); openWorkoutEnv(dayIdx); };
+  }
+
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => {
+    modal.querySelector('.wpr-sheet').style.transform = 'translateY(0)';
+  });
+}
+
+function closeWorkoutPreview() {
+  const modal = document.getElementById('workout-preview-modal');
+  if (!modal) return;
+  const sheet = modal.querySelector('.wpr-sheet');
+  sheet.style.transform = 'translateY(100%)';
+  setTimeout(() => { modal.style.display = 'none'; }, 280);
+}
+
 
 // ── NUTRITION ──
 // ── WATER TRACKING ──
@@ -1850,6 +1959,19 @@ function saveSettings() {
   TARGETS.fat  = parseInt(document.getElementById('s-fat').value)  || TARGETS.fat;
   refreshDashMacros(); renderMacros(); saveToStorage();
 
+  // Save gym days from toggled buttons
+  const gymDayEls = document.querySelectorAll('#settings-gym-days [data-idx]');
+  if (gymDayEls.length > 0) {
+    const newGymDays = [];
+    gymDayEls.forEach(el => {
+      if (el.dataset.active === '1') newGymDays.push(parseInt(el.dataset.idx));
+    });
+    if (newGymDays.length > 0) {
+      GYM_DAYS.length = 0;
+      newGymDays.forEach(d => GYM_DAYS.push(d));
+    }
+  }
+
   const btn = document.getElementById('save-btn'), orig = btn.textContent;
   btn.textContent='✓ SAVED'; btn.style.background='var(--gold-dim)'; btn.style.color='var(--gold)'; btn.style.border='1px solid rgba(212,165,32,0.3)';
   setTimeout(()=>{ btn.textContent=orig; btn.style.background='var(--gold)'; btn.style.color='var(--black)'; btn.style.border='none'; }, 1800);
@@ -1939,12 +2061,6 @@ function finishWorkout() {
   const setsSnapshot = woSets ? JSON.parse(JSON.stringify(woSets)) : {};
   const exercisesSnapshot = woWorkout ? woWorkout.exercises.slice() : [];
 
-  // Compute total volume for proactive message
-  let _finishVol = 0;
-  Object.values(setsSnapshot).forEach(exSets => {
-    if (Array.isArray(exSets)) exSets.forEach(s => { if (s && s.done && s.weight && s.reps) _finishVol += s.weight * s.reps; });
-  });
-
   const woEl2 = document.getElementById('screen-workout');
   woEl2.classList.remove('active');
   woEl2.style.display = '';
@@ -1956,11 +2072,6 @@ function finishWorkout() {
   renderWeek();
 
   _showWorkoutSummary(workoutName, prList, durationMs, setsSnapshot, exercisesSnapshot);
-
-  // Proactive coach: fire post-workout message
-  if (typeof triggerPostWorkoutMessage === 'function') {
-    triggerPostWorkoutMessage(workoutName, prList, _finishVol, durationMs);
-  }
 }
 
 function loadExercise(idx) {
