@@ -1146,117 +1146,27 @@ input::placeholder { color: var(--dim) !important; }
 .macro-ring-tgt { font-size:0.62rem; color:var(--dim); margin-top:1px; }
 
 /* ═══════════════════════════════════════════
-   PROGRESSIVE OVERLOAD ENGINE STYLES
+   PROACTIVE COACH STYLES
    ═══════════════════════════════════════════ */
 
-/* Strength Trend Summary Strip */
-.st-summary-strip {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
+/* Proactive coach bubble — distinct from regular assistant bubbles */
+.coach-bubble.proactive-bubble {
+  background: linear-gradient(135deg, rgba(212,165,32,0.1), rgba(212,165,32,0.04)) !important;
+  border: 1px solid rgba(212,165,32,0.25) !important;
+  position: relative;
 }
-.st-summary-stat {
-  background: var(--dark);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 8px;
-  text-align: center;
-}
-.st-summary-val {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 1.6rem;
-  color: var(--white);
-  line-height: 1;
-  letter-spacing: 1px;
-}
-.st-summary-label {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--dim);
-  margin-top: 3px;
+.coach-bubble.proactive-bubble::before {
+  content: '⚡';
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  font-size: 0.7rem;
+  background: var(--black);
+  padding: 0 4px;
 }
 
-/* Individual Exercise Trend Card */
-.st-ex-card {
-  background: var(--dark);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  transition: border-color 0.2s ease;
-}
-.st-ex-card:hover {
-  border-color: rgba(212,165,32,0.3);
-}
-.st-ex-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.st-ex-name {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 1rem;
-  letter-spacing: 1.5px;
-  color: var(--white);
-}
-.st-ex-sessions {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.65rem;
-  color: var(--dim);
-}
-.st-ex-body {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-}
-.st-ex-stats {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.st-ex-stat-block {
-  display: flex;
-  flex-direction: column;
-}
-.st-ex-big-num {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 1.3rem;
-  color: var(--white);
-  line-height: 1;
-  letter-spacing: 0.5px;
-}
-.st-ex-unit {
-  font-size: 0.75rem;
-  color: var(--dim);
-  margin-left: 2px;
-}
-.st-ex-stat-label {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--dim);
-  margin-top: 1px;
-}
-.st-ex-chart {
-  width: 120px;
-  height: 48px;
-  flex-shrink: 0;
-  opacity: 0.9;
-}
-
-/* PR Toast */
-#pr-toast {
-  pointer-events: none;
-}
-
-@media (max-width: 480px) {
-  .st-ex-body { flex-direction: column; align-items: stretch; }
-  .st-ex-chart { width: 100%; height: 40px; }
-  .st-summary-val { font-size: 1.3rem; }
+/* Coach notification dot (pulsing) */
+#coach-notif-dot,
+#coach-notif-dot-mob {
+  box-shadow: 0 0 6px rgba(212,165,32,0.7);
 }
