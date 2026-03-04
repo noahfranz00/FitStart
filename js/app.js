@@ -331,6 +331,7 @@ const EXERCISE_DB = {
 
   // ═══ MACHINES — LEGS ═══
   'Seated Leg Press':           { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Machine Leg Press':           { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes, Hamstrings', category:'Legs',      wgerId:null },
   'Vertical Leg Press':         { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
   'Single-Leg Press':           { sets:3, reps:'10/leg', rest:90, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
   'Machine Squat':              { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
@@ -730,11 +731,14 @@ CRITICAL RULES:
       }
       const exercises = (day.exercises || []).map(ex => {
         const db = getExerciseData(ex.name);
+        // Cap rest at 120s — compound lifts get max 120s, accessories less
+        const rawRest = ex.rest || db.rest;
+        const cappedRest = Math.min(rawRest, 120);
         return {
           name: ex.name,
           sets: ex.sets || db.sets,
           reps: ex.reps || db.reps,
-          rest: ex.rest || db.rest,
+          rest: cappedRest,
           muscles: ex.muscles || db.muscles,
           ytId: db.yt || null
         };
@@ -1120,7 +1124,7 @@ function initDashboard() {
   }
 
   // Auto-update workout exercises if plan was generated with old templates (v2 = compound-first)
-  const PLAN_VERSION = 3;
+  const PLAN_VERSION = 4;
   if (generatedPlan._v !== PLAN_VERSION && generatedPlan.weekly_schedule && USER) {
     const t = USER.tier || 'beginner';
     generatedPlan.weekly_schedule.forEach(d => {
