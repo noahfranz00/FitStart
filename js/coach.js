@@ -117,21 +117,27 @@ function initCoach() {
 // Adjust the coach fixed overlay to match.
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', () => {
-    const coach = document.querySelector('.main-content.coach-active #view-coach.active');
-    if (!coach) return;
-    // On iOS when keyboard opens, viewport height shrinks. Adjust bottom to keep input visible.
+    const mc = document.querySelector('.main-content.coach-active');
+    if (!mc) return;
+    const container = document.getElementById('coach-chat-container');
+    if (!container) return;
+    // On iOS when keyboard opens, viewport height shrinks. Adjust to keep input visible.
     const vvh = window.visualViewport.height;
     const fullH = window.innerHeight;
     if (vvh < fullH - 50) {
-      // Keyboard is open — shrink the overlay
-      coach.style.height = vvh + 'px';
-      coach.style.bottom = 'auto';
-      coach.style.paddingBottom = '0';
+      // Keyboard is open — shrink container and hide tab bar
+      const tabBar = document.getElementById('mobile-tab-bar');
+      if (tabBar) tabBar.style.display = 'none';
+      mc.style.height = vvh + 'px';
+      mc.style.maxHeight = vvh + 'px';
+      mc.style.overflow = 'hidden';
     } else {
       // Keyboard closed — restore
-      coach.style.height = '';
-      coach.style.bottom = '';
-      coach.style.paddingBottom = '';
+      const tabBar = document.getElementById('mobile-tab-bar');
+      if (tabBar) tabBar.style.display = '';
+      mc.style.height = '';
+      mc.style.maxHeight = '';
+      mc.style.overflow = '';
     }
     // Scroll to bottom of messages
     const msgs = document.getElementById('coach-messages');
