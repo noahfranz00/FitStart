@@ -4,6 +4,13 @@
 // ═══════════════════════════════════════════
 // Dependencies: All globals from app.js, scoring.js functions
 
+// Fuzzy multi-word search: all words in query must appear in name or muscles
+function _fuzzySearchMatch(query, name, muscles) {
+  const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+  const target = (name + ' ' + (muscles || '')).toLowerCase();
+  return words.every(word => target.includes(word));
+}
+
 function dashNav(view, btn) {
   // Hide all views cleanly — no inline style pollution
   document.querySelectorAll('.view').forEach(v => {
@@ -246,7 +253,7 @@ function renderDashExPickerList() {
     var data = EXERCISE_DB[name];
     var muscleMatch = _aesFilterMuscle === 'All' || data.category === _aesFilterMuscle;
     var equipMatch = _aesFilterEquip === 'All' || _getEquipment(name) === _aesFilterEquip;
-    var searchMatch = !search || name.toLowerCase().indexOf(search)!==-1 || (data.muscles||'').toLowerCase().indexOf(search)!==-1;
+    var searchMatch = !search || _fuzzySearchMatch(search, name, data.muscles || '');
     return muscleMatch && equipMatch && searchMatch;
   });
   // Sort: selected first, then alphabetical
@@ -2056,14 +2063,26 @@ function loadExercise(idx) {
   const ex = exes[idx];
   if (!ex) return;
 
-  document.getElementById('wo-ex-title').textContent = ex.name;
+  const titleEl2 = document.getElementById('wo-ex-title');
+  titleEl2.textContent = ex.name;
+  titleEl2.style.fontSize = window.innerWidth <= 768 ? '1.6rem' : '1.8rem';
+  
+  // Prominent sets/reps display below title
+  let setsInfoEl = document.getElementById('wo-sets-info');
+  if (!setsInfoEl) {
+    setsInfoEl = document.createElement('div');
+    setsInfoEl.id = 'wo-sets-info';
+    titleEl2.parentNode.insertBefore(setsInfoEl, titleEl2.nextSibling);
+  }
+  setsInfoEl.innerHTML = `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${ex.sets} SETS × ${ex.reps} REPS</span><span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim);margin-left:10px">REST ${ex.rest}s</span>`;
+  setsInfoEl.style.cssText = 'margin-top:4px;display:flex;align-items:baseline;gap:4px;flex-wrap:wrap';
+  
   const _badgeEl = document.getElementById('wo-ex-badge');
   _badgeEl.innerHTML = 
-    `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">` +
-    `<span>${ex.sets} × ${ex.reps}</span>` +
-    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11" style="opacity:0.6;flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
-    `</div>` +
-    `<span style="font-size:0.6rem;opacity:0.7;letter-spacing:0.5px">REST ${ex.rest}s</span>`;
+    `<div style="display:flex;align-items:center;gap:6px">` +
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" style="opacity:0.7;flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
+    `<span style="font-size:0.65rem;letter-spacing:0.5px">EDIT</span>` +
+    `</div>`;
   _badgeEl.onclick = function() { openSetRepEditor(idx); };
   _badgeEl.title = 'Tap to edit sets & reps';
   // Update header title on mobile to show current exercise
@@ -2087,7 +2106,7 @@ function loadExercise(idx) {
       phBadgeEl.style.cssText = 'display:block;background:rgba(212,165,32,0.07);border:1px solid rgba(212,165,32,0.2);border-radius:8px;padding:8px 14px;font-size:0.75rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px';
     }
   }
-  document.getElementById('wo-muscles-tag').textContent = `Muscles: ${ex.muscles || db.muscles}`;
+  document.getElementById('wo-muscles-tag').style.display = 'none';
   const framesEl = document.getElementById('wo-demo-frames');
   // Try to load wger.de exercise image; fallback to text cues
   const wgerId = db.wgerId;
@@ -3131,7 +3150,7 @@ function renderExModalList() {
   const list = document.getElementById('aes-list');
   const filtered = Object.entries(EXERCISE_DB).filter(([name, data]) => {
     const catMatch = aesCurrentCat === 'All' || data.category === aesCurrentCat;
-    const searchMatch = !search || name.toLowerCase().includes(search) || data.muscles.toLowerCase().includes(search);
+    const searchMatch = !search || _fuzzySearchMatch(search, name, data.muscles);
     return catMatch && searchMatch;
   });
   list.innerHTML = filtered.map(([name, data]) => {
