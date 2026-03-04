@@ -763,6 +763,8 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
 
   /* Dashboard shell */
   #screen-dash.active { display:flex !important; flex-direction:column; height: 100dvh; height: 100vh; max-height: -webkit-fill-available; padding-bottom: 60px; box-sizing: border-box; overflow: hidden !important; }
+  /* Override sticky nav inside dash on mobile — sticky breaks flex height calculation on iOS */
+  #screen-dash > nav { position: relative !important; flex-shrink: 0 !important; }
   .sidebar-nav { width:100%; flex-direction:row; padding:6px 8px; border-right:none; border-bottom:1px solid var(--border); overflow-x:auto; gap:2px; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; }
   .sb-label { display:none; }
   .sb-btn { flex-shrink:0; padding:8px 10px; font-size:0.7rem; justify-content:center; border-radius:8px; white-space:nowrap; }
@@ -881,11 +883,11 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
   .main-content { 
     flex: 1;
     min-height: 0;
-    padding: 14px 14px 80px;
+    padding: 14px 14px 24px;
     width: 100%;
     box-sizing: border-box;
     overflow-x: hidden;
-    overflow-y: auto !important;
+    overflow-y: scroll !important;
     -webkit-overflow-scrolling: touch;
   }
 
