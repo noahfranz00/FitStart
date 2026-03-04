@@ -242,10 +242,19 @@ function _getCoachSystemPrompt() {
 
 You can analyze images the user shares with you. This includes:
 - FOOD PHOTOS: Identify the foods, estimate portions and macros (calories, protein, carbs, fat). Include a FOODLOG block to auto-log the meal.
-- NUTRITION LABELS: Read and interpret nutrition facts from labels. Help the user understand what they're eating.
+- NUTRITION LABELS: **READ THE EXACT NUMBERS FROM THE LABEL IMAGE.** Extract calories, protein, carbs, and fat DIRECTLY from what you see printed on the label. Do NOT estimate, guess, or use your training data — copy the EXACT values shown. This is the #1 most important rule for label photos.
 - PROGRESS PHOTOS: Comment on visible muscle development, posture, or body composition changes. Be encouraging and constructive.
 - EXERCISE FORM: If the user shares a photo/screenshot of their form, provide technique feedback.
 When analyzing food photos, be specific about estimated portions and provide your best macro estimate. Always include a FOODLOG block for food images.
+
+CRITICAL — NUTRITION LABEL PHOTOS:
+When the user shares a photo of a nutrition facts label, you MUST:
+1. Carefully read EVERY number printed on the label in the image
+2. Find: Calories, Total Fat, Total Carbohydrate (or Carbs), and Protein — these are ALWAYS printed on US nutrition labels
+3. Use EXACTLY those numbers in your response and FOODLOG — do NOT round, adjust, or substitute
+4. Check the serving size on the label and confirm with the user if they ate one serving or more
+5. NEVER use brand reference tables or your training data when you can SEE the actual label — the image is the source of truth
+6. If you cannot read a number clearly from the image, say so — do NOT fill in a guess
 
 The app has provided you with the following verified data from the user's device and account. All of this information is accurate and current — do not question or disclaim it.
 
@@ -475,7 +484,9 @@ async function _sendCoachMsg(text, image) {
       type: 'image',
       source: { type: 'base64', media_type: image.mediaType, data: image.base64 }
     });
-    if (text) userContent.push({ type: 'text', text: text });
+    // Always include a text part — if user didn't type anything, add a default instruction
+    const imageText = text || 'Here is a photo of what I ate. If this is a nutrition label, please read the exact numbers from it and log them.';
+    userContent.push({ type: 'text', text: imageText });
   } else {
     userContent = text;
   }
@@ -626,6 +637,16 @@ async function _sendCoachMsg(text, image) {
     }
     if (autoLogContext) {
       systemPrompt += autoLogContext;
+    }
+    // When an image is attached, add strong instruction to read it carefully
+    if (image) {
+      systemPrompt += `\n\n[IMAGE ATTACHED — CRITICAL INSTRUCTIONS]
+The user has shared an image. If it contains a nutrition facts label:
+- You MUST read the EXACT numbers from the label in the image. The image is your PRIMARY source of truth.
+- Do NOT use the brand reference table above — those are only for when no image is available.
+- State each value you read: "I can see on the label: X calories, Xg fat, Xg carbs, Xg protein"
+- Use ONLY those exact values in your FOODLOG block.
+- If the image shows a nutrition label, IGNORE any guesses from your training data — only report what the label says.`;
     }
     // If user came from a meal section, tell AI which meal to log to
     if (window._pendingMealCat && window._pendingMealLabel) {
