@@ -238,6 +238,18 @@ function _getCoachSystemPrompt() {
     if (workoutDates.has(key)) recentDays.push(dayNames[check.getDay()]);
   }
 
+  // Build weekly schedule summary for coach context
+  let weekScheduleStr = '';
+  try {
+    const dayLabels = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    for (let d = 0; d < 7; d++) {
+      if (DAY_WORKOUTS[d] && DAY_WORKOUTS[d].exercises) {
+        weekScheduleStr += '  ' + dayLabels[d] + ': ' + DAY_WORKOUTS[d].name + ' — ' + DAY_WORKOUTS[d].exercises.map(function(e){ return e.name; }).join(', ') + '\n';
+      }
+    }
+    if (weekScheduleStr) weekScheduleStr = 'THIS WEEK\'S FULL SCHEDULE:\n' + weekScheduleStr;
+  } catch(e) { weekScheduleStr = ''; }
+
   return `You are the Blueprint AI Coach — a knowledgeable, motivating personal trainer and nutritionist built into the Blueprint fitness app.
 
 You can analyze images the user shares with you. This includes:
@@ -269,7 +281,8 @@ Training schedule: ${GYM_DAYS.map(i => DAYS_FULL[i]).join(', ')}
 
 TODAY'S APP DATA:
 ${isGymDay ? (todayDone ? 'Workout COMPLETED today (' + (todayWorkout?.name || 'workout') + ')' : 'Scheduled workout: ' + (todayWorkout?.name || 'workout') + ' — not yet completed') : 'Rest day (no workout scheduled)'}
-Logged nutrition so far: ${todayMeals.cal} of ${TARGETS.cal} cal, ${todayMeals.pro}g of ${TARGETS.pro}g protein, ${todayMeals.carb}g of ${TARGETS.carb}g carbs, ${todayMeals.fat}g of ${TARGETS.fat}g fat
+${isGymDay && todayWorkout && todayWorkout.exercises ? 'TODAY\'S EXERCISES:\n' + todayWorkout.exercises.map(function(e, i) { return '  ' + (i+1) + '. ' + e.name + ' — ' + e.sets + ' sets × ' + e.reps + ' reps, rest ' + e.rest + 's' + (e.muscles ? ' (' + e.muscles + ')' : ''); }).join('\n') : ''}
+${weekScheduleStr}Logged nutrition so far: ${todayMeals.cal} of ${TARGETS.cal} cal, ${todayMeals.pro}g of ${TARGETS.pro}g protein, ${todayMeals.carb}g of ${TARGETS.carb}g carbs, ${todayMeals.fat}g of ${TARGETS.fat}g fat
 Daily macro targets: ${TARGETS.cal} cal · ${TARGETS.pro}g protein · ${TARGETS.carb}g carbs · ${TARGETS.fat}g fat${foodMemory}
 
 RECENT ACTIVITY (from app logs):
@@ -286,6 +299,15 @@ BEHAVIOR:
 - If they mention pain or injury, recommend a medical professional.
 - Never say you don't have access to real-time data — the app provides it to you above.
 - When the user logs food, keep your response SHORT. Acknowledge what they logged, show the macros, give one brief comment. Do NOT list or recap previously logged meals — the nutrition tab handles that. Do NOT give a running summary of the day's food unless the user asks for it.
+- CRITICAL — CONSISTENCY: Do NOT contradict yourself within a conversation. If you give advice (e.g. "do X after your workout"), stand by it when given minor new info. Only reverse your position if the new information fundamentally changes the situation. Users lose trust when you flip-flop.
+
+WORKOUT COACHING:
+- You CAN see the user's full workout schedule above — today's exercises, sets, reps, and rest times. ALWAYS reference this data when discussing their training.
+- When the user asks about their workout, exercises, or schedule, refer to the ACTUAL exercises listed above. Never say you can't see their workout or that you don't have access to it.
+- If the user wants to SUBSTITUTE an exercise, suggest a specific replacement that targets the same muscle group. Explain WHY the substitute works. Tell them to use the "Edit" button on the exercise to swap it.
+- If the user asks for a different workout entirely, explain that the app's periodized program is designed for their goals, but offer modifications: they can swap individual exercises or start a custom workout from the Today screen.
+- When suggesting exercise substitutions, consider: their experience level (${USER ? USER.tier : 'beginner'}), the current training phase, available equipment, and the muscle groups that need to be hit.
+- You can recommend modifications like adjusting sets/reps, changing exercise order, or adding warm-up sets.
 
 FOOD LOGGING:
 When the user tells you what they ate, include a FOODLOG JSON block at the END of your response so the app can auto-log it.
