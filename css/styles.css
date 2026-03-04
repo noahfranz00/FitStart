@@ -213,7 +213,7 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
 /* ── DASHBOARD ── */
 #screen-dash { display:none; }
 #screen-dash.active { display:flex !important; flex-direction:column; min-height:100vh; }
-.shell { display:flex; height:calc(100vh - 69px); }
+.shell { display:flex; flex:1; min-height:0; }
 .sidebar-nav { width:220px; flex-shrink:0; background:var(--dark); border-right:1px solid var(--border); padding:28px 12px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; }
 .sb-label { font-size:0.62rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--dim); padding:10px 12px 6px; }
 .sb-btn { display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:10px; font-size:0.83rem; font-weight:500; color:var(--off); cursor:pointer; transition:all 0.18s; background:none; border:none; width:100%; text-align:left; font-family:'Syne',sans-serif; }
@@ -229,6 +229,7 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
 @media(max-width:768px) {
   .main-content.coach-active {
     padding: 0 !important;
+    padding-bottom: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
@@ -260,6 +261,8 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
   .main-content.coach-active .coach-input-bar {
     flex-shrink: 0 !important;
     background: var(--black) !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 10px)) !important;
+    border-top: 1px solid var(--border) !important;
   }
   .main-content.coach-active #view-coach > div:first-child {
     padding: 8px 14px 6px !important;
@@ -759,7 +762,7 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
   .sf-row { grid-template-columns:1fr; gap:10px; margin-bottom:0; }
 
   /* Dashboard shell */
-  #screen-dash.active { display:flex !important; flex-direction:column; }
+  #screen-dash.active { display:flex !important; flex-direction:column; height: 100dvh; height: 100vh; max-height: -webkit-fill-available; padding-bottom: 60px; box-sizing: border-box; overflow: hidden !important; }
   .sidebar-nav { width:100%; flex-direction:row; padding:6px 8px; border-right:none; border-bottom:1px solid var(--border); overflow-x:auto; gap:2px; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; }
   .sb-label { display:none; }
   .sb-btn { flex-shrink:0; padding:8px 10px; font-size:0.7rem; justify-content:center; border-radius:8px; white-space:nowrap; }
@@ -839,8 +842,9 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
   .wo-header { padding:max(10px,env(safe-area-inset-top)) 14px 10px; gap:6px; }
   .wo-title { font-size:0.85rem; flex:1; }
   .wo-back { padding:7px 12px; font-size:0.78rem; }
-  .ex-video-header { padding:12px 14px 10px; flex-direction:column; gap:6px; align-items:flex-start; }
-  .ex-video-title { font-size:1.2rem; }
+  .ex-video-header { padding:12px 14px 10px; flex-direction:row; gap:8px; align-items:flex-start; }
+  .ex-video-title { font-size:1.6rem; flex:1; }
+  .ex-video-badge { min-width:auto; padding:6px 10px; font-size:0.65rem; }
   .ex-video-embed { padding:12px; }
   .ex-video-thumb { max-width:100%; }
   .btn-watch-demo { font-size:0.82rem; padding:10px 16px; width:100%; justify-content:center; }
@@ -866,21 +870,22 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
   /* Hide sidebar on mobile */
   .sidebar-nav { display: none !important; }
   
-  /* Shell fills screen */
+  /* Shell fills screen below nav, above tab bar */
   .shell { 
     flex-direction: column; 
-    height: calc(100dvh - 60px); 
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
     display: flex;
   }
   .main-content { 
     flex: 1;
     min-height: 0;
-    padding: 14px 14px 120px;
+    padding: 14px 14px 80px;
     width: 100%;
     box-sizing: border-box;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -903,8 +908,8 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
     transform: none !important;
   }
   /* Ensure screen-dash doesn't clip the fixed tab bar */
-  #screen-dash { overflow: visible !important; }
-  #screen-dash.active { overflow: visible !important; }
+  #screen-dash { overflow: hidden !important; }
+  #screen-dash.active { overflow: hidden !important; }
   .mob-tab {
     flex: 1;
     display: flex;
