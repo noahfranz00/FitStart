@@ -7,8 +7,14 @@
 // Fuzzy multi-word search: all words in query must appear in name or muscles
 function _fuzzySearchMatch(query, name, muscles) {
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 0);
-  const target = (name + ' ' + (muscles || '')).toLowerCase();
-  return words.every(word => target.includes(word));
+  if (!words.length) return true;
+  const equip = (typeof _getEquipment === 'function') ? _getEquipment(name).toLowerCase() : '';
+  const cat = (EXERCISE_DB[name] ? EXERCISE_DB[name].category : '').toLowerCase();
+  const target = (name + ' ' + (muscles || '') + ' ' + equip + ' ' + cat).toLowerCase();
+  const matchCount = words.filter(word => target.includes(word)).length;
+  // Require all words for 1-2 word queries; allow 1 miss for 3+ word queries
+  const threshold = words.length <= 2 ? words.length : words.length - 1;
+  return matchCount >= threshold;
 }
 
 function dashNav(view, btn) {
@@ -1999,6 +2005,9 @@ function openWorkoutEnv(dayIdx) {
 
   // Show workout screen (position:fixed covers full viewport)
   document.getElementById('screen-dash').style.display = 'none';
+  // Hide mobile tab bar during workout — use class to override !important CSS
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar) tabBar.classList.add('hidden-in-workout');
   const woEl = document.getElementById('screen-workout');
   woEl.classList.add('active');
   woEl.style.display = 'flex';
@@ -2025,6 +2034,9 @@ function exitWorkout() {
   document.body.style.overflow = '';
   const dashRestore = document.getElementById('screen-dash');
   dashRestore.style.display = 'flex';
+  // Restore mobile tab bar
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar) tabBar.classList.remove('hidden-in-workout');
   window.scrollTo(0, 0);
   renderTodayWorkout();
   renderWeek();
@@ -2050,6 +2062,9 @@ function finishWorkout() {
   document.body.style.overflow = '';
   const dashRestore = document.getElementById('screen-dash');
   dashRestore.style.display = 'flex';
+  // Restore mobile tab bar
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar) tabBar.classList.remove('hidden-in-workout');
   window.scrollTo(0, 0);
   renderTodayWorkout();
   renderWeek();
@@ -2093,7 +2108,7 @@ function loadExercise(idx) {
 
   // Exercise demo — form cues + phase info + wger images
   const db = getExerciseData(ex.name);
-  // Show current training phase badge
+  // Show current training phase badge — with exercise-specific context
   const phMod = getPhaseExerciseModifier(CURRENT_WEEK);
   const phBadgeEl = document.getElementById('wo-phase-badge');
   if (phBadgeEl) {
@@ -2102,7 +2117,21 @@ function loadExercise(idx) {
       phBadgeEl.style.cssText = 'display:block;background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.3);border-radius:8px;padding:8px 14px;font-size:0.75rem;color:var(--orange);margin-bottom:10px';
     } else {
       const ph = getTrainingPhase(CURRENT_WEEK);
-      phBadgeEl.textContent = `${ph.name} PHASE · ${ph.intensityLabel}`;
+      // Check if exercise reps match the phase range — if not, give exercise-specific tip
+      const exRepLow = parseInt(String(ex.reps).split('-')[0]) || 8;
+      const phRepLow = parseInt(ph.repRange.split('-')[0]) || 8;
+      const phRepHigh = parseInt(ph.repRange.split('-')[1]) || 12;
+      let badgeText;
+      if (exRepLow < phRepLow) {
+        // Heavy compound (e.g. deadlift 4-6 in hypertrophy phase) — give appropriate tip
+        badgeText = `${ph.name} PHASE · Heavy compound: prioritize form and controlled reps. Rest fully between sets.`;
+      } else if (exRepLow > phRepHigh) {
+        // Higher rep accessory in a strength phase
+        badgeText = `${ph.name} PHASE · Accessory work: focus on controlled tempo and muscle connection.`;
+      } else {
+        badgeText = `${ph.name} PHASE · ${ph.intensityLabel}`;
+      }
+      phBadgeEl.textContent = badgeText;
       phBadgeEl.style.cssText = 'display:block;background:rgba(212,165,32,0.07);border:1px solid rgba(212,165,32,0.2);border-radius:8px;padding:8px 14px;font-size:0.75rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px';
     }
   }
@@ -2123,7 +2152,10 @@ function loadExercise(idx) {
 
   // Rest timer button
   stopRestTimer();
-  restTotalSecs = ex.rest;
+  // Cap rest time based on training phase — max 120s for hypertrophy/strength, 180s for power/peak
+  const phName = (getTrainingPhase(CURRENT_WEEK) || {}).name || '';
+  const maxRest = (phName === 'POWER' || phName === 'PEAK') ? 180 : 120;
+  restTotalSecs = Math.min(ex.rest, maxRest);
   buildRestSelect();
   updateRestDisplay();
 
@@ -2143,9 +2175,29 @@ function loadExercise(idx) {
   renderEcList();
 }
 
+function _isTimedExercise(reps) {
+  return /\d\s*s(?:ec|\/|\b)/i.test(String(reps));
+}
+
 function renderSetsTable(idx, ex) {
   const tbody = document.getElementById('sets-tbody');
   if (!tbody) return;
+  const isTimed = _isTimedExercise(ex.reps);
+  // Update table headers for timed exercises
+  const thead = tbody.closest('table')?.querySelector('thead');
+  if (thead) {
+    const headerRow = thead.querySelector('tr');
+    if (headerRow) {
+      const cells = headerRow.querySelectorAll('th');
+      if (isTimed && cells.length >= 3) {
+        cells[1].textContent = 'DURATION';
+        cells[2].textContent = 'NOTES';
+      } else if (cells.length >= 3) {
+        cells[1].textContent = 'WEIGHT';
+        cells[2].textContent = 'REPS';
+      }
+    }
+  }
   // Apply deload week volume reduction (60% of normal sets, min 2)
   let baseSets = ex.sets;
   if (isDeloadWeek(CURRENT_WEEK)) baseSets = Math.max(2, Math.round(baseSets * 0.6));
@@ -2165,18 +2217,30 @@ function renderSetsTable(idx, ex) {
   for (let s=0; s<numSets; s++) {
     const isSaved = woSets[idx] && woSets[idx][s];
     const isDone = isSaved && woSets[idx][s].done;
-    // Only show saved values if the set was actually completed THIS session
-    const valW = isDone && (woSets[idx][s].weight != null) ? String(woSets[idx][s].weight) : '';
-    const valR = isDone && (woSets[idx][s].reps != null) ? String(woSets[idx][s].reps) : '';
-    // Previous data from the SAME exercise name
     const prev = prevSets[s] || null;
-    const prevHint = (prev && prev.weight && prev.reps) ? '<div style="font-size:0.7rem;color:var(--off);margin-top:3px;font-family:\'DM Mono\',monospace">Last: ' + prev.weight + 'lbs × ' + prev.reps + '</div>' : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div>' + prevHint + '</td>'+
-      '<td class="set-cell-weight"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="decimal" value="'+escapeAttr(valW)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
-      '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="number" inputmode="numeric" value="'+escapeAttr(valR)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
-      '<td><button class="set-check '+(isDone?'done':'')+'" id="sd-'+idx+'-'+s+'" '+(isDone?'disabled':'')+' onclick="completeSet('+idx+','+s+','+ex.rest+')" title="Mark done">✓</button></td>'+
-      '<td><button class="set-del-btn" onclick="deleteSet('+idx+','+s+')" title="Delete set">✕</button></td>';
+
+    if (isTimed) {
+      // Timed exercise: show duration (seconds) + optional notes
+      const valDur = isDone && (woSets[idx][s].weight != null) ? String(woSets[idx][s].weight) : '';
+      const valNote = isDone && (woSets[idx][s].reps != null) ? String(woSets[idx][s].reps) : '';
+      const prevHint = (prev && prev.weight) ? '<div style="font-size:0.7rem;color:var(--off);margin-top:3px;font-family:\'DM Mono\',monospace">Last: ' + prev.weight + 's</div>' : '';
+      tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div>' + prevHint + '</td>'+
+        '<td class="set-cell-weight"><div style="position:relative"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="numeric" value="'+escapeAttr(valDur)+'" min="0" placeholder="sec" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')" style="padding-right:24px"><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:0.65rem;color:var(--dim);pointer-events:none">s</span></div></td>'+
+        '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="text" value="'+escapeAttr(valNote)+'" placeholder="BW" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')" style="font-size:0.75rem"></td>'+
+        '<td><button class="set-check '+(isDone?'done':'')+'" id="sd-'+idx+'-'+s+'" '+(isDone?'disabled':'')+' onclick="completeSet('+idx+','+s+','+ex.rest+')" title="Mark done">✓</button></td>'+
+        '<td><button class="set-del-btn" onclick="deleteSet('+idx+','+s+')" title="Delete set">✕</button></td>';
+    } else {
+      // Standard weight/reps exercise
+      const valW = isDone && (woSets[idx][s].weight != null) ? String(woSets[idx][s].weight) : '';
+      const valR = isDone && (woSets[idx][s].reps != null) ? String(woSets[idx][s].reps) : '';
+      const prevHint = (prev && prev.weight && prev.reps) ? '<div style="font-size:0.7rem;color:var(--off);margin-top:3px;font-family:\'DM Mono\',monospace">Last: ' + prev.weight + 'lbs × ' + prev.reps + '</div>' : '';
+      tr.innerHTML = '<td style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.78rem;white-space:nowrap"><div>Set '+(s+1)+'</div>' + prevHint + '</td>'+
+        '<td class="set-cell-weight"><input class="set-weight-input '+(isDone?'done':'')+'" id="w-'+idx+'-'+s+'" type="number" inputmode="decimal" value="'+escapeAttr(valW)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
+        '<td class="set-cell-reps"><input class="set-reps-input '+(isDone?'done':'')+'" id="r-'+idx+'-'+s+'" type="number" inputmode="numeric" value="'+escapeAttr(valR)+'" min="0" '+(isDone?'readonly':'')+' oninput="autoSaveSet('+idx+','+s+','+ex.rest+')"></td>'+
+        '<td><button class="set-check '+(isDone?'done':'')+'" id="sd-'+idx+'-'+s+'" '+(isDone?'disabled':'')+' onclick="completeSet('+idx+','+s+','+ex.rest+')" title="Mark done">✓</button></td>'+
+        '<td><button class="set-del-btn" onclick="deleteSet('+idx+','+s+')" title="Delete set">✕</button></td>';
+    }
     tbody.appendChild(tr);
   }
 }
@@ -3029,6 +3093,9 @@ function _launchUnplannedEnv(exercises) {
     if (ex.sets) woExtraSets[i] = ex.sets;
   });
   document.getElementById('screen-dash').style.display = 'none';
+  // Hide mobile tab bar during workout
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar) tabBar.style.display = 'none';
   const woEl = document.getElementById('screen-workout');
   woEl.classList.add('active');
   woEl.style.display = 'flex';
@@ -3573,11 +3640,10 @@ async function addCRIngredient() {
       }
     } else {
       // No USDA results — manual entry
-      alert('Not found in USDA database. Please enter macros manually (per 100g).');
       _addManualIngredient(query, grams);
     }
   } catch(e) {
-    alert('USDA search failed. Please enter macros manually.');
+    alert('Search failed — entering macros manually.');
     _addManualIngredient(query, grams);
   }
 
@@ -3586,20 +3652,49 @@ async function addCRIngredient() {
 }
 
 function _addManualIngredient(name, grams) {
-  const cal = prompt(`${name} — Enter CALORIES per 100g:`);
-  const pro = prompt(`${name} — Enter PROTEIN (g) per 100g:`);
-  const carb = prompt(`${name} — Enter CARBS (g) per 100g:`);
-  const fat = prompt(`${name} — Enter FAT (g) per 100g:`);
-  if (cal === null) return;
-  _newRecipe.ingredients.push({
-    name: name, grams: grams,
-    cal100: parseFloat(cal) || 0, pro100: parseFloat(pro) || 0,
-    carb100: parseFloat(carb) || 0, fat100: parseFloat(fat) || 0,
-    _source: 'manual'
-  });
-  document.getElementById('cr-ing-name').value = '';
-  document.getElementById('cr-ing-grams').value = '';
-  renderCRIngredients();
+  // Show a proper modal instead of ugly native prompts
+  const overlay = document.createElement('div');
+  overlay.id = 'manual-ing-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = '<div style="background:var(--dark);border:1px solid var(--border2);border-radius:20px;padding:24px 20px;width:100%;max-width:340px">' +
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;letter-spacing:1.5px;color:var(--white);margin-bottom:4px">' + name + '</div>' +
+    '<div style="font-size:0.75rem;color:var(--dim);margin-bottom:18px">Enter total macros for ' + grams + 'g</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+      '<div><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:5px">CALORIES</div>' +
+        '<input id="mi-cal" type="number" inputmode="numeric" placeholder="0" style="width:100%;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:\'DM Mono\',monospace;font-size:1rem;text-align:center;outline:none;box-sizing:border-box"></div>' +
+      '<div><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:5px">PROTEIN (g)</div>' +
+        '<input id="mi-pro" type="number" inputmode="decimal" placeholder="0" style="width:100%;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:\'DM Mono\',monospace;font-size:1rem;text-align:center;outline:none;box-sizing:border-box"></div>' +
+      '<div><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:5px">CARBS (g)</div>' +
+        '<input id="mi-carb" type="number" inputmode="decimal" placeholder="0" style="width:100%;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:\'DM Mono\',monospace;font-size:1rem;text-align:center;outline:none;box-sizing:border-box"></div>' +
+      '<div><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:5px">FAT (g)</div>' +
+        '<input id="mi-fat" type="number" inputmode="decimal" placeholder="0" style="width:100%;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:\'DM Mono\',monospace;font-size:1rem;text-align:center;outline:none;box-sizing:border-box"></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;margin-top:18px">' +
+      '<button id="mi-cancel" style="flex:1;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--dim);font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer">Cancel</button>' +
+      '<button id="mi-save" style="flex:1;padding:12px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:var(--black);font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer">Add</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+  setTimeout(function() { document.getElementById('mi-cal').focus(); }, 100);
+  document.getElementById('mi-cancel').onclick = function() { overlay.remove(); };
+  document.getElementById('mi-save').onclick = function() {
+    var cal = parseFloat(document.getElementById('mi-cal').value) || 0;
+    var pro = parseFloat(document.getElementById('mi-pro').value) || 0;
+    var carb = parseFloat(document.getElementById('mi-carb').value) || 0;
+    var fat = parseFloat(document.getElementById('mi-fat').value) || 0;
+    if (!cal && !pro && !carb && !fat) { alert('Enter at least one value'); return; }
+    var factor = grams > 0 ? 100 / grams : 1;
+    _newRecipe.ingredients.push({
+      name: name, grams: grams,
+      cal100: Math.round(cal * factor * 10) / 10, pro100: Math.round(pro * factor * 10) / 10,
+      carb100: Math.round(carb * factor * 10) / 10, fat100: Math.round(fat * factor * 10) / 10,
+      _source: 'manual'
+    });
+    document.getElementById('cr-ing-name').value = '';
+    document.getElementById('cr-ing-grams').value = '';
+    renderCRIngredients();
+    overlay.remove();
+  };
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
 }
 
 function saveNewRecipe() {
