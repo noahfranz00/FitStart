@@ -3243,11 +3243,14 @@ document.addEventListener('click', function() { _getAudioCtx(); }, { once: true 
 
 function playRestChime() {
   try {
-    // Always create a fresh AudioContext for the chime — iOS kills suspended ones
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    // Resume immediately — we're inside a setInterval tick which is close enough to user interaction on most iOS versions
+    // Reuse the pre-warmed AudioContext — iOS kills fresh ones created outside user gestures
+    let ctx = _getAudioCtx();
+    if (!ctx) {
+      // Last resort: try creating a new one (works on Android/desktop)
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) ctx = new Ctx();
+    }
+    if (!ctx) { if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]); return; }
     const doPlay = function() {
       const notes = [1047, 1319, 1568]; // C6, E6, G6
       notes.forEach(function(freq, i) {
@@ -3266,8 +3269,6 @@ function playRestChime() {
           } catch(e2) {}
         }, i * 200);
       });
-      // Close context after last note finishes
-      setTimeout(function() { try { ctx.close(); } catch(e3) {} }, 1500);
     };
     if (ctx.state === 'suspended') {
       ctx.resume().then(doPlay).catch(function() { doPlay(); });
@@ -3276,7 +3277,10 @@ function playRestChime() {
     }
     // Haptic: 3 strong bursts
     if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]);
-  } catch (e) {}
+  } catch (e) {
+    // Fallback: vibrate only
+    if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]);
+  }
 }
 
 function startRestTimerSecs(secs) {
