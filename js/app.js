@@ -90,7 +90,7 @@ const EXERCISE_DB = {
   'Tricep Pushdown':       { sets:3, reps:'12-15', rest:60,  muscles:'Triceps',                    category:'Triceps',      wgerId:26  },
   'Rope Pushdown':         { sets:3, reps:'12-15', rest:60,  muscles:'Triceps (lateral head)',     category:'Triceps',      wgerId:26  },
   'Skull Crushers':        { sets:3, reps:'10-12', rest:90,  muscles:'Triceps',                    category:'Triceps',      wgerId:25  },
-  'Close Grip Bench':      { sets:3, reps:'8-10',  rest:120, muscles:'Triceps, Chest',             category:'Triceps',      wgerId:358 },
+  'Close-Grip Bench Press': { sets:3, reps:'8-10',  rest:120, muscles:'Triceps, Chest',             category:'Triceps',      wgerId:358 },
   'Overhead Tricep Extension': { sets:3, reps:'10-12', rest:60, muscles:'Triceps (long head)',     category:'Triceps',      wgerId:null },
   'Kickbacks':             { sets:3, reps:'12-15', rest:60,  muscles:'Triceps',                    category:'Triceps',      wgerId:null },
   'Diamond Push-Up':       { sets:3, reps:'10-15', rest:60,  muscles:'Triceps, Inner Chest',       category:'Triceps',      wgerId:null },
@@ -595,6 +595,7 @@ async function generatePlan() {
   const heightIn = parseInt(document.getElementById('ob-height-in').value) || 0;
   const activity = document.getElementById('ob-activity').value;
   const injuries = document.getElementById('ob-injuries').value.trim();
+  const bodyGoals = (document.getElementById('ob-body-goals') || {}).value ? document.getElementById('ob-body-goals').value.trim() : '';
   const selDays  = getSelectedDays();
   const duration = document.getElementById('ob-duration').value;
   const equipment = getSelectedEquipment();
@@ -617,7 +618,7 @@ async function generatePlan() {
 
   const heightCm = Math.round((heightFt * 12 + heightIn) * 2.54);
   const nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
-  USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
+  USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, bodyGoals, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
 
   // Auto-calculate water goal: half bodyweight in oz, capped at 128oz (1 gallon)
   if (!lsGet('fs_water_goal_custom')) {
@@ -1124,7 +1125,7 @@ function initDashboard() {
   }
 
   // Auto-update workout exercises if plan was generated with old templates (v2 = compound-first)
-  const PLAN_VERSION = 4;
+  const PLAN_VERSION = 5;
   if (generatedPlan._v !== PLAN_VERSION && generatedPlan.weekly_schedule && USER) {
     const t = USER.tier || 'beginner';
     generatedPlan.weekly_schedule.forEach(d => {
