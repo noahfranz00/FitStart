@@ -65,10 +65,10 @@ nav { display:flex; justify-content:space-between; align-items:center; padding:2
 .tier-badge { font-size:0.65rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold); background:var(--gold-dim); border:1px solid rgba(212,165,32,0.2); padding:5px 12px; border-radius:6px; }
 .tier-badge.intermediate { color:var(--orange); background:var(--orange-dim); border-color:rgba(251,146,60,0.2); }
 .tier-badge.advanced { color:var(--red); background:var(--red-dim); border-color:rgba(244,63,94,0.2); }
-.form-section-label { font-size:0.6rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--dim); margin-bottom:12px; margin-top:20px; }
+.form-section-label { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin-bottom:14px; margin-top:28px; padding-bottom:8px; border-bottom:1px solid var(--border); }
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .form-group { display:flex; flex-direction:column; gap:6px; }
-.form-group label { font-size:0.65rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); }
+.form-group label { font-size:0.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--off); margin-bottom:6px; display:block; }
 .form-group input, .form-group select { padding:10px 13px; background:var(--dark); border:1px solid var(--border); border-radius:10px; font-family:'Syne',sans-serif; font-size:0.88rem; color:var(--white); outline:none; transition:border-color 0.2s; }
 .form-group input:focus, .form-group select:focus { border-color:var(--tier-color); }
 .form-group input::placeholder { color:var(--dim); }
@@ -895,7 +895,7 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
     overflow-y: scroll !important;
     -webkit-overflow-scrolling: touch;
   }
-  .view.active { display: block; padding-bottom: 20px; }
+  .view.active { display: block; padding-bottom: 40px; min-height: min-content; }
 
   /* Bottom tab bar - fixed to bottom of viewport */
   .mobile-tab-bar {
