@@ -1104,15 +1104,18 @@ function _updateCoachNotifDot() {
 function _injectProactiveBubble(text, skipHistory) {
   const container = document.getElementById('coach-messages');
   if (!container) return;
-  // Hide starters if visible
-  const starters = document.getElementById('coach-starters');
-  if (starters) starters.style.display = 'none';
+  // Don't hide starters for the first proactive message — keep them accessible
+  // Only hide starters if there's already a conversation
+  if (_coachHistory.length > 0) {
+    const starters = document.getElementById('coach-starters');
+    if (starters) starters.style.display = 'none';
+  }
   const clearBtn = document.getElementById('coach-clear-btn');
   if (clearBtn) clearBtn.style.display = 'block';
   const bubble = document.createElement('div');
   bubble.className = 'coach-bubble assistant proactive-bubble';
   bubble.style.cssText = 'border-color:rgba(212,165,32,0.22);background:rgba(212,165,32,0.06)';
-  bubble.innerHTML = '⚡ ' + _formatCoachText(text);
+  bubble.innerHTML = _formatCoachText(text);
   container.appendChild(bubble);
   container.scrollTop = container.scrollHeight;
   // Only add to history if not already persisted there
