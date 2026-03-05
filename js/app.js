@@ -803,6 +803,41 @@ function renderResults(plan) {
   rs.scrollIntoView({behavior:'smooth',block:'start'});
   document.getElementById('generateBtn').disabled = false;
   renderMyPlan(generatedPlan);
+  
+  // Generate AI explanation of the plan
+  _generatePlanExplanation(plan);
+}
+
+async function _generatePlanExplanation(plan) {
+  const el = document.getElementById('plan-explain-text');
+  if (!el) return;
+  const n = USER.nutrition;
+  const ph = TRAINING_PHASES;
+  const phaseOverview = ph.map(p => 'Weeks ' + p.weeks.join('-') + ': ' + p.name + ' (' + p.repRange + ' reps)').join(', ');
+  const prompt = `You are a fitness coach explaining a new program to a client. Write a 150-word personalized explanation. Be direct and motivating.
+
+CLIENT: ${USER.name}, ${USER.age}yo ${USER.gender}, ${USER.weight}lbs → ${USER.goal}lbs goal
+${USER.bodyGoals ? 'Personal goals: ' + USER.bodyGoals : ''}
+${USER.injuries ? 'Injuries/limitations: ' + USER.injuries : ''}
+Level: ${USER.tier}, ${USER.selDays.length} days/week, ${USER.duration} sessions
+
+PROGRAM: "${plan.name}" — ${selectedWeeks} weeks
+Phases: ${phaseOverview}
+Macros: ${n.calories}cal, ${n.protein}g protein, ${n.carbs}g carbs, ${n.fat}g fat (${n.mode} mode, ${n.weeklyChange}lbs/week)
+
+Write 3 short paragraphs:
+1. What this program is and why it fits their goals${USER.injuries ? ' (mention how you adapted for their injuries)' : ''}
+2. Why these specific macro targets (calories, protein amount, the reasoning)
+3. What the ${selectedWeeks} weeks will look like phase by phase and what to expect
+
+Be concise. No headers. No bullet points. Use their name.`;
+
+  try {
+    const reply = await callClaude([{role:'user',content:prompt}], {max_tokens:400, system:'You are a concise fitness coach. No markdown formatting.'});
+    el.textContent = reply || 'Your program has been customized based on your profile, goals, and schedule.';
+  } catch(e) {
+    el.textContent = `${plan.name} — A ${selectedWeeks}-week periodized program with ${n.calories} daily calories and ${n.protein}g protein. Your training phases progress from hypertrophy to strength to power, with deload weeks built in for recovery.`;
+  }
 }
 
 // ── SIGNUP ──
@@ -1190,6 +1225,8 @@ function initDashboard() {
   document.getElementById('s-weight').value = USER.weight ? USER.weight + ' lbs' : '';
   document.getElementById('s-goal').value   = USER.goal ? USER.goal + ' lbs' : '';
   document.getElementById('s-tier').value   = USER.tier ? USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1) : '';
+  const sBodyGoals = document.getElementById('s-body-goals'); if (sBodyGoals) sBodyGoals.value = USER.bodyGoals || '';
+  const sInjuries = document.getElementById('s-injuries'); if (sInjuries) sInjuries.value = USER.injuries || '';
   document.getElementById('s-cal').value    = TARGETS.cal;
   document.getElementById('s-pro').value    = TARGETS.pro;
   document.getElementById('s-carb').value   = TARGETS.carb;
