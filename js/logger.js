@@ -4,59 +4,49 @@
 // ═══════════════════════════════════════════
 // Dependencies: All globals from app.js, scoring.js functions
 
-// ── EXERCISE VIDEO MAP (YouTube video IDs for form tutorials) ──
-// Curated from popular fitness channels. Falls back to YouTube search for unmapped exercises.
+// ── EXERCISE VIDEO MAP (YouTube Shorts / short tutorials for form reference) ──
+// Short-form only — no 5+ minute videos. Falls back to YouTube search for unmapped exercises.
 const EXERCISE_VIDEOS = {
   // Chest
-  'Bench Press': 'rT7DgCr-3pg',
-  'Incline Barbell Press': 'SrqOu55lrYU',
-  'Dumbbell Bench Press': 'VmB1G1K7v94',
-  'Incline DB Press': 'IP4-r2G6_jM',
-  'Dumbbell Flyes': 'eozdVDA78K0',
+  'Bench Press': 'gRVjAtPip0Y',
+  'Incline Barbell Press': '2tMce4VpHuE',
+  'Dumbbell Bench Press': 'YQ2s_Y7g5Qk',
+  'Incline DB Press': 'FGXM_kfdxhk',
   'Cable Crossover': 'taI4XduLpTk',
-  'Push-Ups': 'IODxDxX7oi4',
-  'Chest Dip': 'wjUmnZH528Y',
+  'Push-Ups': 'ba8tr1NzwXU',
+  'Chest Dip': 'dX_nSOOJIsE',
   // Back
-  'Deadlift': '1ZXobu7JvvE',
-  'Conventional Deadlift': '1ZXobu7JvvE',
-  'Sumo Deadlift': 'V2lAm_QLRWU',
-  'Barbell Row': 'kBWAon7ItDw',
-  'Pull-Ups': 'eGo4IYlbE5g',
-  'Chin-Ups': 'brhRXlOhWAM',
-  'Lat Pulldown': '0oeIB6wi3es',
-  'Seated Cable Row': 'UCXxvVItLoM',
+  'Deadlift': 'XxWcirHIwVo',
+  'Conventional Deadlift': 'XxWcirHIwVo',
+  'Barbell Row': 'FWJR5Ve8bnQ',
+  'Pull-Ups': 'HRV5YKKaeVw',
+  'Lat Pulldown': 'SALxEARiMkw',
+  'Seated Cable Row': 'xQNrFHEMhI4',
   'Face Pulls': 'rep-qVOkqgk',
-  'Dumbbell Row': 'xl1YkGCpQ2M',
+  'Dumbbell Row': 'EL_pgSij6SY',
   // Shoulders
-  'Shoulder Press': 'QAQ64hK4Xxs',
-  'Overhead Press': 'QAQ64hK4Xxs',
-  'Lateral Raise': 'kDqklk1ZESo',
-  'Dumbbell Lateral Raise': 'kDqklk1ZESo',
-  'Rear Delt Fly': 'EA7u4Q_8HQ0',
+  'Shoulder Press': 'M2rwvNhTOu0',
+  'Overhead Press': 'M2rwvNhTOu0',
+  'Lateral Raise': '_OZeEP7lziM',
   'Arnold Press': 'vj2w851ZHRM',
   // Legs
-  'Back Squat': '4Y2ZdHCOXok',
+  'Back Squat': 'bEv6CCg2BC8',
+  'Front Squat': 'v-mQm_9JCMo',
   'Goblet Squat': 'MeIiIdhvXT4',
-  'Romanian Deadlift': 'JCXUYuzwNrM',
+  'Romanian Deadlift': '7j-2w4-P14I',
   'Leg Press': 'IZxyjW7MPJQ',
-  'Leg Curl': 'ELOCsiu8leQ',
-  'Leg Extension': 'YyvSfVjQeL0',
-  'Bulgarian Split Squat': 'Z_krEJghJig',
-  'Lunges': 'QOVaHnm-NlA',
+  'Bulgarian Split Squat': 'hPlKMm-bySY',
+  'Lunges': '3KFeySmhfIo',
+  'Hip Thrust': 'Zp26q4BY5HE',
   'Calf Raises': '-M4-G8p8fmc',
-  'Hip Thrust': 'SEdqd1n0cvg',
   // Arms
   'Barbell Curl': 'kwG2ipFRgFo',
-  'Dumbbell Curl': 'ykJmrZ5v0Oo',
   'Hammer Curl': 'TwD-YGVP4Bk',
-  'Tricep Pushdown': 'REbLPK4Gv2I',
+  'Tricep Pushdown': '2-LAMcpzODU',
   'Skull Crushers': 'd_KZxkY_0cM',
-  'Close-Grip Bench': 'nEF0bv2FW94',
   // Core
   'Plank': 'yeKv5oX_6GY',
   'Dead Bug': '2LgSCwyNqTo',
-  'Hanging Leg Raise': 'hdng3Nm1x_E',
-  'Cable Woodchop': 'pAplQXk3dkU',
 };
 
 // Fuzzy multi-word search: all words in query must appear in name or muscles
@@ -488,46 +478,26 @@ document.addEventListener('click', function(){ closeExRowMenu(); });
 // ── MACROS ──
 function refreshDashMacros() {
   const t = getAllEntries(TODAY_IDX).reduce((a,e)=>({cal:a.cal+e.cal,pro:a.pro+e.pro,carb:a.carb+(e.carb||0),fat:a.fat+(e.fat||0)}),{cal:0,pro:0,carb:0,fat:0});
+  const circumference = 263.9;
   
-  // Calories
-  const calOver = t.cal > TARGETS.cal;
-  const calEl = document.getElementById('d-cal'); if (!calEl) return;
-  calEl.textContent = t.cal.toLocaleString();
-  calEl.className = 'sc-val'+(calOver?' over':'');
-  document.getElementById('d-cal-sub').textContent = 'of '+TARGETS.cal.toLocaleString();
-  document.getElementById('d-cal-bar').style.width = Math.min(t.cal/TARGETS.cal*100,100)+'%';
-  document.getElementById('d-cal-bar').className = 'prog-fill'+(calOver?' over':'');
-  
-  // Protein
-  const proOver = t.pro > TARGETS.pro;
-  const proEl = document.getElementById('d-pro');
-  proEl.textContent = t.pro+'g';
-  proEl.className = 'sc-val'+(proOver?' over':'');
-  document.getElementById('d-pro-sub').textContent = 'of '+TARGETS.pro+'g';
-  document.getElementById('d-pro-bar').style.width = Math.min(t.pro/TARGETS.pro*100,100)+'%';
-  document.getElementById('d-pro-bar').className = 'prog-fill'+(proOver?' over':'');
-  
-  // Carbs
-  const carbOver = t.carb > TARGETS.carb;
-  const carbEl = document.getElementById('d-carb');
-  if (carbEl) {
-    carbEl.textContent = t.carb+'g';
-    carbEl.className = 'sc-val'+(carbOver?' over':'');
-    document.getElementById('d-carb-sub').textContent = 'of '+TARGETS.carb+'g';
-    document.getElementById('d-carb-bar').style.width = Math.min(t.carb/TARGETS.carb*100,100)+'%';
-    document.getElementById('d-carb-bar').className = 'prog-fill'+(carbOver?' over':'');
-  }
-  
-  // Fat
-  const fatOver = t.fat > TARGETS.fat;
-  const fatEl = document.getElementById('d-fat');
-  if (fatEl) {
-    fatEl.textContent = t.fat+'g';
-    fatEl.className = 'sc-val'+(fatOver?' over':'');
-    document.getElementById('d-fat-sub').textContent = 'of '+TARGETS.fat+'g';
-    document.getElementById('d-fat-bar').style.width = Math.min(t.fat/TARGETS.fat*100,100)+'%';
-    document.getElementById('d-fat-bar').className = 'prog-fill'+(fatOver?' over':'');
-  }
+  [['cal',TARGETS.cal,'','d-cal','d-cal-ring','d-cal-sub'],
+   ['pro',TARGETS.pro,'g','d-pro','d-pro-ring','d-pro-sub'],
+   ['carb',TARGETS.carb,'g','d-carb','d-carb-ring','d-carb-sub'],
+   ['fat',TARGETS.fat,'g','d-fat','d-fat-ring','d-fat-sub']].forEach(([k,tgt,u,vid,rid,sid])=>{
+    const val = t[k];
+    const pct = tgt > 0 ? val / tgt : 0;
+    const offset = circumference * (1 - Math.min(pct, 1));
+    let color;
+    if (pct > 1.05) color = '#ef4444';
+    else if (pct >= 0.90) color = '#22c55e';
+    else color = '#D4A520';
+    const el = document.getElementById(vid);
+    const ring = document.getElementById(rid);
+    const sub = document.getElementById(sid);
+    if (el) el.textContent = (k==='cal' ? val.toLocaleString() : val) + u;
+    if (ring) { ring.style.strokeDashoffset = offset; ring.setAttribute('stroke', color); }
+    if (sub) sub.textContent = 'of ' + (tgt||'\u2014') + (u ? u : '');
+  });
 }
 
 // ── WEEK ──
@@ -2166,17 +2136,12 @@ function loadExercise(idx) {
     setsInfoEl.id = 'wo-sets-info';
     titleEl2.parentNode.insertBefore(setsInfoEl, titleEl2.nextSibling);
   }
-  setsInfoEl.innerHTML = `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${ex.sets} SETS × ${ex.reps} REPS</span><span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim);margin-left:10px">REST ${ex.rest}s</span>`;
-  setsInfoEl.style.cssText = 'margin-top:4px;display:flex;align-items:baseline;gap:4px;flex-wrap:wrap';
+  setsInfoEl.innerHTML = `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${ex.sets} SETS × ${ex.reps} REPS</span><button onclick="openSetRepEditor(${idx})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--dim);font-size:0.6rem;font-family:'DM Mono',monospace;cursor:pointer;margin:0 6px;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:3px;vertical-align:middle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>EDIT</button><span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim)">REST ${ex.rest}s</span>`;
+  setsInfoEl.style.cssText = 'margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap';
   
+  // Hide the separate badge element entirely
   const _badgeEl = document.getElementById('wo-ex-badge');
-  _badgeEl.innerHTML = 
-    `<div style="display:flex;align-items:center;gap:6px">` +
-    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" style="opacity:0.7;flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
-    `<span style="font-size:0.65rem;letter-spacing:0.5px">EDIT</span>` +
-    `</div>`;
-  _badgeEl.onclick = function() { openSetRepEditor(idx); };
-  _badgeEl.title = 'Tap to edit sets & reps';
+  if (_badgeEl) _badgeEl.style.display = 'none';
   // Update header title on mobile to show current exercise
   const titleEl = document.getElementById('wo-title');
   if (titleEl && window.innerWidth <= 768) {
@@ -3460,57 +3425,58 @@ function startRestTimer() {
   startRestTimerSecs(restTotalSecs);
 }
 
-// Pre-create AudioContext on first user tap so iOS allows audio later
-let _audioCtx = null;
-function _getAudioCtx() {
-  if (!_audioCtx) {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (Ctx) _audioCtx = new Ctx();
-  }
-  if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume();
-  return _audioCtx;
+// Pre-create Audio element for rest timer chime — HTML5 Audio is more reliable than WebAudio on iOS PWA
+// Generate a simple chime as a base64 WAV
+let _chimeAudio = null;
+function _initChimeAudio() {
+  if (_chimeAudio) return;
+  try {
+    // Generate a 0.3s 880Hz sine wave WAV at 22050Hz sample rate
+    const sr = 22050, dur = 0.3, freq = 880;
+    const samples = Math.floor(sr * dur);
+    const buffer = new ArrayBuffer(44 + samples * 2);
+    const view = new DataView(buffer);
+    // WAV header
+    const writeStr = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+    writeStr(0, 'RIFF'); view.setUint32(4, 36 + samples * 2, true); writeStr(8, 'WAVE');
+    writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true); view.setUint32(24, sr, true); view.setUint32(28, sr * 2, true);
+    view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    writeStr(36, 'data'); view.setUint32(40, samples * 2, true);
+    for (let i = 0; i < samples; i++) {
+      const t = i / sr;
+      const envelope = Math.max(0, 1 - t / dur);
+      const val = Math.sin(2 * Math.PI * freq * t) * envelope * 0.8;
+      view.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, val * 32767)), true);
+    }
+    const blob = new Blob([buffer], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    _chimeAudio = new Audio(url);
+    _chimeAudio.volume = 0.8;
+    // Preload
+    _chimeAudio.load();
+  } catch (e) { console.log('Chime init failed:', e); }
 }
-document.addEventListener('touchstart', function() { _getAudioCtx(); }, { once: true });
-document.addEventListener('click', function() { _getAudioCtx(); }, { once: true });
+// Unlock audio on first user gesture (required by iOS)
+function _unlockChimeAudio() {
+  _initChimeAudio();
+  if (_chimeAudio) {
+    _chimeAudio.play().then(() => { _chimeAudio.pause(); _chimeAudio.currentTime = 0; }).catch(() => {});
+  }
+}
+document.addEventListener('touchstart', _unlockChimeAudio, { once: true });
+document.addEventListener('click', _unlockChimeAudio, { once: true });
 
 function playRestChime() {
   try {
-    // Reuse the pre-warmed AudioContext — iOS kills fresh ones created outside user gestures
-    let ctx = _getAudioCtx();
-    if (!ctx) {
-      // Last resort: try creating a new one (works on Android/desktop)
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (Ctx) ctx = new Ctx();
+    _initChimeAudio();
+    if (_chimeAudio) {
+      _chimeAudio.currentTime = 0;
+      _chimeAudio.play().catch(() => {});
     }
-    if (!ctx) { if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]); return; }
-    const doPlay = function() {
-      const notes = [1047, 1319, 1568]; // C6, E6, G6
-      notes.forEach(function(freq, i) {
-        setTimeout(function() {
-          try {
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.connect(g);
-            g.connect(ctx.destination);
-            o.frequency.value = freq;
-            o.type = 'sine';
-            g.gain.setValueAtTime(0.7, ctx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-            o.start(ctx.currentTime);
-            o.stop(ctx.currentTime + 0.5);
-          } catch(e2) {}
-        }, i * 200);
-      });
-    };
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(doPlay).catch(function() { doPlay(); });
-    } else {
-      doPlay();
-    }
-    // Haptic: 3 strong bursts
+    // Haptic
     if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]);
   } catch (e) {
-    // Fallback: vibrate only
     if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]);
   }
 }
@@ -3518,7 +3484,7 @@ function playRestChime() {
 function startRestTimerSecs(secs) {
   stopRestTimer();
   // Pre-warm audio on iOS so it can play when timer ends
-  _getAudioCtx();
+  _initChimeAudio();
   _chimePlayedForCurrentTimer = false;
   restTotalSecs = secs;
   restTimerEndAt = Date.now() + secs * 1000;
@@ -3591,7 +3557,7 @@ function restoreRestTimerIfActive() {
   _chimePlayedForCurrentTimer = false;
   restTotalSecs = saved.total || 90;
   restTimerEndAt = saved.endAt;
-  _getAudioCtx();
+  _initChimeAudio();
   _startTimerUI(restTotalSecs);
 }
 
