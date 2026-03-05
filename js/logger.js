@@ -2127,22 +2127,19 @@ function loadExercise(idx) {
 
   const titleEl2 = document.getElementById('wo-ex-title');
   titleEl2.textContent = ex.name;
-  titleEl2.style.fontSize = window.innerWidth <= 768 ? '1.6rem' : '1.8rem';
   
-  // Prominent sets/reps display below title
-  let setsInfoEl = document.getElementById('wo-sets-info');
-  if (!setsInfoEl) {
-    setsInfoEl = document.createElement('div');
-    setsInfoEl.id = 'wo-sets-info';
-    titleEl2.parentNode.insertBefore(setsInfoEl, titleEl2.nextSibling);
-  }
-  setsInfoEl.innerHTML = `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${ex.sets} SETS × ${ex.reps} REPS</span><button onclick="openSetRepEditor(${idx})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--dim);font-size:0.6rem;font-family:'DM Mono',monospace;cursor:pointer;margin:0 6px;letter-spacing:0.5px;display:inline-flex;align-items:center;gap:3px;vertical-align:middle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>EDIT</button><span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim)">REST ${ex.rest}s</span>`;
-  setsInfoEl.style.cssText = 'margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap';
-  
-  // Hide the separate badge element entirely
-  const _badgeEl = document.getElementById('wo-ex-badge');
-  if (_badgeEl) _badgeEl.style.display = 'none';
-  // Update header title on mobile to show current exercise
+  // Single clean line: SETS × REPS  |  REST  |  [EDIT]  [⋮]
+  const setsInfoEl = document.getElementById('wo-sets-info');
+  setsInfoEl.innerHTML = 
+    `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${ex.sets} SETS × ${ex.reps} REPS</span>` +
+    `<span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim)">REST ${ex.rest}s</span>` +
+    `<span style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-shrink:0">` +
+      `<button onclick="openSetRepEditor(${idx})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--dim);font-size:0.6rem;font-family:'DM Mono',monospace;cursor:pointer;letter-spacing:0.5px;display:flex;align-items:center;gap:4px" title="Edit sets & reps">` +
+        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>EDIT</button>` +
+      `<button onclick="_toggleWoExMenu(event)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--dim);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1" title="Exercise options">⋮</button>` +
+    `</span>`;
+
+  // Update mobile header title
   const titleEl = document.getElementById('wo-title');
   if (titleEl && window.innerWidth <= 768) {
     titleEl.textContent = `${idx+1}/${exes.length} — ${ex.name.toUpperCase()}`;
@@ -2219,13 +2216,14 @@ function loadExercise(idx) {
 
 // ── WORKOUT ENV 3-DOT MENU ──
 let _woExMenuEl = null;
-function _toggleWoExMenu() {
+function _toggleWoExMenu(e) {
   if (_woExMenuEl) { _woExMenuEl.remove(); _woExMenuEl = null; return; }
-  const btn = document.getElementById('wo-ex-menu-btn');
+  // Find the clicked button from the event, or fall back to finding it in the sets-info row
+  const btn = (e && e.currentTarget) ? e.currentTarget : document.querySelector('#wo-sets-info button[title="Exercise options"]');
   if (!btn) return;
   const rect = btn.getBoundingClientRect();
   _woExMenuEl = document.createElement('div');
-  _woExMenuEl.style.cssText = 'position:fixed;top:' + (rect.bottom + 4) + 'px;right:' + (window.innerWidth - rect.right) + 'px;background:#1a1a1a;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:6px 0;min-width:200px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,0.7);animation:fadeUp 0.15s ease';
+  _woExMenuEl.style.cssText = 'position:fixed;top:' + (rect.bottom + 4) + 'px;right:' + Math.max(8, window.innerWidth - rect.right) + 'px;background:#1a1a1a;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:6px 0;min-width:200px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,0.7);animation:fadeUp 0.15s ease';
   const idx = woCurrentEx;
   _woExMenuEl.innerHTML = 
     '<span onclick="_substituteFromWorkout(' + idx + ')" style="display:block;padding:12px 16px;font-size:0.85rem;color:#E2DFD8;cursor:pointer">🔄 Substitute Exercise</span>' +
@@ -2236,9 +2234,10 @@ function _toggleWoExMenu() {
     s.onmouseleave = function() { s.style.background = 'none'; };
   });
   document.body.appendChild(_woExMenuEl);
+  const _menuBtn = btn;
   setTimeout(function() {
     document.addEventListener('click', function _close(e) {
-      if (_woExMenuEl && !_woExMenuEl.contains(e.target) && e.target !== btn) {
+      if (_woExMenuEl && !_woExMenuEl.contains(e.target) && e.target !== _menuBtn) {
         _closeWoExMenu();
       }
       document.removeEventListener('click', _close);
