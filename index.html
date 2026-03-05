@@ -854,13 +854,10 @@ self.addEventListener('fetch', e => {
     <!-- CENTER: Demo + Sets -->
     <div class="wo-main elite" id="wo-main">
       <!-- Exercise Header -->
-      <div class="wo-ex-header">
-        <div>
-          <div class="ex-video-title" id="wo-ex-title">Select an exercise</div>
-          <div class="ex-muscles-tag" id="wo-muscles-tag" style="margin-top:4px">Muscles targeted</div>
-        </div>
-        <div class="ex-video-badge" id="wo-ex-badge"></div>
-        <button id="wo-ex-menu-btn" onclick="_toggleWoExMenu()" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--dim);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s" title="Exercise options">⋮</button>
+      <div class="wo-ex-header" id="wo-ex-header-wrap" style="padding:14px 16px 10px">
+        <div id="wo-ex-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:1px;color:var(--white);line-height:1.2">Select an exercise</div>
+        <div id="wo-sets-info" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
+        <div class="ex-muscles-tag" id="wo-muscles-tag" style="display:none"></div>
       </div>
       <div id="wo-phase-badge" style="display:none"></div>
 
