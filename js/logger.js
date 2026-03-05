@@ -49,6 +49,45 @@ const EXERCISE_VIDEOS = {
   'Dead Bug': '2LgSCwyNqTo',
 };
 
+// ── WARMUP RECOMMENDATIONS by workout focus ──
+const WARMUP_MAP = {
+  'Upper Push':  { time: '5-8 min', steps: ['2 min light cardio (jump rope or jog)', 'Arm circles — 20 forward, 20 backward', 'Band pull-aparts × 15', '10 push-ups (slow tempo)', 'Empty bar bench press × 10-12'] },
+  'Upper Pull':  { time: '5-8 min', steps: ['2 min light cardio', 'Band pull-aparts × 15', 'Cat-cow stretches × 10', 'Dead hangs 20-30 sec', 'Light lat pulldowns × 10-12'] },
+  'Lower Power': { time: '8-10 min', steps: ['3 min walk/bike', 'Leg swings — 15 each side', 'Bodyweight squats × 15', 'Glute bridges × 15', 'Light goblet squat × 10', 'Empty bar squats × 8-10'] },
+  'Lower Hyper': { time: '5-8 min', steps: ['2 min bike or walk', 'Leg swings — 15 each side', 'Bodyweight lunges × 10 each', 'Glute bridges × 15', 'Light leg press × 10-12'] },
+  'Full Body':   { time: '5-8 min', steps: ['3 min light cardio', 'Arm circles × 15 each', 'Leg swings × 10 each', 'Bodyweight squats × 15', 'Light push-ups × 10'] },
+  'Push':        { time: '5-8 min', steps: ['2 min jump rope or jog', 'Arm circles — 20 forward, 20 backward', 'Band pull-aparts × 15', '10 push-ups (slow tempo)', 'Empty bar bench press × 10'] },
+  'Pull':        { time: '5-8 min', steps: ['2 min light cardio', 'Band pull-aparts × 15', 'Cat-cow stretches × 10', 'Dead hangs 20-30 sec', 'Light lat pulldowns × 10'] },
+  'Legs':        { time: '8-10 min', steps: ['3 min bike or walk', 'Hip circles × 10 each', 'Leg swings — 15 each side', 'Bodyweight squats × 15', 'Glute bridges × 15', 'Empty bar squats × 8'] },
+  'Arms':        { time: '5 min', steps: ['2 min light cardio', 'Wrist circles × 20', 'Light curls × 12', 'Light pushdowns × 12'] },
+  'default':     { time: '5 min', steps: ['2-3 min light cardio (walk, jog, or bike)', 'Dynamic stretches for target muscles', 'One light warm-up set of the first exercise'] }
+};
+let _warmupDismissed = false;
+
+function _renderWarmupBanner(workoutName) {
+  const banner = document.getElementById('wo-warmup-banner');
+  if (!banner || _warmupDismissed) { if (banner) banner.style.display = 'none'; return; }
+  // Match workout name to warmup
+  let warmup = WARMUP_MAP.default;
+  for (const key in WARMUP_MAP) {
+    if (key !== 'default' && workoutName && workoutName.toLowerCase().includes(key.toLowerCase())) {
+      warmup = WARMUP_MAP[key]; break;
+    }
+  }
+  banner.style.cssText = 'margin:10px 14px;padding:14px 16px;background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.25);border-radius:12px';
+  banner.innerHTML = 
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:1.5px;color:var(--orange)">WARM UP · ' + warmup.time + '</div>' +
+      '<button onclick="_dismissWarmup()" style="background:none;border:none;color:var(--dim);font-size:0.85rem;cursor:pointer;padding:2px 6px">✕</button>' +
+    '</div>' +
+    warmup.steps.map(function(s) { return '<div style="display:flex;align-items:flex-start;gap:8px;padding:2px 0"><span style="color:var(--orange);font-size:0.7rem;margin-top:2px">●</span><span style="font-size:0.78rem;color:var(--off);line-height:1.4">' + s + '</span></div>'; }).join('');
+}
+function _dismissWarmup() {
+  _warmupDismissed = true;
+  const banner = document.getElementById('wo-warmup-banner');
+  if (banner) banner.style.display = 'none';
+}
+
 // Fuzzy multi-word search: all words in query must appear in name or muscles
 function _fuzzySearchMatch(query, name, muscles) {
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 0);
@@ -347,10 +386,13 @@ function selectDashEx(name) {
   
   if (_woSubstituteMode && woWorkout) {
     // Substituting from within workout env — update live workout
-    if (_dashExPickerMode === 'substitute') {
-      woWorkout.exercises[_dashExPickerIdx] = newEx;
+    const mode = _dashExPickerMode;
+    const targetIdx = _dashExPickerIdx;
+    if (mode === 'substitute') {
+      woWorkout.exercises[targetIdx] = newEx;
     } else {
-      woWorkout.exercises.splice(_dashExPickerIdx + 1, 0, newEx);
+      newEx._supersetWith = woWorkout.exercises[targetIdx].name;
+      woWorkout.exercises.splice(targetIdx + 1, 0, newEx);
     }
     // Also persist to plan if this is a planned workout
     if (DAY_WORKOUTS[woDay]) {
@@ -358,10 +400,9 @@ function selectDashEx(name) {
       persistTodayWorkout();
     }
     closeDashExPicker();
-    _woSubstituteMode = false;
     // Reload current exercise to reflect changes
     renderEcList();
-    loadExercise(_dashExPickerMode === 'substitute' ? _dashExPickerIdx : _dashExPickerIdx + 1);
+    loadExercise(mode === 'substitute' ? targetIdx : targetIdx + 1);
     return;
   }
   
@@ -370,6 +411,7 @@ function selectDashEx(name) {
   if (_dashExPickerMode === 'substitute') {
     workout.exercises[_dashExPickerIdx] = newEx;
   } else {
+    newEx._supersetWith = workout.exercises[_dashExPickerIdx].name;
     workout.exercises.splice(_dashExPickerIdx + 1, 0, newEx);
   }
   persistTodayWorkout();
@@ -2067,6 +2109,8 @@ function openWorkoutEnv(dayIdx, startExIdx) {
   if (fill) fill.style.width = '0%';
   if (label) label.textContent = `0 / ${workout.exercises.length}`;
 
+  _warmupDismissed = false;
+  _renderWarmupBanner(workout.name);
   renderEcList();
   loadExercise(woCurrentEx);
   restoreRestTimerIfActive();
@@ -2128,6 +2172,9 @@ function loadExercise(idx) {
   const titleEl2 = document.getElementById('wo-ex-title');
   titleEl2.textContent = ex.name;
   
+  // Superset indicator
+  const ssTag = ex._supersetWith ? '<div style="font-size:0.65rem;font-family:\'DM Mono\',monospace;color:var(--orange);letter-spacing:0.5px;margin-top:2px">SUPERSET with ' + ex._supersetWith + '</div>' : '';
+  
   // Single clean line: SETS × REPS  |  REST  |  [EDIT]  [⋮]
   const setsInfoEl = document.getElementById('wo-sets-info');
   setsInfoEl.innerHTML = 
@@ -2137,7 +2184,8 @@ function loadExercise(idx) {
       `<button onclick="openSetRepEditor(${idx})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--dim);font-size:0.6rem;font-family:'DM Mono',monospace;cursor:pointer;letter-spacing:0.5px;display:flex;align-items:center;gap:4px" title="Edit sets & reps">` +
         `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>EDIT</button>` +
       `<button onclick="_toggleWoExMenu(event)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--dim);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1" title="Exercise options">⋮</button>` +
-    `</span>`;
+    `</span>` +
+    ssTag;
 
   // Update mobile header title
   const titleEl = document.getElementById('wo-title');
@@ -2145,7 +2193,7 @@ function loadExercise(idx) {
     titleEl.textContent = `${idx+1}/${exes.length} — ${ex.name.toUpperCase()}`;
   }
 
-  // Exercise demo — form cues + phase info + wger images
+  // Exercise demo — video + phase info
   const db = getExerciseData(ex.name);
   // Show current training phase badge — with exercise-specific context
   const phMod = getPhaseExerciseModifier(CURRENT_WEEK);
@@ -2176,14 +2224,7 @@ function loadExercise(idx) {
   }
   document.getElementById('wo-muscles-tag').style.display = 'none';
   const framesEl = document.getElementById('wo-demo-frames');
-  // Try to load wger.de exercise image; fallback to text cues
-  const wgerId = db.wgerId;
-  if (wgerId) {
-    renderDemoPlaceholder(framesEl, ex.name, ex.muscles || db.muscles); // show immediately
-    _loadExerciseImage(framesEl, wgerId, ex.name, ex.muscles || db.muscles);
-  } else {
-    renderDemoPlaceholder(framesEl, ex.name, ex.muscles || db.muscles);
-  }
+  renderDemoPlaceholder(framesEl, ex.name, ex.muscles || db.muscles);
 
   // Initialize dynamic set count if not set
   if (!woExtraSets[idx]) woExtraSets[idx] = ex.sets;
@@ -2287,10 +2328,30 @@ function _isTimedExercise(reps) {
   return /\d\s*s(?:ec|\/|\b)/i.test(String(reps));
 }
 
+function _isDumbbellExercise(name) {
+  const n = name.toLowerCase();
+  return n.includes('dumbbell') || n.includes(' db ') || n.startsWith('db ') || n.includes('hammer curl') || n.includes('arnold press');
+}
+
 function renderSetsTable(idx, ex) {
   const tbody = document.getElementById('sets-tbody');
   if (!tbody) return;
   const isTimed = _isTimedExercise(ex.reps);
+  
+  // Show/hide dumbbell weight note
+  let dbNote = document.getElementById('wo-db-note');
+  if (!dbNote) {
+    dbNote = document.createElement('div');
+    dbNote.id = 'wo-db-note';
+    const panel = tbody.closest('.sets-panel');
+    if (panel) panel.appendChild(dbNote);
+  }
+  if (_isDumbbellExercise(ex.name)) {
+    dbNote.style.cssText = 'padding:6px 0 2px;font-size:0.68rem;color:var(--dim);font-family:"DM Mono",monospace;text-align:center';
+    dbNote.textContent = 'Log the weight of ONE dumbbell';
+  } else {
+    dbNote.style.display = 'none';
+  }
   // Update table headers for timed exercises
   const thead = tbody.closest('table')?.querySelector('thead');
   if (thead) {
@@ -2419,6 +2480,7 @@ function isPR(exIdx, setIdx, weight, reps) {
 }
 
 function completeSet(exIdx, setIdx, restSecs) {
+  _dismissWarmup(); // Auto-hide warmup once user starts logging
   const wEl = document.getElementById(`w-${exIdx}-${setIdx}`);
   const rEl = document.getElementById(`r-${exIdx}-${setIdx}`);
   const weight = wEl.value || wEl.placeholder || '0';
@@ -2504,17 +2566,12 @@ const EXERCISE_CUES = {
 
 
 function renderDemoPlaceholder(el, name, muscles) {
-  const cues = EXERCISE_CUES[name] || EXERCISE_CUES.default;
-  const allCues = cues.start.concat(cues.mid, cues.end).slice(0, 4);
   const videoId = EXERCISE_VIDEOS[name] || null;
-  const ytSearch = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(name + ' proper form tutorial');
+  const ytSearch = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(name + ' proper form short');
 
-  // Video section
-  let videoHtml;
   if (videoId) {
-    // Lazy YouTube embed: thumbnail first, iframe on tap
-    videoHtml = `
-      <div id="yt-player-wrap" style="position:relative;width:100%;padding-bottom:56.25%;background:#000;border-radius:14px;overflow:hidden;cursor:pointer" onclick="_loadYTPlayer(this,'${videoId}')">
+    el.innerHTML = `
+      <div style="position:relative;width:100%;padding-bottom:56.25%;background:#000;border-radius:14px;overflow:hidden;cursor:pointer" onclick="_loadYTPlayer(this,'${videoId}')">
         <img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35)">
           <div style="width:60px;height:42px;background:rgba(212,165,32,0.95);border-radius:10px;display:flex;align-items:center;justify-content:center">
@@ -2524,69 +2581,18 @@ function renderDemoPlaceholder(el, name, muscles) {
         <div style="position:absolute;bottom:8px;left:8px;font-size:0.65rem;color:rgba(255,255,255,0.7);font-family:'DM Mono',monospace;letter-spacing:0.5px">TAP TO PLAY</div>
       </div>`;
   } else {
-    // No curated video — show prominent search button
-    videoHtml = `
-      <div style="position:relative;width:100%;padding-bottom:40%;background:var(--dark);border-radius:14px;overflow:hidden;border:1px solid var(--border);cursor:pointer" onclick="window.open('${ytSearch}','_blank')">
-        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
-          <div style="width:52px;height:36px;background:rgba(212,165,32,0.15);border:1px solid rgba(212,165,32,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="18" height="18"><polygon points="6 3 20 12 6 21"/></svg>
-          </div>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;color:var(--gold)">WATCH FORM TUTORIAL</span>
-          <span style="font-size:0.65rem;color:var(--dim)">Opens YouTube</span>
-        </div>
+    el.innerHTML = `
+      <div style="width:100%;padding:16px 0;display:flex;align-items:center;justify-content:center" onclick="window.open('${ytSearch}','_blank')">
+        <button style="display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--border);border-radius:10px;padding:10px 18px;cursor:pointer;color:var(--dim);font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:0.5px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="16" height="16"><polygon points="6 3 20 12 6 21"/></svg>
+          WATCH FORM TUTORIAL
+        </button>
       </div>`;
   }
-
-  // Form cues (compact, always shown)
-  const cuesHtml = `
-    <div style="display:flex;flex-direction:column;gap:5px;padding:10px 0">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.75rem;letter-spacing:1px;color:var(--gold);margin-bottom:2px">FORM CUES</div>
-      ${allCues.map(function(c) { return '<div style="display:flex;align-items:flex-start;gap:8px"><div style="width:4px;height:4px;border-radius:50%;background:var(--gold);margin-top:6px;flex-shrink:0"></div><div style="font-size:0.78rem;color:var(--off);line-height:1.4">' + c + '</div></div>'; }).join('')}
-    </div>`;
-
-  el.innerHTML = videoHtml + cuesHtml;
 }
 
 function _loadYTPlayer(wrap, videoId) {
   wrap.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1&rel=0&modestbranding=1&playsinline=1" style="position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:14px" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>';
-}
-
-// ── EXERCISE IMAGE LOADER (wger.de) ──
-const _wgerImageCache = {};
-async function _loadExerciseImage(framesEl, wgerId, name, muscles) {
-  if (_wgerImageCache[wgerId] === null) return; // known to have no image
-  if (_wgerImageCache[wgerId]) {
-    _addWgerImageToDemo(framesEl, _wgerImageCache[wgerId], name);
-    return;
-  }
-  try {
-    const resp = await fetch(`https://wger.de/api/v2/exerciseimage/?exercise=${wgerId}&format=json&limit=2`);
-    if (!resp.ok) throw new Error('no image');
-    const data = await resp.json();
-    const imgs = data.results || [];
-    if (!imgs.length) { _wgerImageCache[wgerId] = null; return; }
-    const main = imgs.find(i => i.is_main) || imgs[0];
-    _wgerImageCache[wgerId] = main.image;
-    _addWgerImageToDemo(framesEl, main.image, name);
-  } catch(e) {
-    _wgerImageCache[wgerId] = null;
-  }
-}
-
-function _addWgerImageToDemo(framesEl, imageUrl, name) {
-  // Insert wger muscle diagram below video, above form cues
-  const existing = framesEl.querySelector('.wger-img-slot');
-  if (existing) return; // already added
-  const cuesDiv = framesEl.querySelector('[style*="FORM CUES"]')?.parentElement;
-  const imgDiv = document.createElement('div');
-  imgDiv.className = 'wger-img-slot';
-  imgDiv.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);margin-top:8px';
-  imgDiv.innerHTML = '<img src="' + imageUrl + '" alt="' + name + '" style="max-width:80px;max-height:80px;object-fit:contain;border-radius:8px;background:#1a1a1a" onerror="this.parentElement.remove()"><div style="font-size:0.72rem;color:var(--dim);line-height:1.4">Muscle diagram from wger.de</div>';
-  if (cuesDiv) {
-    framesEl.insertBefore(imgDiv, cuesDiv);
-  } else {
-    framesEl.appendChild(imgDiv);
-  }
 }
 
 // ── EXERCISE CUSTOMIZER ──
@@ -3233,6 +3239,8 @@ function _launchUnplannedEnv(exercises) {
   const dayTitleEl = document.getElementById('wo-day-title');
   if (dayTitleEl) dayTitleEl.textContent = woWorkout.dayName;
   document.getElementById('wo-day-subtitle').textContent = '';
+  _warmupDismissed = false;
+  _renderWarmupBanner(woWorkout.dayName);
   renderEcList();
   loadExercise(0);
   restoreRestTimerIfActive();
@@ -3267,8 +3275,9 @@ function renderEcList() {
   if (!list) return;
   list.innerHTML = exes.map((ex,i) => {
     const isDone = woSets[i] && woSets[i].some(s => s.done);
+    const ssLabel = ex._supersetWith ? '<div style="font-size:0.55rem;color:var(--orange);font-family:\'DM Mono\',monospace;letter-spacing:0.5px">SS</div>' : '';
     return `<div class="wo-ex-sidebar-item ${i===woCurrentEx?'active':''}" onclick="loadExercise(${i})">
-      <div class="wo-ex-sidebar-num">${i+1}</div>
+      <div class="wo-ex-sidebar-num">${i+1}${ssLabel}</div>
       <div class="wo-ex-sidebar-info">
         <div class="wo-ex-sidebar-name">${ex.name}</div>
         <div class="wo-ex-sidebar-sets">${ex.sets}×${ex.reps}</div>
@@ -3538,7 +3547,7 @@ function skipRest() {
 
 function stopRestTimer() {
   if (restTimerInterval) { clearInterval(restTimerInterval); restTimerInterval = null; }
-  // Also clear localStorage so stale timers don't get restored
+  restTimerEndAt = 0;
   lsSet('fs_rest_timer', null);
 }
 
