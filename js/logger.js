@@ -4,6 +4,61 @@
 // ═══════════════════════════════════════════
 // Dependencies: All globals from app.js, scoring.js functions
 
+// ── EXERCISE VIDEO MAP (YouTube video IDs for form tutorials) ──
+// Curated from popular fitness channels. Falls back to YouTube search for unmapped exercises.
+const EXERCISE_VIDEOS = {
+  // Chest
+  'Bench Press': 'rT7DgCr-3pg',
+  'Incline Barbell Press': 'SrqOu55lrYU',
+  'Dumbbell Bench Press': 'VmB1G1K7v94',
+  'Incline DB Press': 'IP4-r2G6_jM',
+  'Dumbbell Flyes': 'eozdVDA78K0',
+  'Cable Crossover': 'taI4XduLpTk',
+  'Push-Ups': 'IODxDxX7oi4',
+  'Chest Dip': 'wjUmnZH528Y',
+  // Back
+  'Deadlift': '1ZXobu7JvvE',
+  'Conventional Deadlift': '1ZXobu7JvvE',
+  'Sumo Deadlift': 'V2lAm_QLRWU',
+  'Barbell Row': 'kBWAon7ItDw',
+  'Pull-Ups': 'eGo4IYlbE5g',
+  'Chin-Ups': 'brhRXlOhWAM',
+  'Lat Pulldown': '0oeIB6wi3es',
+  'Seated Cable Row': 'UCXxvVItLoM',
+  'Face Pulls': 'rep-qVOkqgk',
+  'Dumbbell Row': 'xl1YkGCpQ2M',
+  // Shoulders
+  'Shoulder Press': 'QAQ64hK4Xxs',
+  'Overhead Press': 'QAQ64hK4Xxs',
+  'Lateral Raise': 'kDqklk1ZESo',
+  'Dumbbell Lateral Raise': 'kDqklk1ZESo',
+  'Rear Delt Fly': 'EA7u4Q_8HQ0',
+  'Arnold Press': 'vj2w851ZHRM',
+  // Legs
+  'Back Squat': '4Y2ZdHCOXok',
+  'Goblet Squat': 'MeIiIdhvXT4',
+  'Romanian Deadlift': 'JCXUYuzwNrM',
+  'Leg Press': 'IZxyjW7MPJQ',
+  'Leg Curl': 'ELOCsiu8leQ',
+  'Leg Extension': 'YyvSfVjQeL0',
+  'Bulgarian Split Squat': 'Z_krEJghJig',
+  'Lunges': 'QOVaHnm-NlA',
+  'Calf Raises': '-M4-G8p8fmc',
+  'Hip Thrust': 'SEdqd1n0cvg',
+  // Arms
+  'Barbell Curl': 'kwG2ipFRgFo',
+  'Dumbbell Curl': 'ykJmrZ5v0Oo',
+  'Hammer Curl': 'TwD-YGVP4Bk',
+  'Tricep Pushdown': 'REbLPK4Gv2I',
+  'Skull Crushers': 'd_KZxkY_0cM',
+  'Close-Grip Bench': 'nEF0bv2FW94',
+  // Core
+  'Plank': 'yeKv5oX_6GY',
+  'Dead Bug': '2LgSCwyNqTo',
+  'Hanging Leg Raise': 'hdng3Nm1x_E',
+  'Cable Woodchop': 'pAplQXk3dkU',
+};
+
 // Fuzzy multi-word search: all words in query must appear in name or muscles
 function _fuzzySearchMatch(query, name, muscles) {
   const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 0);
@@ -94,7 +149,7 @@ function renderTodayWorkout() {
   else { btn.textContent = 'START WORKOUT'; btn.classList.remove('done'); }
   document.getElementById('today-ex-list').innerHTML = exes.map((ex,i)=>{
     const prev = getPrevSet(TODAY_IDX,i,0);
-    return `<div class="ex-row ${wktDone.has(TODAY_IDX)?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX})">
+    return `<div class="ex-row ${wktDone.has(TODAY_IDX)?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
       <button class="ex-row-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options">⋮</button>
       <div><div class="ex-name">${ex.name}</div><div class="ex-detail">${ex.sets}×${ex.reps} · Rest ${ex.rest}s${prev?` · Last: ${prev.weight}lbs×${prev.reps}`:''}</div></div>
       <div class="ex-detail">${ex.muscles}</div>
@@ -248,6 +303,7 @@ function closeDashExPicker() {
   document.getElementById('dash-ex-picker-modal').classList.remove('open');
   _dashExPickerMode = null;
   _dashExPickerIdx = null;
+  _woSubstituteMode = false;
 }
 
 function filterDashExPicker() { renderDashExPickerList(); }
@@ -297,9 +353,30 @@ function selectDashEx(name) {
     }
     return;
   }
+  var newEx = { name: name, sets: db.sets, reps: db.reps, rest: db.rest, muscles: db.muscles };
+  
+  if (_woSubstituteMode && woWorkout) {
+    // Substituting from within workout env — update live workout
+    if (_dashExPickerMode === 'substitute') {
+      woWorkout.exercises[_dashExPickerIdx] = newEx;
+    } else {
+      woWorkout.exercises.splice(_dashExPickerIdx + 1, 0, newEx);
+    }
+    // Also persist to plan if this is a planned workout
+    if (DAY_WORKOUTS[woDay]) {
+      DAY_WORKOUTS[woDay].exercises = woWorkout.exercises;
+      persistTodayWorkout();
+    }
+    closeDashExPicker();
+    _woSubstituteMode = false;
+    // Reload current exercise to reflect changes
+    renderEcList();
+    loadExercise(_dashExPickerMode === 'substitute' ? _dashExPickerIdx : _dashExPickerIdx + 1);
+    return;
+  }
+  
   var workout = DAY_WORKOUTS[TODAY_IDX];
   if (!workout) { closeDashExPicker(); return; }
-  var newEx = { name: name, sets: db.sets, reps: db.reps, rest: db.rest, muscles: db.muscles };
   if (_dashExPickerMode === 'substitute') {
     workout.exercises[_dashExPickerIdx] = newEx;
   } else {
@@ -1978,14 +2055,14 @@ let woPRs = []; // Track PRs hit during this workout session
 let woStartTime = null; // Track workout duration
 let restTimerInterval = null;
 
-function openWorkoutEnv(dayIdx) {
+function openWorkoutEnv(dayIdx, startExIdx) {
   const workout = DAY_WORKOUTS[dayIdx];
   if (!workout || !workout.exercises.length) {
     openUnplannedWorkout(dayIdx);
     return;
   }
   woDay = dayIdx;
-  woCurrentEx = 0;
+  woCurrentEx = startExIdx || 0;
   woWorkout = workout;
   woPRs = [];
   woStartTime = Date.now();
@@ -2021,7 +2098,7 @@ function openWorkoutEnv(dayIdx) {
   if (label) label.textContent = `0 / ${workout.exercises.length}`;
 
   renderEcList();
-  loadExercise(0);
+  loadExercise(woCurrentEx);
   restoreRestTimerIfActive();
 }
 
@@ -2173,6 +2250,73 @@ function loadExercise(idx) {
   }
 
   renderEcList();
+}
+
+// ── WORKOUT ENV 3-DOT MENU ──
+let _woExMenuEl = null;
+function _toggleWoExMenu() {
+  if (_woExMenuEl) { _woExMenuEl.remove(); _woExMenuEl = null; return; }
+  const btn = document.getElementById('wo-ex-menu-btn');
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  _woExMenuEl = document.createElement('div');
+  _woExMenuEl.style.cssText = 'position:fixed;top:' + (rect.bottom + 4) + 'px;right:' + (window.innerWidth - rect.right) + 'px;background:#1a1a1a;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:6px 0;min-width:200px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,0.7);animation:fadeUp 0.15s ease';
+  const idx = woCurrentEx;
+  _woExMenuEl.innerHTML = 
+    '<span onclick="_substituteFromWorkout(' + idx + ')" style="display:block;padding:12px 16px;font-size:0.85rem;color:#E2DFD8;cursor:pointer">🔄 Substitute Exercise</span>' +
+    '<span onclick="_addSupersetFromWorkout(' + idx + ')" style="display:block;padding:12px 16px;font-size:0.85rem;color:#E2DFD8;cursor:pointer">➕ Add Superset</span>' +
+    '<span onclick="removeExerciseFromWorkout(' + idx + ');_closeWoExMenu()" style="display:block;padding:12px 16px;font-size:0.85rem;color:#F43F5E;cursor:pointer">🗑 Remove Exercise</span>';
+  _woExMenuEl.querySelectorAll('span').forEach(function(s) {
+    s.onmouseenter = function() { s.style.background = 'rgba(255,255,255,0.06)'; };
+    s.onmouseleave = function() { s.style.background = 'none'; };
+  });
+  document.body.appendChild(_woExMenuEl);
+  setTimeout(function() {
+    document.addEventListener('click', function _close(e) {
+      if (_woExMenuEl && !_woExMenuEl.contains(e.target) && e.target !== btn) {
+        _closeWoExMenu();
+      }
+      document.removeEventListener('click', _close);
+    }, { once: true });
+  }, 10);
+}
+function _closeWoExMenu() {
+  if (_woExMenuEl) { _woExMenuEl.remove(); _woExMenuEl = null; }
+}
+
+// Track if substitute originated from workout env
+let _woSubstituteMode = false;
+function _substituteFromWorkout(idx) {
+  _closeWoExMenu();
+  _woSubstituteMode = true;
+  _dashExPickerMode = 'substitute';
+  _dashExPickerIdx = idx;
+  var modal = document.getElementById('dash-ex-picker-modal');
+  modal.classList.add('open');
+  document.getElementById('dash-ex-picker-title').textContent = 'SUBSTITUTE EXERCISE';
+  document.getElementById('dash-ex-picker-search').value = '';
+  _aesFilterMuscle = 'All';
+  _aesFilterEquip = 'All';
+  _updateAesFilterLabels();
+  var tray = document.getElementById('aes-build-tray');
+  if (tray) tray.style.display = 'none';
+  renderDashExPickerList();
+}
+function _addSupersetFromWorkout(idx) {
+  _closeWoExMenu();
+  _woSubstituteMode = true;
+  _dashExPickerMode = 'superset';
+  _dashExPickerIdx = idx;
+  var modal = document.getElementById('dash-ex-picker-modal');
+  modal.classList.add('open');
+  document.getElementById('dash-ex-picker-title').textContent = 'ADD SUPERSET';
+  document.getElementById('dash-ex-picker-search').value = '';
+  _aesFilterMuscle = 'All';
+  _aesFilterEquip = 'All';
+  _updateAesFilterLabels();
+  var tray = document.getElementById('aes-build-tray');
+  if (tray) tray.style.display = 'none';
+  renderDashExPickerList();
 }
 
 function _isTimedExercise(reps) {
@@ -2397,22 +2541,50 @@ const EXERCISE_CUES = {
 
 function renderDemoPlaceholder(el, name, muscles) {
   const cues = EXERCISE_CUES[name] || EXERCISE_CUES.default;
-  const phases = [
-    { label:'START POSITION', color:'#60a5fa', cues:cues.start },
-    { label:'MID MOVEMENT',   color:'#D4A520', cues:cues.mid },
-    { label:'END / LOCKOUT',  color:'#f472b6', cues:cues.end },
-  ];
-  el.innerHTML = phases.map((p,pi) => `
-    <div style="flex:1;display:flex;flex-direction:column;background:var(--dark);border-radius:14px;overflow:hidden;border:1px solid var(--border)">
-      <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.02)">
-        <div style="width:22px;height:22px;border-radius:50%;background:${p.color}22;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:0.7rem;color:${p.color};flex-shrink:0">${pi+1}</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:1px;color:${p.color}">${p.label}</div>
-      </div>
-      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:9px;flex:1">
-        ${p.cues.map(c=>`<div style="display:flex;align-items:flex-start;gap:8px"><div style="width:4px;height:4px;border-radius:50%;background:${p.color};margin-top:6px;flex-shrink:0"></div><div style="font-size:0.79rem;color:var(--off);line-height:1.45">${c}</div></div>`).join('')}
-      </div>
-    </div>`
-  ).join('');
+  const allCues = cues.start.concat(cues.mid, cues.end).slice(0, 4);
+  const videoId = EXERCISE_VIDEOS[name] || null;
+  const ytSearch = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(name + ' proper form tutorial');
+
+  // Video section
+  let videoHtml;
+  if (videoId) {
+    // Lazy YouTube embed: thumbnail first, iframe on tap
+    videoHtml = `
+      <div id="yt-player-wrap" style="position:relative;width:100%;padding-bottom:56.25%;background:#000;border-radius:14px;overflow:hidden;cursor:pointer" onclick="_loadYTPlayer(this,'${videoId}')">
+        <img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35)">
+          <div style="width:60px;height:42px;background:rgba(212,165,32,0.95);border-radius:10px;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="#111" width="22" height="22"><polygon points="6 3 20 12 6 21"/></svg>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:8px;font-size:0.65rem;color:rgba(255,255,255,0.7);font-family:'DM Mono',monospace;letter-spacing:0.5px">TAP TO PLAY</div>
+      </div>`;
+  } else {
+    // No curated video — show prominent search button
+    videoHtml = `
+      <div style="position:relative;width:100%;padding-bottom:40%;background:var(--dark);border-radius:14px;overflow:hidden;border:1px solid var(--border);cursor:pointer" onclick="window.open('${ytSearch}','_blank')">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+          <div style="width:52px;height:36px;background:rgba(212,165,32,0.15);border:1px solid rgba(212,165,32,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="18" height="18"><polygon points="6 3 20 12 6 21"/></svg>
+          </div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;color:var(--gold)">WATCH FORM TUTORIAL</span>
+          <span style="font-size:0.65rem;color:var(--dim)">Opens YouTube</span>
+        </div>
+      </div>`;
+  }
+
+  // Form cues (compact, always shown)
+  const cuesHtml = `
+    <div style="display:flex;flex-direction:column;gap:5px;padding:10px 0">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.75rem;letter-spacing:1px;color:var(--gold);margin-bottom:2px">FORM CUES</div>
+      ${allCues.map(function(c) { return '<div style="display:flex;align-items:flex-start;gap:8px"><div style="width:4px;height:4px;border-radius:50%;background:var(--gold);margin-top:6px;flex-shrink:0"></div><div style="font-size:0.78rem;color:var(--off);line-height:1.4">' + c + '</div></div>'; }).join('')}
+    </div>`;
+
+  el.innerHTML = videoHtml + cuesHtml;
+}
+
+function _loadYTPlayer(wrap, videoId) {
+  wrap.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1&rel=0&modestbranding=1&playsinline=1" style="position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:14px" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>';
 }
 
 // ── EXERCISE IMAGE LOADER (wger.de) ──
@@ -2420,7 +2592,7 @@ const _wgerImageCache = {};
 async function _loadExerciseImage(framesEl, wgerId, name, muscles) {
   if (_wgerImageCache[wgerId] === null) return; // known to have no image
   if (_wgerImageCache[wgerId]) {
-    _renderImageFrame(framesEl, _wgerImageCache[wgerId], name, muscles);
+    _addWgerImageToDemo(framesEl, _wgerImageCache[wgerId], name);
     return;
   }
   try {
@@ -2429,35 +2601,28 @@ async function _loadExerciseImage(framesEl, wgerId, name, muscles) {
     const data = await resp.json();
     const imgs = data.results || [];
     if (!imgs.length) { _wgerImageCache[wgerId] = null; return; }
-    // Prefer the main image (is_main=true)
     const main = imgs.find(i => i.is_main) || imgs[0];
     _wgerImageCache[wgerId] = main.image;
-    _renderImageFrame(framesEl, main.image, name, muscles);
+    _addWgerImageToDemo(framesEl, main.image, name);
   } catch(e) {
-    _wgerImageCache[wgerId] = null; // cache miss
+    _wgerImageCache[wgerId] = null;
   }
 }
-function _renderImageFrame(framesEl, imageUrl, name, muscles) {
-  // Show image + keep one cue card
-  const cues = EXERCISE_CUES[name] || EXERCISE_CUES.default;
-  framesEl.innerHTML = `
-    <div style="flex:1.6;display:flex;flex-direction:column;background:var(--dark);border-radius:14px;overflow:hidden;border:1px solid var(--border)">
-      <div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.02)">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:1px;color:#60a5fa">EXERCISE DEMO</div>
-        <div style="margin-left:auto;font-size:0.65rem;color:var(--dim)">wger.de</div>
-      </div>
-      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:8px;min-height:140px">
-        <img src="${imageUrl}" alt="${name}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:8px" onerror="this.parentElement.parentElement.parentElement.remove()">
-      </div>
-    </div>
-    <div style="flex:1;display:flex;flex-direction:column;background:var(--dark);border-radius:14px;overflow:hidden;border:1px solid var(--border)">
-      <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:1px;color:#D4A520">FORM CUES</div>
-      </div>
-      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1">
-        ${cues.start.concat(cues.mid).slice(0,4).map(c=>`<div style="display:flex;align-items:flex-start;gap:8px"><div style="width:4px;height:4px;border-radius:50%;background:#D4A520;margin-top:6px;flex-shrink:0"></div><div style="font-size:0.79rem;color:var(--off);line-height:1.45">${c}</div></div>`).join('')}
-      </div>
-    </div>`;
+
+function _addWgerImageToDemo(framesEl, imageUrl, name) {
+  // Insert wger muscle diagram below video, above form cues
+  const existing = framesEl.querySelector('.wger-img-slot');
+  if (existing) return; // already added
+  const cuesDiv = framesEl.querySelector('[style*="FORM CUES"]')?.parentElement;
+  const imgDiv = document.createElement('div');
+  imgDiv.className = 'wger-img-slot';
+  imgDiv.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);margin-top:8px';
+  imgDiv.innerHTML = '<img src="' + imageUrl + '" alt="' + name + '" style="max-width:80px;max-height:80px;object-fit:contain;border-radius:8px;background:#1a1a1a" onerror="this.parentElement.remove()"><div style="font-size:0.72rem;color:var(--dim);line-height:1.4">Muscle diagram from wger.de</div>';
+  if (cuesDiv) {
+    framesEl.insertBefore(imgDiv, cuesDiv);
+  } else {
+    framesEl.appendChild(imgDiv);
+  }
 }
 
 // ── EXERCISE CUSTOMIZER ──
@@ -3354,32 +3519,45 @@ function startRestTimerSecs(secs) {
   stopRestTimer();
   // Pre-warm audio on iOS so it can play when timer ends
   _getAudioCtx();
+  _chimePlayedForCurrentTimer = false;
   restTotalSecs = secs;
   restTimerEndAt = Date.now() + secs * 1000;
   lsSet('fs_rest_timer', { endAt: restTimerEndAt, total: secs });
+  _startTimerUI(secs);
+}
+
+// Internal: start the visual countdown for an already-configured timer
+function _startTimerUI(totalSecs) {
   const label = document.getElementById('rest-timer-label');
   const secsDisplay = document.getElementById('rest-timer-secs-display');
   const bar = document.getElementById('rest-timer-progress');
   if (label) label.textContent = 'TAP TO STOP';
-  if (secsDisplay) secsDisplay.textContent = secs + 's';
   if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
   if (navigator.vibrate) navigator.vibrate(50);
   restTimerInterval = setInterval(() => {
     const remaining = Math.ceil((restTimerEndAt - Date.now()) / 1000);
     if (secsDisplay) secsDisplay.textContent = Math.max(0, remaining) + 's';
     if (bar) {
-      const elapsed = secs - remaining;
-      const pct = Math.min(100, (elapsed / secs) * 100);
+      const elapsed = totalSecs - remaining;
+      const pct = Math.min(100, (elapsed / totalSecs) * 100);
       bar.style.transition = 'width 0.5s linear';
       bar.style.width = pct + '%';
     }
     if (remaining <= 0) {
-      if (navigator.vibrate) navigator.vibrate([150, 80, 150, 80, 150]);
-      playRestChime();
+      _fireChimeOnce();
       skipRest();
       if (label) label.textContent = 'DONE! TAP TO RESTART';
     }
   }, 500);
+}
+
+// Guard: only chime once per timer cycle
+let _chimePlayedForCurrentTimer = false;
+function _fireChimeOnce() {
+  if (_chimePlayedForCurrentTimer) return;
+  _chimePlayedForCurrentTimer = true;
+  if (navigator.vibrate) navigator.vibrate([150, 80, 150, 80, 150]);
+  playRestChime();
 }
 
 function skipRest() {
@@ -3395,14 +3573,26 @@ function skipRest() {
 
 function stopRestTimer() {
   if (restTimerInterval) { clearInterval(restTimerInterval); restTimerInterval = null; }
+  // Also clear localStorage so stale timers don't get restored
+  lsSet('fs_rest_timer', null);
 }
 
 function restoreRestTimerIfActive() {
   const saved = lsGet('fs_rest_timer');
-  if (!saved || !saved.endAt || saved.endAt <= Date.now()) return;
+  if (!saved || !saved.endAt) return;
+  const remaining = Math.ceil((saved.endAt - Date.now()) / 1000);
+  if (remaining <= 0) {
+    // Timer expired while away — chime once, then clear
+    lsSet('fs_rest_timer', null);
+    _fireChimeOnce();
+    return;
+  }
+  // Resume with the SAVED endAt, not a fresh timer
+  _chimePlayedForCurrentTimer = false;
   restTotalSecs = saved.total || 90;
   restTimerEndAt = saved.endAt;
-  startRestTimerSecs(restTotalSecs);
+  _getAudioCtx();
+  _startTimerUI(restTotalSecs);
 }
 
 document.addEventListener('visibilitychange', function() {
@@ -3410,10 +3600,9 @@ document.addEventListener('visibilitychange', function() {
     const remaining = Math.ceil((restTimerEndAt - Date.now()) / 1000);
     const secsDisplay = document.getElementById('rest-timer-secs-display');
     const bar = document.getElementById('rest-timer-progress');
-    const label = document.getElementById('rest-timer-label');
     if (secsDisplay) secsDisplay.textContent = Math.max(0, remaining) + 's';
-    if (remaining <= 0 && label) {
-      playRestChime();
+    if (remaining <= 0) {
+      _fireChimeOnce();
       skipRest();
     } else if (bar && restTotalSecs > 0) {
       const pct = Math.min(100, ((restTotalSecs - remaining) / restTotalSecs) * 100);
