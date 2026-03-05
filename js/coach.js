@@ -300,6 +300,10 @@ BEHAVIOR:
 - Adjust energy to the time of day.
 - Use **bold** sparingly for key points.
 - If they mention pain or injury, recommend a medical professional.
+${USER && USER.injuries ? `
+CRITICAL — INJURY AWARENESS:
+The user has reported these injuries/limitations: "${USER.injuries}"
+You MUST factor these into EVERY exercise recommendation and workout modification. Never suggest exercises that could aggravate these conditions. When suggesting substitutions, always explain why the alternative is safer for their specific injury. If they ask about an exercise that might conflict with their injury, warn them proactively.` : ''}
 - Never say you don't have access to real-time data — the app provides it to you above.
 - When the user logs food, keep your response SHORT. Acknowledge what they logged, show the macros, give one brief comment. Do NOT list or recap previously logged meals — the nutrition tab handles that. Do NOT give a running summary of the day's food unless the user asks for it.
 - CRITICAL — CONSISTENCY: Do NOT contradict yourself within a conversation. If you give advice (e.g. "do X after your workout"), stand by it when given minor new info. Only reverse your position if the new information fundamentally changes the situation. Users lose trust when you flip-flop.
@@ -439,7 +443,14 @@ Rules:
 - The FOODLOG block must be the LAST thing in your response
 - CRITICAL: ONLY log food items mentioned in the user's CURRENT message. NEVER re-log items from earlier in the conversation. If the user says "I ate one egg", the FOODLOG should ONLY contain the egg — not anything they mentioned before. Previous items are already logged.
 - ACCURACY IS CRITICAL: Users trust these numbers for their diet. Getting macros wrong by even 50 calories per item compounds across meals. Always use the brand reference table or database results. If you don't have exact data for a branded item, say so and ask the user to check the label rather than guessing.
-- For common whole foods not in the brand table (chicken breast, rice, eggs, etc.), use standard USDA values.`;
+- For common whole foods not in the brand table (chicken breast, rice, eggs, etc.), use standard USDA values.
+
+MOVING MEALS:
+If the user says they logged food to the wrong meal (e.g. "move my eggs from breakfast to lunch" or "that should be in dinner not snacks"), include a MOVEMEAL block at the END of your response:
+\`\`\`MOVEMEAL
+{"from":"breakfast","to":"lunch","item":"eggs"}
+\`\`\`
+The app will search for the closest matching item in the "from" category and move it. Confirm the move to the user.`;
 }
 
 function sendCoachStarter(text) {
@@ -696,6 +707,26 @@ The user has shared an image. If it contains a nutrition facts label:
     } else {
       // Strip any FOODLOG block the AI might have added anyway
       reply = reply.replace(/```FOODLOG[\s\S]*?```/g, '').trim();
+    }
+
+    // Parse MOVEMEAL block if present
+    const moveMealMatch = reply.match(/```MOVEMEAL\s*([\s\S]*?)```/);
+    if (moveMealMatch) {
+      try {
+        const moveData = JSON.parse(moveMealMatch[1].trim());
+        if (moveData.from && moveData.to && moveData.item) {
+          const fromEntries = getMealCatEntries(TODAY_IDX, moveData.from);
+          const matchIdx = fromEntries.findIndex(function(e) {
+            return e.name.toLowerCase().includes(moveData.item.toLowerCase());
+          });
+          if (matchIdx >= 0) {
+            const item = fromEntries.splice(matchIdx, 1)[0];
+            getMealCatEntries(TODAY_IDX, moveData.to).push(item);
+            saveToStorage(); if (typeof renderMealCategories === 'function') renderMealCategories(); if (typeof renderMacros === 'function') renderMacros();
+          }
+        }
+      } catch(e2) {}
+      reply = reply.replace(/```MOVEMEAL[\s\S]*?```/g, '').trim();
     }
 
     _appendCoachBubble('assistant', reply || 'Sorry, I could not generate a response. Please try again.');
