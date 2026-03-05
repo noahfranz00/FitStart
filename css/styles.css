@@ -888,13 +888,14 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
   .main-content { 
     flex: 1;
     min-height: 0;
-    padding: 14px 14px 24px;
+    padding: 14px 14px 80px;
     width: 100%;
     box-sizing: border-box;
     overflow-x: hidden;
     overflow-y: scroll !important;
     -webkit-overflow-scrolling: touch;
   }
+  .view.active { display: block; padding-bottom: 20px; }
 
   /* Bottom tab bar - fixed to bottom of viewport */
   .mobile-tab-bar {
