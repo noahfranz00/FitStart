@@ -163,8 +163,8 @@ self.addEventListener('fetch', e => {
           <div class="day-pill" data-equip="Bodyweight Only">Bodyweight Only</div>
         </div>
       </div>
-      <div class="form-group" style="grid-column:1/-1"><label>Injuries or Limitations <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-        <input type="text" id="ob-injuries" placeholder="e.g. bad knees, lower back pain, shoulder impingement">
+      <div class="form-group" style="grid-column:1/-1"><label>Injuries or Limitations <span style="color:var(--orange);font-weight:600;text-transform:none;letter-spacing:0">⚠ Important</span></label>
+        <textarea id="ob-injuries" placeholder="List any injuries, pain, or physical limitations. Your program will be adapted to avoid aggravating these areas.&#10;&#10;Example: bad right knee — can't do deep squats, lower back pain from a herniated disc" style="width:100%;min-height:50px;padding:10px 12px;background:var(--dark);border:1px solid rgba(251,146,60,0.3);border-radius:10px;font-family:inherit;font-size:0.85rem;color:var(--white);resize:vertical;outline:none"></textarea>
       </div>
     </div>
 
@@ -243,13 +243,28 @@ self.addEventListener('fetch', e => {
 </div>
 
 <section id="results-section">
-  <div class="cta-into-app" style="margin:0">
-    <h3>YOUR PLAN IS READY</h3>
-    <p>Start your full program, track macros, and log every workout inside the app.</p>
-    <button class="btn-enter-app" onclick="goToDash()">ENTER THE APP →</button>
-    <p class="cta-fine">7-day free trial · Then $29.99/month · Cancel anytime</p>
+  <div style="max-width:640px;margin:0 auto;padding:24px 20px">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">YOUR PLAN IS READY</div>
+    </div>
+    <!-- AI-generated explanation -->
+    <div id="plan-explanation" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:20px;font-size:0.88rem;line-height:1.6;color:var(--off)">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;color:var(--gold);margin-bottom:10px">YOUR PROGRAM</div>
+      <div id="plan-explain-text" style="white-space:pre-line">Loading your personalized breakdown...</div>
+    </div>
+    <!-- Quick start instructions -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;color:var(--gold);margin-bottom:10px">GETTING STARTED</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:0.82rem;color:var(--off);line-height:1.5">
+        <div style="display:flex;gap:10px"><span style="color:var(--gold);font-weight:700;flex-shrink:0">1.</span><span><strong>Log food through the AI Coach.</strong> Tap Coach, type what you ate or snap a photo of your plate or nutrition label. The AI reads labels and estimates portions automatically.</span></div>
+        <div style="display:flex;gap:10px"><span style="color:var(--gold);font-weight:700;flex-shrink:0">2.</span><span><strong>Follow your daily workout.</strong> Tap Today to see your exercises. The app tracks sets, reps, weight, and rest times — just fill in as you go.</span></div>
+        <div style="display:flex;gap:10px"><span style="color:var(--gold);font-weight:700;flex-shrink:0">3.</span><span><strong>Upload progress photos.</strong> Send photos to the AI Coach to track visible changes over time. The Coach gives feedback on posture and development.</span></div>
+        <div style="display:flex;gap:10px"><span style="color:var(--gold);font-weight:700;flex-shrink:0">4.</span><span><strong>Adjust anytime.</strong> Body goals change? Go to Settings to update your targets, swap exercises, or ask the Coach for modifications.</span></div>
+      </div>
+    </div>
+    <button class="btn-enter-app" onclick="goToDash()" style="width:100%;padding:16px;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;border-radius:12px;border:none;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);color:var(--black);cursor:pointer">ENTER THE APP →</button>
+    <p class="cta-fine" style="text-align:center;margin-top:10px">7-day free trial · Then $29.99/month · Cancel anytime</p>
   </div>
-  <!-- Hidden plan data for My Plan tab -->
   <div id="results-grid" style="display:none"></div>
   <div id="week-card" style="display:none"></div>
   <div id="results-banner" style="display:none"><h2 id="plan-name"></h2><p id="plan-tagline"></p><div id="results-tier-badge"></div></div>
@@ -696,6 +711,8 @@ self.addEventListener('fetch', e => {
             <div><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Current Weight</div><input id="s-weight" class="settings-input"></div>
             <div><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Goal Weight</div><input id="s-goal" class="settings-input"></div>
             <div><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Experience Level</div><input id="s-tier" class="settings-input" readonly></div>
+            <div style="grid-column:1/-1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Body Goals</div><textarea id="s-body-goals" class="settings-input" style="min-height:50px;resize:vertical;font-family:inherit" placeholder="What do you want to achieve?"></textarea></div>
+            <div style="grid-column:1/-1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin-bottom:6px">Injuries / Limitations</div><textarea id="s-injuries" class="settings-input" style="min-height:40px;resize:vertical;font-family:inherit;border-color:rgba(251,146,60,0.3)" placeholder="Any injuries or physical limitations"></textarea></div>
           </div>
         </div>
         <div class="card">
