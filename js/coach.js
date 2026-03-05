@@ -186,7 +186,9 @@ function _getCoachSystemPrompt() {
   let timeOfDay = 'morning';
   if (hour >= 12 && hour < 17) timeOfDay = 'afternoon';
   else if (hour >= 17 && hour < 21) timeOfDay = 'evening';
-  else if (hour >= 21 || hour < 5) timeOfDay = 'night';
+  else if (hour >= 21) timeOfDay = 'night';
+  else if (hour < 4) timeOfDay = 'night';
+  else timeOfDay = 'early morning';
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
   // Today's nutrition so far (all 4 macros)
@@ -277,6 +279,7 @@ USER PROFILE:
 Name: ${USER ? USER.name : 'User'}
 Goal: ${goalDirection} (current: ${currentWeight} lbs → target: ${goalWeight} lbs)
 Level: ${USER ? USER.tier : 'beginner'}
+${USER && USER.bodyGoals ? 'Personal goals: ' + USER.bodyGoals : ''}
 Training schedule: ${GYM_DAYS.map(i => DAYS_FULL[i]).join(', ')}
 
 TODAY'S APP DATA:
