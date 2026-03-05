@@ -457,7 +457,7 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
 .ec-del:hover { background:var(--red-dim); border-color:var(--red); color:var(--red); }
 
 /* Add exercise modal */
-.add-ex-modal { position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:900; display:none; align-items:flex-end; justify-content:center; }
+.add-ex-modal { position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:6500; display:none; align-items:flex-end; justify-content:center; }
 .add-ex-modal.open { display:flex; }
 .add-ex-sheet { background:var(--dark); border:1px solid var(--border2); border-radius:24px 24px 0 0; width:100%; max-width:680px; max-height:85vh; min-height:60vh; display:flex; flex-direction:column; }
 .aes-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
