@@ -347,11 +347,51 @@ self.addEventListener('fetch', e => {
         <div class="page-title" id="dash-day-title">TODAY</div>
         <div class="page-sub" id="dash-day-sub">Week 1 of your program</div>
       </div>
-      <div class="today-grid">
-        <div class="stat-card"><div class="card-label">Calories</div><div class="sc-val" id="d-cal">0</div><div class="sc-sub" id="d-cal-sub">of — target</div><div class="prog-bar"><div class="prog-fill" id="d-cal-bar" style="width:0%"></div></div></div>
-        <div class="stat-card"><div class="card-label">Protein</div><div class="sc-val" id="d-pro">0g</div><div class="sc-sub" id="d-pro-sub">of —g target</div><div class="prog-bar"><div class="prog-fill" id="d-pro-bar" style="width:0%"></div></div></div>
-        <div class="stat-card"><div class="card-label">Carbs</div><div class="sc-val" id="d-carb">0g</div><div class="sc-sub" id="d-carb-sub">of —g target</div><div class="prog-bar"><div class="prog-fill" id="d-carb-bar" style="width:0%"></div></div></div>
-        <div class="stat-card"><div class="card-label">Fat</div><div class="sc-val" id="d-fat">0g</div><div class="sc-sub" id="d-fat-sub">of —g target</div><div class="prog-bar"><div class="prog-fill" id="d-fat-bar" style="width:0%"></div></div></div>
+      <div class="today-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card" style="display:flex;flex-direction:column;align-items:center;padding:14px 8px">
+          <div style="position:relative;width:56px;height:56px">
+            <svg viewBox="0 0 100 100" width="56" height="56">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+              <circle id="d-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:700;color:var(--white)" id="d-cal">0</div>
+          </div>
+          <div class="card-label" style="margin-top:6px;font-size:0.55rem">CALORIES</div>
+          <div class="sc-sub" id="d-cal-sub" style="font-size:0.55rem">of —</div>
+        </div>
+        <div class="stat-card" style="display:flex;flex-direction:column;align-items:center;padding:14px 8px">
+          <div style="position:relative;width:56px;height:56px">
+            <svg viewBox="0 0 100 100" width="56" height="56">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+              <circle id="d-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:700;color:var(--white)" id="d-pro">0g</div>
+          </div>
+          <div class="card-label" style="margin-top:6px;font-size:0.55rem">PROTEIN</div>
+          <div class="sc-sub" id="d-pro-sub" style="font-size:0.55rem">of —g</div>
+        </div>
+        <div class="stat-card" style="display:flex;flex-direction:column;align-items:center;padding:14px 8px">
+          <div style="position:relative;width:56px;height:56px">
+            <svg viewBox="0 0 100 100" width="56" height="56">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+              <circle id="d-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:700;color:var(--white)" id="d-carb">0g</div>
+          </div>
+          <div class="card-label" style="margin-top:6px;font-size:0.55rem">CARBS</div>
+          <div class="sc-sub" id="d-carb-sub" style="font-size:0.55rem">of —g</div>
+        </div>
+        <div class="stat-card" style="display:flex;flex-direction:column;align-items:center;padding:14px 8px">
+          <div style="position:relative;width:56px;height:56px">
+            <svg viewBox="0 0 100 100" width="56" height="56">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+              <circle id="d-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:700;color:var(--white)" id="d-fat">0g</div>
+          </div>
+          <div class="card-label" style="margin-top:6px;font-size:0.55rem">FAT</div>
+          <div class="sc-sub" id="d-fat-sub" style="font-size:0.55rem">of —g</div>
+        </div>
         <div style="display:none" id="d-wkt-name" aria-hidden="true"></div><div style="display:none" id="d-wkt-sub" aria-hidden="true"></div><div style="display:none" id="d-wkt-bar" aria-hidden="true"></div>
       </div>
       <div class="log-toggle-card">
