@@ -137,6 +137,7 @@ self.addEventListener('fetch', e => {
       </div>
       <div class="form-group"><label>Current Weight (lbs)</label><input type="number" id="ob-weight" placeholder="e.g. 235"></div>
       <div class="form-group"><label>Goal Weight (lbs)</label><input type="number" id="ob-goal" placeholder="e.g. 215"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Body Goals</label><textarea id="ob-body-goals" placeholder="Describe what you want to achieve, e.g. 'I want to lean out and build visible abs for summer' or 'I want to bulk up and add 20lbs of muscle'" style="width:100%;min-height:60px;padding:10px 12px;background:var(--dark);border:1px solid var(--border2);border-radius:10px;font-family:inherit;font-size:0.85rem;color:var(--white);resize:vertical;outline:none"></textarea></div>
       <div class="form-group" style="grid-column:1/-1"><label>Activity Level (outside gym)</label>
         <select id="ob-activity">
           <option value="">Select...</option>
@@ -853,6 +854,8 @@ self.addEventListener('fetch', e => {
 
     <!-- CENTER: Demo + Sets -->
     <div class="wo-main elite" id="wo-main">
+      <!-- Warmup Banner (shown before first exercise, dismissible) -->
+      <div id="wo-warmup-banner" style="display:none"></div>
       <!-- Exercise Header -->
       <div class="wo-ex-header" id="wo-ex-header-wrap" style="padding:14px 16px 10px">
         <div id="wo-ex-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:1px;color:var(--white);line-height:1.2">Select an exercise</div>
