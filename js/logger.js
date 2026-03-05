@@ -833,6 +833,7 @@ function renderMealCategories() {
       `<div class="meal-entry-row">
         <div><div class="mer-name">${e.name}</div><div class="mer-macros">${e.pro}g P · ${e.carb}g C · ${e.fat}g F</div></div>
         <div class="mer-cal">${e.cal}</div>
+        <button class="mer-move" onclick="event.stopPropagation();_showMoveMealMenu('${cat.id}',${i},this)" title="Move to another meal" style="background:none;border:none;color:var(--dim);font-size:0.65rem;cursor:pointer;padding:4px;font-family:'DM Mono',monospace">↔</button>
         <button class="mer-del" onclick="deleteCatMeal('${cat.id}',${i})">✕</button>
       </div>`
     ).join('');
@@ -851,6 +852,37 @@ function renderMealCategories() {
 
 function deleteCatMeal(catId, idx) {
   getMealCatEntries(nutDay, catId).splice(idx, 1);
+  renderMealCategories(); renderMacros(); saveToStorage();
+}
+
+let _moveMealMenuEl = null;
+function _showMoveMealMenu(fromCat, idx, btn) {
+  if (_moveMealMenuEl) { _moveMealMenuEl.remove(); _moveMealMenuEl = null; return; }
+  const rect = btn.getBoundingClientRect();
+  _moveMealMenuEl = document.createElement('div');
+  _moveMealMenuEl.style.cssText = 'position:fixed;top:' + (rect.bottom + 4) + 'px;right:' + Math.max(8, window.innerWidth - rect.right) + 'px;background:#1a1a1a;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:6px 0;min-width:150px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,0.7)';
+  _moveMealMenuEl.innerHTML = '<div style="padding:6px 14px;font-size:0.65rem;color:var(--dim);font-weight:700;letter-spacing:1px">MOVE TO</div>' +
+    MEAL_CATS.filter(function(c) { return c.id !== fromCat; }).map(function(c) {
+      return '<span onclick="_moveMeal(\'' + fromCat + '\',' + idx + ',\'' + c.id + '\')" style="display:block;padding:10px 14px;font-size:0.82rem;color:#E2DFD8;cursor:pointer">' + c.label + '</span>';
+    }).join('');
+  _moveMealMenuEl.querySelectorAll('span').forEach(function(s) {
+    s.onmouseenter = function() { s.style.background = 'rgba(255,255,255,0.06)'; };
+    s.onmouseleave = function() { s.style.background = 'none'; };
+  });
+  document.body.appendChild(_moveMealMenuEl);
+  setTimeout(function() {
+    document.addEventListener('click', function _close() {
+      if (_moveMealMenuEl) { _moveMealMenuEl.remove(); _moveMealMenuEl = null; }
+      document.removeEventListener('click', _close);
+    }, { once: true });
+  }, 10);
+}
+function _moveMeal(fromCat, idx, toCat) {
+  if (_moveMealMenuEl) { _moveMealMenuEl.remove(); _moveMealMenuEl = null; }
+  const entries = getMealCatEntries(nutDay, fromCat);
+  if (!entries[idx]) return;
+  const item = entries.splice(idx, 1)[0];
+  getMealCatEntries(nutDay, toCat).push(item);
   renderMealCategories(); renderMacros(); saveToStorage();
 }
 
@@ -2026,6 +2058,11 @@ function saveSettings() {
     }
   }
   if (newGoal && USER) USER.goal = newGoal;
+  // Save body goals and injuries
+  const sBodyGoals = document.getElementById('s-body-goals');
+  if (sBodyGoals && USER) USER.bodyGoals = sBodyGoals.value.trim();
+  const sInjuries = document.getElementById('s-injuries');
+  if (sInjuries && USER) USER.injuries = sInjuries.value.trim();
   lsSet('fs_user', USER);
 
   // Save gym days
