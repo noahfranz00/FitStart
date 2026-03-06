@@ -596,6 +596,7 @@ async function generatePlan() {
   const activity = document.getElementById('ob-activity').value;
   const injuries = document.getElementById('ob-injuries').value.trim();
   const bodyGoals = (document.getElementById('ob-body-goals') || {}).value ? document.getElementById('ob-body-goals').value.trim() : '';
+  const personalRules = (document.getElementById('ob-rules') || {}).value ? document.getElementById('ob-rules').value.trim() : '';
   const selDays  = getSelectedDays();
   const duration = document.getElementById('ob-duration').value;
   const equipment = getSelectedEquipment();
@@ -618,7 +619,7 @@ async function generatePlan() {
 
   const heightCm = Math.round((heightFt * 12 + heightIn) * 2.54);
   const nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
-  USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, bodyGoals, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
+  USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, bodyGoals, personalRules, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
 
   // Auto-calculate water goal: half bodyweight in oz, capped at 128oz (1 gallon)
   if (!lsGet('fs_water_goal_custom')) {
@@ -1227,6 +1228,7 @@ function initDashboard() {
   document.getElementById('s-tier').value   = USER.tier ? USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1) : '';
   const sBodyGoals = document.getElementById('s-body-goals'); if (sBodyGoals) sBodyGoals.value = USER.bodyGoals || '';
   const sInjuries = document.getElementById('s-injuries'); if (sInjuries) sInjuries.value = USER.injuries || '';
+  const sRules = document.getElementById('s-rules'); if (sRules) sRules.value = USER.personalRules || '';
   document.getElementById('s-cal').value    = TARGETS.cal;
   document.getElementById('s-pro').value    = TARGETS.pro;
   document.getElementById('s-carb').value   = TARGETS.carb;
