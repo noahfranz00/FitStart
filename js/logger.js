@@ -839,10 +839,14 @@ function renderMealCategories() {
     const totalCarb = entries.reduce((s,e) => s+e.carb, 0);
     const totalFat = entries.reduce((s,e) => s+e.fat, 0);
     const entryRows = entries.map((e,i) =>
-      `<div class="meal-entry-row">
-        <div><div class="mer-name">${e.name}</div><div class="mer-macros">${e.pro}g P · ${e.carb}g C · ${e.fat}g F</div></div>
-        <div class="mer-cal">${e.cal}</div>
-        <button class="mer-move" onclick="event.stopPropagation();_showMoveMealMenu('${cat.id}',${i},this)" title="Move to another meal" style="background:none;border:none;color:var(--dim);font-size:0.65rem;cursor:pointer;padding:4px;font-family:'DM Mono',monospace">↔</button>
+      `<div class="meal-entry-row" style="align-items:center">
+        <div style="flex:1;min-width:0"><div class="mer-name">${e.name}</div><div class="mer-macros">${e.pro}g P · ${e.carb}g C · ${e.fat}g F</div></div>
+        <div style="display:flex;align-items:center;gap:1px;flex-shrink:0">
+          <button onclick="event.stopPropagation();_adjustMealQty('${cat.id}',${i},0.5)" style="width:22px;height:22px;border-radius:5px;border:1px solid var(--border);background:none;color:var(--dim);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0" title="Half portion">½</button>
+          <div class="mer-cal" style="min-width:32px;text-align:center;font-size:0.78rem">${e.cal}</div>
+          <button onclick="event.stopPropagation();_adjustMealQty('${cat.id}',${i},2)" style="width:22px;height:22px;border-radius:5px;border:1px solid var(--border);background:none;color:var(--dim);font-size:0.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0" title="Double portion">2x</button>
+        </div>
+        <button class="mer-move" onclick="event.stopPropagation();_showMoveMealMenu('${cat.id}',${i},this)" title="Move" style="background:none;border:none;color:var(--dim);font-size:0.6rem;cursor:pointer;padding:2px 4px;font-family:'DM Mono',monospace">↔</button>
         <button class="mer-del" onclick="deleteCatMeal('${cat.id}',${i})">✕</button>
       </div>`
     ).join('');
@@ -861,6 +865,22 @@ function renderMealCategories() {
 
 function deleteCatMeal(catId, idx) {
   getMealCatEntries(nutDay, catId).splice(idx, 1);
+  renderMealCategories(); renderMacros(); saveToStorage();
+}
+
+function _adjustMealQty(catId, idx, multiplier) {
+  const entries = getMealCatEntries(nutDay, catId);
+  if (!entries[idx]) return;
+  const e = entries[idx];
+  e.cal = Math.round(e.cal * multiplier);
+  e.pro = Math.round(e.pro * multiplier);
+  e.carb = Math.round(e.carb * multiplier);
+  e.fat = Math.round(e.fat * multiplier);
+  if (multiplier === 2) {
+    e.name = e.name.replace(/ \(\d+x\)$/, '') + ' (2x)';
+  } else if (multiplier === 0.5) {
+    e.name = e.name.replace(/ \(\d+x\)$/, '').replace(/ \(half\)$/, '') + ' (half)';
+  }
   renderMealCategories(); renderMacros(); saveToStorage();
 }
 
