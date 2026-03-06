@@ -335,7 +335,16 @@ function closeDashExPicker() {
   _woSubstituteMode = false;
 }
 
-function filterDashExPicker() { renderDashExPickerList(); }
+function filterDashExPicker() {
+  // Auto-clear muscle/equipment filters when user starts searching
+  const search = (document.getElementById('dash-ex-picker-search') || {}).value || '';
+  if (search.trim().length > 0 && (_aesFilterMuscle !== 'All' || _aesFilterEquip !== 'All')) {
+    _aesFilterMuscle = 'All';
+    _aesFilterEquip = 'All';
+    _updateAesFilterLabels();
+  }
+  renderDashExPickerList();
+}
 
 function renderDashExPickerList() {
   var search = (document.getElementById('dash-ex-picker-search')||{}).value.toLowerCase();
@@ -2063,6 +2072,8 @@ function saveSettings() {
   if (sBodyGoals && USER) USER.bodyGoals = sBodyGoals.value.trim();
   const sInjuries = document.getElementById('s-injuries');
   if (sInjuries && USER) USER.injuries = sInjuries.value.trim();
+  const sRules = document.getElementById('s-rules');
+  if (sRules && USER) USER.personalRules = sRules.value.trim();
   lsSet('fs_user', USER);
 
   // Save gym days
@@ -3505,12 +3516,25 @@ function _initChimeAudio() {
 // Unlock audio on first user gesture (required by iOS)
 function _unlockChimeAudio() {
   _initChimeAudio();
+  // Unlock by playing at zero volume, then restore
   if (_chimeAudio) {
-    _chimeAudio.play().then(() => { _chimeAudio.pause(); _chimeAudio.currentTime = 0; }).catch(() => {});
+    const origVol = _chimeAudio.volume;
+    _chimeAudio.volume = 0;
+    _chimeAudio.play().then(() => { _chimeAudio.pause(); _chimeAudio.currentTime = 0; _chimeAudio.volume = origVol; }).catch(() => { _chimeAudio.volume = origVol; });
   }
 }
 document.addEventListener('touchstart', _unlockChimeAudio, { once: true });
 document.addEventListener('click', _unlockChimeAudio, { once: true });
+
+// On page load: immediately clear any stale rest timer data from previous sessions
+(function() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('fs_rest_timer'));
+    if (saved && saved.endAt && saved.endAt <= Date.now()) {
+      localStorage.removeItem('fs_rest_timer');
+    }
+  } catch(e) {}
+})();
 
 function playRestChime() {
   try {
@@ -3593,9 +3617,12 @@ function restoreRestTimerIfActive() {
   if (!saved || !saved.endAt) return;
   const remaining = Math.ceil((saved.endAt - Date.now()) / 1000);
   if (remaining <= 0) {
-    // Timer expired while away — chime once, then clear
+    // Timer expired — clear it. Only chime if it expired within last 30 seconds
     lsSet('fs_rest_timer', null);
-    _fireChimeOnce();
+    const expiredAgo = Math.abs(remaining);
+    if (expiredAgo <= 30) {
+      _fireChimeOnce();
+    }
     return;
   }
   // Resume with the SAVED endAt, not a fresh timer
