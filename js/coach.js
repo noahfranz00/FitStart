@@ -719,11 +719,14 @@ async function _sendCoachMsg(text, image) {
     if (image) {
       systemPrompt += `\n\n[IMAGE ATTACHED — CRITICAL INSTRUCTIONS]
 The user has shared an image. If it contains a nutrition facts label:
-- You MUST read the EXACT numbers from the label in the image. The image is your PRIMARY source of truth.
+- You MUST read the EXACT numbers from the label in the image. The image is your PRIMARY and ONLY source of truth.
 - Do NOT use the brand reference table above — those are only for when no image is available.
-- State each value you read: "I can see on the label: X calories, Xg fat, Xg carbs, Xg protein"
-- Use ONLY those exact values in your FOODLOG block.
-- If the image shows a nutrition label, IGNORE any guesses from your training data — only report what the label says.`;
+- Read the label systematically: Serving Size → Calories → Total Fat → Total Carbohydrate → Protein
+- State each value: "From the label I can read: Serving size: X, Calories: X, Total Fat: Xg, Total Carbs: Xg, Protein: Xg"
+- Use ONLY those exact values in your FOODLOG block — do NOT adjust, estimate, or substitute from memory
+- If you read Calories as 200, log 200. If you read Protein as 20g, log 20. Do NOT change any number.
+- TRIPLE CHECK: Before writing the FOODLOG, verify each number matches what you stated from the label. If any number differs, fix it.
+- If the image is NOT a nutrition label (it's a food photo), estimate the macros from the food visible and note it's an estimate.`;
     }
     // If user came from a meal section, tell AI which meal to log to
     if (window._pendingMealCat && window._pendingMealLabel) {
