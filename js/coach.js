@@ -159,6 +159,30 @@ function clearCoachHistory() {
   if (clearBtn) clearBtn.style.display = 'none';
 }
 
+function _acceptCoachWorkout() {
+  const wk = window._pendingCoachWorkout;
+  if (!wk || !wk.exercises) return;
+  // Replace today's workout
+  const exes = wk.exercises.map(function(e) {
+    const db = getExerciseData(e.name);
+    return { name: e.name, sets: e.sets || db.sets || 3, reps: e.reps || db.reps || '8-10', rest: e.rest || db.rest || 90, muscles: e.muscles || db.muscles || '' };
+  });
+  DAY_WORKOUTS[TODAY_IDX] = { name: wk.name || 'Custom Workout', focus: '', exercises: exes };
+  if (generatedPlan && generatedPlan.weekly_schedule && generatedPlan.weekly_schedule[TODAY_IDX]) {
+    generatedPlan.weekly_schedule[TODAY_IDX].exercises = exes;
+    generatedPlan.weekly_schedule[TODAY_IDX].badge = wk.name || 'Custom';
+    lsSet('fs_plan', generatedPlan);
+  }
+  window._pendingCoachWorkout = null;
+  _appendCoachBubble('assistant', '✓ **Workout updated!** Your Today tab now shows the new workout. Tap Today to start it.');
+  if (typeof renderTodayWorkout === 'function') renderTodayWorkout();
+}
+
+function _regenerateCoachWorkout() {
+  window._pendingCoachWorkout = null;
+  _sendCoachMsg('Generate a different workout with different exercises. Keep the same muscle focus but change the exercise selection.');
+}
+
 function _getCoachSystemPrompt() {
   const weightLog = getWeightLog();
   const currentWeight = weightLog.length ? weightLog[weightLog.length - 1].lbs : (USER ? USER.weight : '?');
@@ -280,7 +304,10 @@ Name: ${USER ? USER.name : 'User'}
 Goal: ${goalDirection} (current: ${currentWeight} lbs → target: ${goalWeight} lbs)
 Level: ${USER ? USER.tier : 'beginner'}
 ${USER && USER.bodyGoals ? 'Personal goals: ' + USER.bodyGoals : ''}
+${USER && USER.personalRules ? 'Personal rules: ' + USER.personalRules : ''}
+${USER && USER.injuries ? 'Injuries: ' + USER.injuries : ''}
 Training schedule: ${GYM_DAYS.map(i => DAYS_FULL[i]).join(', ')}
+${USER && USER.nutrition && USER.nutrition.mode === 'lose' ? 'DAILY STEP GOAL: 10,000 steps — remind them about this when relevant' : ''}
 
 TODAY'S APP DATA:
 ${isGymDay ? (todayDone ? 'Workout COMPLETED today (' + (todayWorkout?.name || 'workout') + ')' : 'Scheduled workout: ' + (todayWorkout?.name || 'workout') + ' — not yet completed') : 'Rest day (no workout scheduled)'}
@@ -312,7 +339,11 @@ WORKOUT COACHING:
 - You CAN see the user's full workout schedule above — today's exercises, sets, reps, and rest times. ALWAYS reference this data when discussing their training.
 - When the user asks about their workout, exercises, or schedule, refer to the ACTUAL exercises listed above. Never say you can't see their workout or that you don't have access to it.
 - If the user wants to SUBSTITUTE an exercise, suggest a specific replacement that targets the same muscle group. Explain WHY the substitute works. Tell them to use the "Edit" button on the exercise to swap it.
-- If the user asks for a different workout entirely, explain that the app's periodized program is designed for their goals, but offer modifications: they can swap individual exercises or start a custom workout from the Today screen.
+- If the user asks for a COMPLETELY DIFFERENT workout, generate one and include a WORKOUT block at the END of your response:
+\`\`\`WORKOUT
+{"name":"Custom Leg Day","exercises":[{"name":"Back Squat","sets":4,"reps":"8-10","rest":90,"muscles":"Quads, Glutes"},{"name":"Romanian Deadlift","sets":3,"reps":"10-12","rest":90,"muscles":"Hamstrings"}]}
+\`\`\`
+The app will show Accept and Regenerate buttons. Only include this for full workout replacements, not minor substitutions.
 - When suggesting exercise substitutions, consider: their experience level (${USER ? USER.tier : 'beginner'}), the current training phase, available equipment, and the muscle groups that need to be hit.
 - You can recommend modifications like adjusting sets/reps, changing exercise order, or adding warm-up sets.
 
@@ -383,7 +414,8 @@ Snacks:
   SkinnyPop Popcorn (1oz): 140cal 2P 15C 9F
   Rice Krispies Treat (1 bar): 90cal 1P 17C 2F
   String Cheese (1 stick): 80cal 7P 1C 5F
-  Babybel Original (1 piece): 70cal 5P 0C 5F
+  Light/Low-Fat String Cheese (1 stick): 50cal 6P 1C 2.5F
+  Babybel Light (1 piece): 50cal 6P 0C 3F
   Quaker Rice Cakes Chocolate (1 cake): 60cal 1P 12C 0.5F
   Quaker Rice Cakes Lightly Salted (1 cake): 35cal 1P 7C 0F
   Quaker Rice Cakes Caramel (1 cake): 50cal 1P 11C 0F
@@ -401,6 +433,8 @@ Cereal & Oats:
   Magic Spoon (1 cup): 140cal 13P 15C 7F
 
 CRITICAL SERVING SIZE RULE: When a user specifies an exact weight (e.g. "2.68oz" or "7 ounces"), you MUST:
+
+PRODUCT VARIANT RULE: When the user specifies "low fat", "light", "fat free", "reduced fat", "sugar free", or any variant, you MUST use the macros for that SPECIFIC variant — not the regular version. If the variant isn't in your reference table, look for it in database results or ask the user to check the label. NEVER silently use regular macros when they said "low fat".
 1. Find the per-serving macros from the table above (note the serving size listed — e.g. "per 1oz" or "per 3oz/85g")
 2. Calculate how many servings their amount equals: (their amount) ÷ (serving size)
 3. Multiply ALL macros by that number
@@ -450,7 +484,14 @@ If the user says they logged food to the wrong meal (e.g. "move my eggs from bre
 \`\`\`MOVEMEAL
 {"from":"breakfast","to":"lunch","item":"eggs"}
 \`\`\`
-The app will search for the closest matching item in the "from" category and move it. Confirm the move to the user.`;
+The app will search for the closest matching item in the "from" category and move it. Confirm the move to the user.
+
+DELETING FOOD:
+If the user says to delete/remove a food they logged (e.g. "delete the eggs" or "remove that protein shake from my log"), include a DELETEFOOD block:
+\`\`\`DELETEFOOD
+{"meal":"breakfast","item":"eggs"}
+\`\`\`
+The app will find and remove the closest matching item. If "meal" is unknown, use "any" to search all categories. Confirm the deletion.`;
 }
 
 function sendCoachStarter(text) {
@@ -727,6 +768,55 @@ The user has shared an image. If it contains a nutrition facts label:
         }
       } catch(e2) {}
       reply = reply.replace(/```MOVEMEAL[\s\S]*?```/g, '').trim();
+    }
+
+    // Parse DELETEFOOD block if present
+    const deleteFoodMatch = reply.match(/```DELETEFOOD\s*([\s\S]*?)```/);
+    if (deleteFoodMatch) {
+      try {
+        const delData = JSON.parse(deleteFoodMatch[1].trim());
+        if (delData.item) {
+          const searchItem = delData.item.toLowerCase();
+          let found = false;
+          const catsToSearch = delData.meal === 'any' ? ['breakfast','lunch','dinner','snacks','other'] : [delData.meal];
+          for (const catId of catsToSearch) {
+            const entries = getMealCatEntries(TODAY_IDX, catId);
+            const matchIdx = entries.findIndex(function(e) {
+              return e.name.toLowerCase().includes(searchItem);
+            });
+            if (matchIdx >= 0) {
+              entries.splice(matchIdx, 1);
+              found = true;
+              break;
+            }
+          }
+          if (found) {
+            saveToStorage();
+            if (typeof renderMealCategories === 'function') renderMealCategories();
+            if (typeof renderMacros === 'function') renderMacros();
+            if (typeof refreshDashMacros === 'function') refreshDashMacros();
+          }
+        }
+      } catch(e2) {}
+      reply = reply.replace(/```DELETEFOOD[\s\S]*?```/g, '').trim();
+    }
+
+    // Parse WORKOUT block if present — show Accept/Regenerate buttons
+    const workoutMatch = reply.match(/```WORKOUT\s*([\s\S]*?)```/);
+    if (workoutMatch) {
+      try {
+        const wkData = JSON.parse(workoutMatch[1].trim());
+        if (wkData.exercises && wkData.exercises.length > 0) {
+          window._pendingCoachWorkout = wkData;
+          reply = reply.replace(/```WORKOUT[\s\S]*?```/g, '').trim();
+          reply += '\n\n<div style="display:flex;gap:8px;margin-top:12px">' +
+            '<button onclick="_acceptCoachWorkout()" style="flex:1;padding:12px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:#111;font-family:\'Bebas Neue\',sans-serif;font-size:0.95rem;letter-spacing:1.5px;cursor:pointer">ACCEPT WORKOUT</button>' +
+            '<button onclick="_regenerateCoachWorkout()" style="flex:1;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--dim);font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">REGENERATE</button>' +
+            '</div>';
+        }
+      } catch(e2) {
+        reply = reply.replace(/```WORKOUT[\s\S]*?```/g, '').trim();
+      }
     }
 
     _appendCoachBubble('assistant', reply || 'Sorry, I could not generate a response. Please try again.');
