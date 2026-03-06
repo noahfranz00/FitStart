@@ -166,6 +166,9 @@ self.addEventListener('fetch', e => {
       <div class="form-group" style="grid-column:1/-1"><label>Injuries or Limitations <span style="color:var(--orange);font-weight:600;text-transform:none;letter-spacing:0">⚠ Important</span></label>
         <textarea id="ob-injuries" placeholder="List any injuries, pain, or physical limitations. Your program will be adapted to avoid aggravating these areas.&#10;&#10;Example: bad right knee — can't do deep squats, lower back pain from a herniated disc" style="width:100%;min-height:50px;padding:10px 12px;background:var(--dark);border:1px solid rgba(251,146,60,0.3);border-radius:10px;font-family:inherit;font-size:0.85rem;color:var(--white);resize:vertical;outline:none"></textarea>
       </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Personal Rules <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <textarea id="ob-rules" placeholder="Any preferences or restrictions the AI should know about.&#10;Examples: I don't do lunges, I workout at 5am, I'm lactose intolerant, I don't eat pork, I prefer machine exercises" style="width:100%;min-height:50px;padding:10px 12px;background:var(--dark);border:1px solid var(--border2);border-radius:10px;font-family:inherit;font-size:0.85rem;color:var(--white);resize:vertical;outline:none"></textarea>
+      </div>
     </div>
 
     <div class="form-section-label">Goal Timeline</div>
@@ -713,6 +716,7 @@ self.addEventListener('fetch', e => {
             <div><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Experience Level</div><input id="s-tier" class="settings-input" readonly></div>
             <div style="grid-column:1/-1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Body Goals</div><textarea id="s-body-goals" class="settings-input" style="min-height:50px;resize:vertical;font-family:inherit" placeholder="What do you want to achieve?"></textarea></div>
             <div style="grid-column:1/-1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin-bottom:6px">Injuries / Limitations</div><textarea id="s-injuries" class="settings-input" style="min-height:40px;resize:vertical;font-family:inherit;border-color:rgba(251,146,60,0.3)" placeholder="Any injuries or physical limitations"></textarea></div>
+            <div style="grid-column:1/-1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Personal Rules</div><textarea id="s-rules" class="settings-input" style="min-height:40px;resize:vertical;font-family:inherit" placeholder="e.g. I don't do lunges, I'm lactose intolerant, I workout at 5am"></textarea></div>
           </div>
         </div>
         <div class="card">
@@ -928,7 +932,7 @@ self.addEventListener('fetch', e => {
   <div id="unplanned-modal-inner" style="background:var(--dark);border:1px solid var(--border2);border-radius:24px 24px 0 0;width:100%;max-width:600px;padding:24px 20px 40px;max-height:92dvh;overflow-y:auto;transition:max-height 0.3s ease">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1.5px" id="unplanned-modal-title">START A WORKOUT</div>
-      <button onclick="closeUnplannedModal()" style="background:none;border:none;color:var(--dim);font-size:1.4rem;cursor:pointer;padding:4px 8px">✕</button>
+      <button onclick="closeUnplannedModal()" style="background:var(--card);border:1px solid var(--border);color:var(--white);font-size:1.2rem;cursor:pointer;padding:6px 12px;border-radius:8px;flex-shrink:0">✕</button>
     </div>
     <div style="font-size:0.82rem;color:var(--dim);margin-bottom:24px" id="unplanned-modal-day"></div>
 
