@@ -675,6 +675,8 @@ async function buildPlan(selDays) {
   const exPerSession = u.tier === 'beginner' ? '3-4' : u.tier === 'intermediate' ? '4-5' : '5-6';
   const userPrompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
 Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks === 0 ? 'ongoing/maintenance' : u.weeks + 'wk'}.
+${u.bodyGoals ? 'Body goals: ' + u.bodyGoals.slice(0, 100) : ''}
+${u.personalRules ? 'Rules: ' + u.personalRules.slice(0, 100) : ''}
 
 Return ONLY this JSON structure:
 {"planName":"short name","tagline":"short","philosophy":"1 sentence","schedule":[{"day":"Monday","type":"workout","badge":"Push","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
@@ -700,14 +702,22 @@ CRITICAL RULES:
       let clean = raw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
       // Attempt direct parse first
       try { parsed = JSON.parse(clean); break; } catch(_) {}
-      // Try to repair truncated JSON by closing open brackets/braces
+      // Aggressive JSON repair for truncated responses
       let repaired = clean;
-      // Remove trailing incomplete key-value pair (e.g. ,"muscles":"Che )
+      // Remove any trailing incomplete string (unclosed quote)
+      if ((repaired.match(/"/g) || []).length % 2 !== 0) {
+        repaired = repaired.replace(/"[^"]*$/, '"');
+      }
+      // Remove trailing incomplete key-value patterns
       repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
+      repaired = repaired.replace(/,\s*"[^"]*":\s*\d*$/, '');
       repaired = repaired.replace(/,\s*"[^"]*":\s*$/, '');
       repaired = repaired.replace(/,\s*"[^"]*$/, '');
       repaired = repaired.replace(/,\s*$/, '');
-      // Count and close unclosed brackets
+      // Remove trailing incomplete object/array entries
+      repaired = repaired.replace(/,\s*\{[^}]*$/, '');
+      repaired = repaired.replace(/,\s*\[[^\]]*$/, '');
+      // Count and close unclosed brackets/braces
       const opens = (repaired.match(/\[/g)||[]).length - (repaired.match(/\]/g)||[]).length;
       const braces = (repaired.match(/\{/g)||[]).length - (repaired.match(/\}/g)||[]).length;
       for (let i = 0; i < opens; i++) repaired += ']';
