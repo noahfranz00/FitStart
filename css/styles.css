@@ -762,7 +762,7 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
   .sf-row { grid-template-columns:1fr; gap:10px; margin-bottom:0; }
 
   /* Dashboard shell */
-  #screen-dash.active { display:flex !important; flex-direction:column; height: 100dvh; height: 100vh; max-height: -webkit-fill-available; padding-bottom: 60px; box-sizing: border-box; overflow: hidden !important; }
+  #screen-dash.active { display:flex !important; flex-direction:column; height: 100dvh; height: 100vh; max-height: -webkit-fill-available; padding-bottom: 60px; box-sizing: border-box; }
   /* Override sticky nav inside dash on mobile — sticky breaks flex height calculation on iOS */
   #screen-dash > nav { position: relative !important; flex-shrink: 0 !important; }
   .sidebar-nav { width:100%; flex-direction:row; padding:6px 8px; border-right:none; border-bottom:1px solid var(--border); overflow-x:auto; gap:2px; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; }
@@ -916,9 +916,9 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
     transform: none !important;
   }
   .mobile-tab-bar.hidden-in-workout { display: none !important; }
-  /* Ensure screen-dash doesn't clip the fixed tab bar */
-  #screen-dash { overflow: hidden !important; }
-  #screen-dash.active { overflow: hidden !important; }
+  /* Ensure screen-dash flex layout works without blocking scroll */
+  #screen-dash { overflow: visible !important; }
+  #screen-dash.active { overflow: visible !important; }
   .mob-tab {
     flex: 1;
     display: flex;
@@ -962,8 +962,9 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
     transform: translateY(110%);
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    pointer-events: none;
   }
-  .mob-more-drawer.open { transform: translateY(0); }
+  .mob-more-drawer.open { transform: translateY(0); pointer-events: auto; }
   .mob-more-handle {
     width: 36px; height: 4px;
     background: var(--border);
