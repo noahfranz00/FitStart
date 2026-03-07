@@ -2,75 +2,59 @@
   'use strict';
 
   var USER_KEY = 'fs_user';
-  var memoryCache = {
-    user: null
-  };
+  var memoryCache = { user: null };
 
   function isObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
   }
 
-  function deepClone(value) {
+  function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
 
-  function safeParse(json, fallback) {
-    if (typeof json !== 'string' || !json.trim()) return fallback;
+  function safeParse(raw, fallback) {
+    if (typeof raw !== 'string' || !raw.trim()) return fallback;
     try {
-      return JSON.parse(json);
+      return JSON.parse(raw);
     } catch (err) {
-      console.warn('[StorageAPI] Failed to parse JSON:', err);
+      console.warn('[StorageAPI] Failed to parse fs_user:', err);
       return fallback;
     }
   }
 
   function normalizeUser(user) {
     if (!isObject(user)) return {};
-    return deepClone(user);
-  }
-
-  function readLocalUser() {
-    var raw = localStorage.getItem(USER_KEY);
-    var parsed = safeParse(raw, {});
-    return normalizeUser(parsed);
-  }
-
-  function writeLocalUser(user) {
-    var normalized = normalizeUser(user);
-    localStorage.setItem(USER_KEY, JSON.stringify(normalized));
-    return normalized;
+    return clone(user);
   }
 
   function emitUserChanged(user) {
     window.dispatchEvent(new CustomEvent('fs:user-changed', {
-      detail: {
-        user: deepClone(user)
-      }
+      detail: { user: clone(user) }
     }));
   }
 
   function getUser() {
     if (memoryCache.user && isObject(memoryCache.user)) {
-      return deepClone(memoryCache.user);
+      return clone(memoryCache.user);
     }
-
-    var user = readLocalUser();
-    memoryCache.user = deepClone(user);
-    return deepClone(user);
+    var parsed = safeParse(localStorage.getItem(USER_KEY), {});
+    var normalized = normalizeUser(parsed);
+    memoryCache.user = clone(normalized);
+    return clone(normalized);
   }
 
   function setUser(user) {
-    var normalized = writeLocalUser(user);
-    memoryCache.user = deepClone(normalized);
+    var normalized = normalizeUser(user);
+    localStorage.setItem(USER_KEY, JSON.stringify(normalized));
+    memoryCache.user = clone(normalized);
     emitUserChanged(normalized);
-    return deepClone(normalized);
+    return clone(normalized);
   }
 
   function patchUser(patch) {
-    var currentUser = getUser();
-    var safePatch = isObject(patch) ? patch : {};
-    var nextUser = Object.assign({}, currentUser, safePatch);
-    return setUser(nextUser);
+    var current = getUser();
+    var next = Object.assign({}, current, isObject(patch) ? patch : {});
+    return setUser(next);
   }
 
   function clearUser() {
@@ -80,8 +64,7 @@
   }
 
   function hasUser() {
-    var user = getUser();
-    return Object.keys(user).length > 0;
+    return Object.keys(getUser()).length > 0;
   }
 
   function reloadUser() {
