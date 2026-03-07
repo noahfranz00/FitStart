@@ -409,7 +409,11 @@ let currentTier = 'beginner';
 let selectedSplit = 'ppl';
 let selectedWeeks = 16;
 let generatedPlan = null;
-let USER = {};
+let USER = window.StorageAPI ? StorageAPI.getUser() : {};
+
+window.addEventListener('fs:user-changed', function (event) {
+  USER = event && event.detail && event.detail.user ? event.detail.user : (window.StorageAPI ? StorageAPI.getUser() : {});
+});
 
 const DAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const DAYS_FULL  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -613,7 +617,7 @@ async function generatePlan() {
   if (!duration) missing.push('Session Length');
   if (equipment.length === 0) missing.push('Available Equipment');
   if (missing.length > 0) {
-    alert('Please fill in: ' + missing.join(', '));
+    showToast('Please fill in: ' + missing.join(', '), 'warning', 4000);
     return;
   }
 
@@ -656,7 +660,7 @@ async function generatePlan() {
     document.querySelector('.main-layout').style.display = '';
     document.getElementById('hero-section').style.display = '';
     document.getElementById('loading').style.display = 'none';
-    alert('Error: ' + (e.message || String(e)));
+    showToast(e.message || 'Plan generation failed. Try again.', 'error', 6000);
   }
 }
 
@@ -690,11 +694,23 @@ CRITICAL RULES:
 - philosophy: 1 short sentence only
 - Equipment: ${equipStr}. Avoid: ${injuryStr}`;
 
-  // Try up to 2 attempts in case of truncated response
+  // Try up to 3 attempts with progressively simpler prompts
   let parsed;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let prompt = userPrompt;
+    if (attempt === 1) {
+      prompt = userPrompt + '\n\nIMPORTANT: Keep exercise names SHORT (2-3 words max). Keep philosophy under 50 words. Minimize all string lengths to fit within token limits.';
+    } else if (attempt === 2) {
+      // Stripped-down prompt — remove body goals and personal rules to reduce response length
+      prompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
+Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}.
+Return ONLY this JSON structure:
+{"planName":"short name","tagline":"short","philosophy":"1 sentence","schedule":[{"day":"Monday","type":"workout","badge":"Push","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
+RULES: All 7 days Mon-Sun. Gym: ${gymDaysStr}. ${exPerSession} exercises per workout. Short names. Equipment: ${equipStr}.`;
+    }
+
     const raw = await callClaude(
-      [{ role: 'user', content: attempt === 0 ? userPrompt : userPrompt + '\n\nIMPORTANT: Keep exercise names SHORT (2-3 words max). Keep philosophy under 50 words. Minimize all string lengths to fit within token limits.' }],
+      [{ role: 'user', content: prompt }],
       { system: systemPrompt, max_tokens: 8000, timeout: 90000 }
     );
 
@@ -704,6 +720,9 @@ CRITICAL RULES:
       try { parsed = JSON.parse(clean); break; } catch(_) {}
       // Aggressive JSON repair for truncated responses
       let repaired = clean;
+      // Fix: strip any non-JSON prefix (AI sometimes adds text before the JSON)
+      const jsonStart = repaired.search(/[\[{]/);
+      if (jsonStart > 0) repaired = repaired.substring(jsonStart);
       // Remove any trailing incomplete string (unclosed quote)
       if ((repaired.match(/"/g) || []).length % 2 !== 0) {
         repaired = repaired.replace(/"[^"]*$/, '"');
@@ -714,25 +733,50 @@ CRITICAL RULES:
       repaired = repaired.replace(/,\s*"[^"]*":\s*$/, '');
       repaired = repaired.replace(/,\s*"[^"]*$/, '');
       repaired = repaired.replace(/,\s*$/, '');
-      // Remove trailing incomplete object/array entries
-      repaired = repaired.replace(/,\s*\{[^}]*$/, '');
-      repaired = repaired.replace(/,\s*\[[^\]]*$/, '');
-      // Count and close unclosed brackets/braces
-      const opens = (repaired.match(/\[/g)||[]).length - (repaired.match(/\]/g)||[]).length;
-      const braces = (repaired.match(/\{/g)||[]).length - (repaired.match(/\}/g)||[]).length;
-      for (let i = 0; i < opens; i++) repaired += ']';
-      for (let i = 0; i < braces; i++) repaired += '}';
+      // Remove trailing incomplete object/array entries (handle nested structures)
+      // Repeatedly strip the last incomplete object/array until stable
+      let prevLen = -1;
+      while (repaired.length !== prevLen) {
+        prevLen = repaired.length;
+        repaired = repaired.replace(/,\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*$/, '');
+        repaired = repaired.replace(/,\s*\[[^\]]*$/, '');
+        repaired = repaired.replace(/,\s*$/, '');
+      }
+      // Count and close unclosed brackets/braces (outside of strings)
+      let inStr = false, braceCount = 0, bracketCount = 0;
+      for (let ci = 0; ci < repaired.length; ci++) {
+        const ch = repaired[ci];
+        if (ch === '"' && (ci === 0 || repaired[ci-1] !== '\\')) { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (ch === '{') braceCount++;
+        else if (ch === '}') braceCount--;
+        else if (ch === '[') bracketCount++;
+        else if (ch === ']') bracketCount--;
+      }
+      for (let i = 0; i < bracketCount; i++) repaired += ']';
+      for (let i = 0; i < braceCount; i++) repaired += '}';
       parsed = JSON.parse(repaired);
+      if (attempt > 0) console.log('[PlanGen] Succeeded on attempt ' + (attempt + 1) + ' with JSON repair');
       break;
     } catch(e) {
-      if (attempt === 1) throw new Error('JSON parse failed: ' + e.message + ' | Raw: ' + raw.substring(0, 200));
+      console.warn('[PlanGen] Attempt ' + (attempt + 1) + ' failed:', e.message);
+      if (attempt === 2) throw new Error('Plan generation failed after 3 attempts. Please try again — if this keeps happening, try simplifying your goals or rules.');
     }
   }
 
   // Validate the parsed plan has required fields — accept multiple possible key names
   const sched = parsed.schedule || parsed.weekly_schedule || parsed.weeklySchedule || parsed.days || parsed.plan;
   if (!parsed || !sched || !Array.isArray(sched) || sched.length < 7) {
-    throw new Error('AI returned an incomplete plan (missing schedule). Please try again.');
+    // If we got partial data (e.g. 5 of 7 days), pad with rest days rather than failing
+    if (parsed && sched && Array.isArray(sched) && sched.length >= 3) {
+      console.warn('[PlanGen] Partial schedule (' + sched.length + '/7 days) — padding with rest days');
+      const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      while (sched.length < 7) {
+        sched.push({ day: allDays[sched.length], type: 'rest', badge: 'Rest', exercises: [] });
+      }
+    } else {
+      throw new Error('AI returned an incomplete plan. Please try again.');
+    }
   }
 
   // Enrich exercises with DB data (sets/reps/rest overridden by AI, but pull muscle images etc.)
@@ -959,13 +1003,78 @@ const LS = {
   woDraft:  'fs_wo_draft', // { [dayIdx]: { sets: woSets, extraSets: woExtraSets } } — every keystroke persisted
 };
 
-function lsGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; } }
-function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+function lsGet(key) {
+  try {
+    if (key === 'fs_user' && window.StorageAPI) return StorageAPI.getUser();
+    return JSON.parse(localStorage.getItem(key));
+  } catch(e) {
+    return null;
+  }
+}
+function lsSet(key, val) {
+  try {
+    if (key === 'fs_user' && window.StorageAPI) {
+      StorageAPI.setUser(val);
+      return;
+    }
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch(e) {}
+}
+function lsRemove(key) {
+  try {
+    if (key === 'fs_user' && window.StorageAPI) {
+      StorageAPI.clearUser();
+      return;
+    }
+    localStorage.removeItem(key);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+// TOAST NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════
+function showToast(message, type, durationMs) {
+  type = type || 'info';     // 'info' | 'error' | 'success' | 'warning'
+  durationMs = durationMs || (type === 'error' ? 5000 : 3000);
+  var container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:90%;max-width:400px';
+    document.body.appendChild(container);
+  }
+  var toast = document.createElement('div');
+  var colors = {
+    error:   'background:rgba(244,63,94,0.95);color:#fff',
+    warning: 'background:rgba(251,146,60,0.95);color:#111',
+    success: 'background:rgba(34,197,94,0.92);color:#fff',
+    info:    'background:rgba(30,30,30,0.95);color:#fff;border:1px solid rgba(255,255,255,0.1)'
+  };
+  toast.style.cssText = (colors[type] || colors.info) + ';padding:12px 18px;border-radius:12px;font-size:0.82rem;font-weight:500;line-height:1.4;pointer-events:auto;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 24px rgba(0,0,0,0.3);opacity:0;transform:translateY(-10px);transition:opacity 0.25s,transform 0.25s';
+  toast.textContent = message;
+  container.appendChild(toast);
+  // Animate in
+  requestAnimationFrame(function() {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+  // Animate out and remove
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, durationMs);
+}
 
 // ── ANTHROPIC API (via Cloudflare Worker proxy) ──
 const AI_PROXY = 'https://fitstart-api.noah-0c3.workers.dev';
 
 async function callClaude(messages, opts = {}) {
+  // Quick offline check
+  if (!navigator.onLine) {
+    showToast('You\'re offline. Connect to the internet and try again.', 'error');
+    throw new Error('No internet connection.');
+  }
   const body = {
     model: opts.model || 'claude-sonnet-4-20250514',
     max_tokens: opts.max_tokens || 2048,
@@ -984,14 +1093,32 @@ async function callClaude(messages, opts = {}) {
     clearTimeout(timeout);
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      if (response.status === 429) throw new Error('Slow down — too many requests. Try again in a minute.');
+      if (response.status === 429) {
+        showToast('Too many requests — wait a moment and try again.', 'warning');
+        throw new Error('Slow down — too many requests. Try again in a minute.');
+      }
+      if (response.status === 503 || response.status === 502) {
+        showToast('AI service is temporarily down. Try again in a few minutes.', 'error');
+        throw new Error('AI service is temporarily unavailable.');
+      }
+      if (response.status >= 500) {
+        showToast('Server error. Try again shortly.', 'error');
+        throw new Error('Server error (' + response.status + '). Try again.');
+      }
       throw new Error(err.error?.message || 'AI is temporarily unavailable. Try again shortly.');
     }
     const data = await response.json();
     return (data.content?.[0]?.text || '').trim();
   } catch(e) {
     clearTimeout(timeout);
-    if (e.name === 'AbortError') throw new Error('Request timed out. Try again.');
+    if (e.name === 'AbortError') {
+      showToast('Request timed out. Check your connection and try again.', 'warning');
+      throw new Error('Request timed out. Try again.');
+    }
+    if (e.message && e.message.includes('Failed to fetch')) {
+      showToast('Can\'t reach the server. Check your internet connection.', 'error');
+      throw new Error('Network error — can\'t reach server.');
+    }
     throw e;
   }
 }
@@ -1158,7 +1285,7 @@ function initDashboard() {
   if (!generatedPlan || !generatedPlan.weekly_schedule || !Array.isArray(generatedPlan.weekly_schedule)) {
     // Plan data is missing or corrupt — clear and show onboarding
     localStorage.removeItem('fs_plan');
-    localStorage.removeItem('fs_user');
+    lsRemove('fs_user');
     localStorage.removeItem('fs_entered');
     const dash = document.getElementById('screen-dash');
     if (dash) {
@@ -1483,13 +1610,13 @@ function _bootApp() {
     } else {
       // Clear any stale/incomplete data and show onboarding
       localStorage.removeItem('fs_plan');
-      localStorage.removeItem('fs_user');
+      lsRemove('fs_user');
       localStorage.removeItem('fs_entered');
     }
   } catch(e) {
     console.error('Boot error, clearing data:', e);
     localStorage.removeItem('fs_plan');
-    localStorage.removeItem('fs_user');
+    lsRemove('fs_user');
     localStorage.removeItem('fs_entered');
     location.reload();
   }
