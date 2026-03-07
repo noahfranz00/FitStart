@@ -17,7 +17,7 @@ function handleCoachPhoto(input) {
   if (!file) return;
   // Limit to 4MB
   if (file.size > 4 * 1024 * 1024) {
-    alert('Image too large. Please use an image under 4MB.');
+    showToast('Image too large — please use one under 4MB.', 'warning');
     input.value = '';
     return;
   }
@@ -1083,6 +1083,56 @@ function _parseFoodLog(reply) {
   }
 }
 
+// ── MACRO SANITY CHECK ──
+// Catches AI hallucinations where protein/carb/fat values are inverted or wildly wrong
+// Rule: calories ≈ protein*4 + carbs*4 + fat*9 (within tolerance)
+function _validateAndFixMacros(entry) {
+  const { cal, pro, carb, fat } = entry;
+  if (!cal || cal < 5) return entry; // skip trivial items (water, etc.)
+
+  const computed = Math.round(pro * 4 + carb * 4 + fat * 9);
+  const diff = Math.abs(computed - cal);
+  const tolerance = Math.max(cal * 0.25, 30); // 25% or 30cal, whichever is larger
+
+  if (diff <= tolerance) return entry; // macros add up
+
+  // Try common inversions and see if any fix it
+  const swaps = [
+    { pro: carb, carb: pro, fat, label: 'pro↔carb' },
+    { pro: fat, carb, fat: pro, label: 'pro↔fat' },
+    { pro, carb: fat, fat: carb, label: 'carb↔fat' },
+  ];
+
+  for (const s of swaps) {
+    const swapComputed = Math.round(s.pro * 4 + s.carb * 4 + s.fat * 9);
+    const swapDiff = Math.abs(swapComputed - cal);
+    if (swapDiff < diff && swapDiff <= tolerance) {
+      console.warn('[MacroFix] ' + entry.name + ': fixed ' + s.label + ' swap (' + pro + 'P/' + carb + 'C/' + fat + 'F → ' + s.pro + 'P/' + s.carb + 'C/' + s.fat + 'F)');
+      entry.pro = Math.round(s.pro);
+      entry.carb = Math.round(s.carb);
+      entry.fat = Math.round(s.fat);
+      entry._macroFixed = s.label;
+      return entry;
+    }
+  }
+
+  // No swap fixed it — recalculate calories from macros if macros seem more plausible
+  if (computed > 20 && computed < 5000) {
+    const macroRatio = computed / cal;
+    if (macroRatio > 1.4 || macroRatio < 0.6) {
+      console.warn('[MacroFix] ' + entry.name + ': recalculated cal from macros (' + cal + ' → ' + computed + ')');
+      entry.cal = computed;
+      entry._macroFixed = 'cal-recalc';
+      return entry;
+    }
+  }
+
+  // Can't fix automatically — flag it
+  console.warn('[MacroCheck] ' + entry.name + ': macros don\'t add up (cal=' + cal + ', computed=' + computed + ', diff=' + diff + ')');
+  entry._macroWarning = true;
+  return entry;
+}
+
 function _processFoodLog(data) {
   const validMeals = ['breakfast', 'lunch', 'dinner', 'snacks', 'other'];
   // Use pending meal from nutrition page if set, otherwise use what AI said
@@ -1099,13 +1149,15 @@ function _processFoodLog(data) {
 
   for (const item of data.items) {
     if (!item.name) continue;
-    const entry = {
+    let entry = {
       name: item.name,
       cal: Math.round(item.cal || 0),
       pro: Math.round(item.pro || 0),
       carb: Math.round(item.carb || 0),
       fat: Math.round(item.fat || 0),
     };
+    // Validate macros add up — catches AI inversions (e.g. swapped protein/carbs)
+    entry = _validateAndFixMacros(entry);
     getMealCatEntries(TODAY_IDX, meal).push(entry);
     loggedItems.push(entry);
   }
@@ -1118,12 +1170,15 @@ function _processFoodLog(data) {
 
     // Show a confirmation card in the chat — ONLY the items just logged
     const mealLabel = meal.charAt(0).toUpperCase() + meal.slice(1);
-    const itemList = loggedItems.map(e => 
-      `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
-        <span style="color:var(--off);font-weight:600">${e.name}</span>
+    const itemList = loggedItems.map(e => {
+      let badge = '';
+      if (e._macroFixed) badge = '<span style="font-size:0.6rem;background:rgba(96,165,250,0.15);color:#60a5fa;padding:2px 6px;border-radius:4px;margin-left:6px">auto-corrected</span>';
+      else if (e._macroWarning) badge = '<span style="font-size:0.6rem;background:rgba(244,63,94,0.15);color:#F43F5E;padding:2px 6px;border-radius:4px;margin-left:6px">check macros</span>';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
+        <span style="color:var(--off);font-weight:600">${e.name}${badge}</span>
         <span style="font-family:'DM Mono',monospace;font-size:0.7rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;margin-left:12px">${e.cal} cal · ${e.pro}g P · ${e.carb||0}g C · ${e.fat||0}g F</span>
       </div>`
-    ).join('');
+    }).join('');
 
     const container = document.getElementById('coach-messages');
     const card = document.createElement('div');
