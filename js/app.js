@@ -664,6 +664,25 @@ async function generatePlan() {
   }
 }
 
+// Parse personal rules for banned exercises (e.g. "I don't do lunges" → ["lunge"])
+function _parseBannedExercises(rulesStr) {
+  if (!rulesStr) return [];
+  var banned = [];
+  // Match patterns like: "no lunges", "don't do lunges", "I hate lunges", "avoid lunges", "never lunges", "not lunges", "skip lunges"
+  var patterns = rulesStr.toLowerCase().match(/(?:no|don'?t\s+do|never\s+do|hate|avoid|skip|can'?t\s+do|not?\s+do|never|don'?t\s+want|won'?t\s+do|refuse)\s+([a-z\s\-]+?)(?:\.|,|;|$|and\s|or\s|\n)/gi);
+  if (patterns) {
+    for (var i = 0; i < patterns.length; i++) {
+      var match = patterns[i].replace(/^(?:no|don'?t\s+do|never\s+do|hate|avoid|skip|can'?t\s+do|not?\s+do|never|don'?t\s+want|won'?t\s+do|refuse)\s+/i, '').replace(/[\.\,\;\n]+$/, '').trim();
+      if (match && match.length >= 3 && match.length < 40) {
+        // Singularize trailing 's' for matching (lunges → lunge)
+        var base = match.replace(/s$/, '');
+        banned.push(base);
+      }
+    }
+  }
+  return banned;
+}
+
 async function buildPlan(selDays) {
   const u = USER;
   const n = u.nutrition;
@@ -677,10 +696,10 @@ async function buildPlan(selDays) {
   const systemPrompt = `You are an elite strength coach. Respond ONLY with a single valid JSON object. No markdown, no code blocks, no explanation. Raw JSON only. Keep ALL strings as short as possible.`;
 
   const exPerSession = u.tier === 'beginner' ? '3-4' : u.tier === 'intermediate' ? '4-5' : '5-6';
+  const rulesStr = u.personalRules ? u.personalRules.slice(0, 300) : '';
   const userPrompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
 Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks === 0 ? 'ongoing/maintenance' : u.weeks + 'wk'}.
-${u.bodyGoals ? 'Body goals: ' + u.bodyGoals.slice(0, 100) : ''}
-${u.personalRules ? 'Rules: ' + u.personalRules.slice(0, 100) : ''}
+${u.bodyGoals ? 'Body goals: ' + u.bodyGoals.slice(0, 150) : ''}
 
 Return ONLY this JSON structure:
 {"planName":"short name","tagline":"short","philosophy":"1 sentence","schedule":[{"day":"Monday","type":"workout","badge":"Push","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
@@ -692,7 +711,8 @@ CRITICAL RULES:
 - Exercise names: 2-3 words max (e.g. "Bench Press" not "Barbell Flat Bench Press")
 - muscles: single word (e.g. "Chest" not "Chest, Front Delts")
 - philosophy: 1 short sentence only
-- Equipment: ${equipStr}. Avoid: ${injuryStr}`;
+- Equipment: ${equipStr}. Avoid: ${injuryStr}
+${rulesStr ? '- USER PERSONAL RULES (MUST OBEY — these override everything else): ' + rulesStr : ''}`;
 
   // Try up to 3 attempts with progressively simpler prompts
   let parsed;
@@ -701,12 +721,12 @@ CRITICAL RULES:
     if (attempt === 1) {
       prompt = userPrompt + '\n\nIMPORTANT: Keep exercise names SHORT (2-3 words max). Keep philosophy under 50 words. Minimize all string lengths to fit within token limits.';
     } else if (attempt === 2) {
-      // Stripped-down prompt — remove body goals and personal rules to reduce response length
+      // Stripped-down prompt — shorter but KEEP personal rules
       prompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
 Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}.
 Return ONLY this JSON structure:
 {"planName":"short name","tagline":"short","philosophy":"1 sentence","schedule":[{"day":"Monday","type":"workout","badge":"Push","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
-RULES: All 7 days Mon-Sun. Gym: ${gymDaysStr}. ${exPerSession} exercises per workout. Short names. Equipment: ${equipStr}.`;
+RULES: All 7 days Mon-Sun. Gym: ${gymDaysStr}. ${exPerSession} exercises per workout. Short names. Equipment: ${equipStr}.${rulesStr ? ' MUST OBEY: ' + rulesStr : ''}`;
     }
 
     const raw = await callClaude(
@@ -780,12 +800,24 @@ RULES: All 7 days Mon-Sun. Gym: ${gymDaysStr}. ${exPerSession} exercises per wor
   }
 
   // Enrich exercises with DB data (sets/reps/rest overridden by AI, but pull muscle images etc.)
+  // Also filter out exercises that violate personal rules
+  const bannedExercises = _parseBannedExercises(rulesStr);
   const schedule = sched.map(day => {
     try {
       if (day.type === 'rest' || !day.exercises || day.exercises.length === 0) {
         return { day: day.day, type: 'rest', badge: day.badge || 'Rest', workout: 'Rest day. Recover, hydrate, and let your muscles rebuild.', exercises: [] };
       }
-      const exercises = (day.exercises || []).map(ex => {
+      const exercises = (day.exercises || []).filter(ex => {
+        // Check against banned exercises from personal rules
+        const exLower = ex.name.toLowerCase();
+        for (var bi = 0; bi < bannedExercises.length; bi++) {
+          if (exLower.includes(bannedExercises[bi])) {
+            console.log('[PlanGen] Filtered out "' + ex.name + '" — matches personal rule ban on "' + bannedExercises[bi] + '"');
+            return false;
+          }
+        }
+        return true;
+      }).map(ex => {
         const db = getExerciseData(ex.name);
         // Cap rest at 120s — compound lifts get max 120s, accessories less
         const rawRest = ex.rest || db.rest;
@@ -960,7 +992,8 @@ function goToDash() {
   // Must use inline flex — CSS #screen-dash{display:none} beats .screen.active{display:block}
   dash.style.display = 'flex';
   dash.style.flexDirection = 'column';
-  dash.style.minHeight = '100vh';
+  dash.style.height = '100dvh';
+  dash.style.height = '100vh';
   dash.classList.add('active');
   window.scrollTo(0,0);
 }
