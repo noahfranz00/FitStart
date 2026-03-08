@@ -901,7 +901,7 @@ async function _generatePlanExplanation(plan) {
   const n = USER.nutrition;
   const ph = TRAINING_PHASES;
   const phaseOverview = ph.map(p => 'Weeks ' + p.weeks.join('-') + ': ' + p.name + ' (' + p.repRange + ' reps)').join(', ');
-  const prompt = `You are a fitness coach explaining a new program to a client. Write a 150-word personalized explanation. Be direct and motivating.
+  const prompt = `You are a fitness coach explaining a new program to a client. Write a personalized explanation as exactly 3 paragraphs separated by blank lines.
 
 CLIENT: ${USER.name}, ${USER.age}yo ${USER.gender}, ${USER.weight}lbs → ${USER.goal}lbs goal
 ${USER.bodyGoals ? 'Personal goals: ' + USER.bodyGoals : ''}
@@ -912,18 +912,51 @@ PROGRAM: "${plan.name}" — ${selectedWeeks} weeks
 Phases: ${phaseOverview}
 Macros: ${n.calories}cal, ${n.protein}g protein, ${n.carbs}g carbs, ${n.fat}g fat (${n.mode} mode, ${n.weeklyChange}lbs/week)
 
-Write 3 short paragraphs:
-1. What this program is and why it fits their goals${USER.injuries ? ' (mention how you adapted for their injuries)' : ''}
-2. Why these specific macro targets (calories, protein amount, the reasoning)
-3. What the ${selectedWeeks} weeks will look like phase by phase and what to expect
+Paragraph 1 (3-4 sentences): What this program is and why it fits their goals${USER.injuries ? ' (mention how you adapted for their injuries)' : ''}
+Paragraph 2 (3-4 sentences): Why these specific macro targets — calories, protein amount, the reasoning
+Paragraph 3 (3-4 sentences): What the ${selectedWeeks} weeks will look like phase by phase
 
-Be concise. No headers. No bullet points. Use their name.`;
+Be concise. Use their name. No headers, no bullet points, no markdown.`;
+
+  // Render key stats immediately while AI generates
+  var statsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">'
+    + '<div style="background:var(--dark);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;color:var(--bone);line-height:1">' + n.calories.toLocaleString() + '</div>'
+    + '<div style="font-size:0.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-top:4px">DAILY CAL</div></div>'
+    + '<div style="background:var(--dark);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;color:var(--bone);line-height:1">' + n.protein + 'g</div>'
+    + '<div style="font-size:0.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-top:4px">PROTEIN</div></div>'
+    + '<div style="background:var(--dark);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;color:var(--bone);line-height:1">' + selectedWeeks + '</div>'
+    + '<div style="font-size:0.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-top:4px">WEEKS</div></div></div>';
+
+  el.innerHTML = statsHtml + '<div style="color:var(--dim);font-size:0.84rem">Generating your personalized breakdown...</div>';
 
   try {
-    const reply = await callClaude([{role:'user',content:prompt}], {max_tokens:400, system:'You are a concise fitness coach. No markdown formatting.'});
-    el.textContent = reply || 'Your program has been customized based on your profile, goals, and schedule.';
+    var reply = await callClaude([{role:'user',content:prompt}], {max_tokens:500, system:'You are a concise fitness coach. No markdown formatting. No headers. Just 3 paragraphs separated by blank lines.'});
+    // Split into paragraphs
+    var paragraphs = (reply || '').split(/\n\s*\n/).filter(function(p) { return p.trim().length > 20; });
+    if (paragraphs.length < 3) {
+      // If AI didn't split cleanly, try splitting on double newline or just show as-is
+      paragraphs = (reply || '').split(/\n\n/).filter(function(p) { return p.trim().length > 10; });
+    }
+    var labels = ['YOUR PROGRAM', 'YOUR MACROS', 'YOUR PHASES'];
+    var icons = [
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3m0 0v7"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+    ];
+    var cardsHtml = statsHtml;
+    for (var i = 0; i < Math.min(paragraphs.length, 3); i++) {
+      cardsHtml += '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:12px">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--dim)">' + icons[i]
+        + '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:2px;color:var(--bone)">' + labels[i] + '</span></div>'
+        + '<div style="font-size:0.88rem;color:var(--off);line-height:1.65">' + paragraphs[i].trim() + '</div></div>';
+    }
+    el.innerHTML = cardsHtml;
   } catch(e) {
-    el.textContent = `${plan.name} — A ${selectedWeeks}-week periodized program with ${n.calories} daily calories and ${n.protein}g protein. Your training phases progress from hypertrophy to strength to power, with deload weeks built in for recovery.`;
+    el.innerHTML = statsHtml + '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px">'
+      + '<div style="font-size:0.88rem;color:var(--off);line-height:1.65">' + plan.name + ' — A ' + selectedWeeks + '-week periodized program with ' + n.calories + ' daily calories and ' + n.protein + 'g protein. Your training phases progress from hypertrophy to strength to power, with deload weeks built in for recovery.</div></div>';
   }
 }
 
