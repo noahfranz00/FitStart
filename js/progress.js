@@ -82,7 +82,7 @@ function renderWeightHistory() {
     const svgEl = document.getElementById('weight-chart');
     const W = svgEl.parentElement.offsetWidth || 300;
     const pts = sorted.map((e, i) => [i, parseFloat(e.lbs)]);
-    drawSVGLine('weight-chart', pts, '#D4A520', 'rgba(212,165,32,0.08)', W, 140, 34, 8, 8, 20);
+    drawSVGLine('weight-chart', pts, '#F2F0EB', 'rgba(255,255,255,0.04)', W, 140, 34, 8, 8, 20);
     // X labels
     const labelsEl = document.getElementById('weight-chart-labels');
     if (labelsEl && sorted.length > 1) {
@@ -96,7 +96,7 @@ function renderWeightHistory() {
   if (deltaBadge) {
     const arrow = diff < 0 ? '↓' : diff > 0 ? '↑' : '→';
     const good = (mode==='lose' && diff<0) || (mode==='gain' && diff>0);
-    const color = good ? '#D4A520' : diff===0 ? 'var(--dim)' : '#f87171';
+    const color = good ? '#F2F0EB' : diff===0 ? 'var(--dim)' : '#f87171';
     deltaBadge.innerHTML = `<span style="color:${color}">${arrow} ${Math.abs(diff).toFixed(1)} lbs</span> <span style="color:var(--dim);font-size:0.72rem">from start</span>`;
   }
 
@@ -116,7 +116,7 @@ function renderWeightHistory() {
     histEl.innerHTML = rev.slice(0,10).map((e,i) => {
       const prev = rev[i+1];
       const change = prev ? (e.lbs - prev.lbs) : 0;
-      const changeStr = change === 0 ? '' : `<span style="font-size:0.72rem;color:${change<0?'#D4A520':'#f87171'}">${change>0?'+':''}${change.toFixed(1)}</span>`;
+      const changeStr = change === 0 ? '' : `<span style="font-size:0.72rem;color:${change<0?'#F2F0EB':'#f87171'}">${change>0?'+':''}${change.toFixed(1)}</span>`;
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
         <div style="font-size:0.82rem;color:var(--off)">${e.date}</div>
         <div style="display:flex;align-items:center;gap:10px">
@@ -322,9 +322,9 @@ function renderProgram() {
     const wDeload = isDeloadWeek(w);
     const phaseTag = wDeload
       ? '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(251,146,60,0.1);color:var(--orange);padding:2px 7px;border-radius:4px;border:1px solid rgba(251,146,60,0.2)">⚡ DELOAD</span>'
-      : '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(212,165,32,0.07);background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:2px 7px;border-radius:4px;border:1px solid rgba(212,165,32,0.15)">'+wPhase.name+'</span>';
+      : '<span style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(212,165,32,0.07);color:#F2F0EB;padding:2px 7px;border-radius:4px;border:1px solid rgba(212,165,32,0.15)">'+wPhase.name+'</span>';
     const badge = isDone
-      ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--gold-dim);background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:3px 9px;border-radius:5px">✓ Done</span>'
+      ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.06);color:#F2F0EB;padding:3px 9px;border-radius:5px">✓ Done</span>'
       : isCurrent
       ? '<span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--orange-dim);color:var(--orange);padding:3px 9px;border-radius:5px">In Progress</span>'
       : '';
