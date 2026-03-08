@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="description" content="AI-powered fitness plans, workout tracking, and nutrition logging.">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;700;800&family=DM+Mono:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script>
 if ('serviceWorker' in navigator) {
@@ -252,8 +252,7 @@ self.addEventListener('fetch', e => {
     </div>
     <!-- AI-generated explanation -->
     <div id="plan-explanation" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:20px;font-size:0.88rem;line-height:1.6;color:var(--off)">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;color:var(--gold);margin-bottom:10px">YOUR PROGRAM</div>
-      <div id="plan-explain-text" style="white-space:pre-line">Loading your personalized breakdown...</div>
+      <div id="plan-explain-text" style="display:flex;flex-direction:column">Loading your personalized breakdown...</div>
     </div>
     <!-- Quick start instructions -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:20px">
@@ -366,50 +365,62 @@ self.addEventListener('fetch', e => {
         <div class="page-title" id="dash-day-title">TODAY</div>
         <div class="page-sub" id="dash-day-sub">Week 1 of your program</div>
       </div>
-      <div class="today-grid" style="grid-template-columns:repeat(4,1fr)">
-        <div class="stat-card" style="display:flex;flex-direction:column;align-items:center;padding:14px 8px">
-          <div style="position:relative;width:56px;height:56px">
-            <svg viewBox="0 0 100 100" width="56" height="56">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="d-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+      <div class="today-grid" style="grid-template-columns:repeat(2,1fr);gap:12px">
+        <!-- Calories — hero ring -->
+        <div class="stat-card" style="display:flex;align-items:center;gap:16px;padding:18px">
+          <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+            <svg viewBox="0 0 100 100" width="80" height="80">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+              <circle id="d-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="6" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
             </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:700;color:var(--white)" id="d-cal">0</div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:0.5px;color:var(--bone)" id="d-cal">0</div>
           </div>
-          <div class="card-label" style="margin-top:6px;font-size:0.55rem">CALORIES</div>
-          <div class="sc-sub" id="d-cal-sub" style="font-size:0.55rem">of —</div>
+          <div>
+            <div class="card-label" style="margin-bottom:3px">CALORIES</div>
+            <div class="sc-sub" id="d-cal-sub" style="font-size:0.68rem">of —</div>
+          </div>
         </div>
-        <div class="stat-card" style="display:flex;flex-direction:column;align-items:center;padding:14px 8px">
-          <div style="position:relative;width:56px;height:56px">
-            <svg viewBox="0 0 100 100" width="56" height="56">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="d-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+        <!-- Protein — hero ring -->
+        <div class="stat-card" style="display:flex;align-items:center;gap:16px;padding:18px">
+          <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+            <svg viewBox="0 0 100 100" width="80" height="80">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+              <circle id="d-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="6" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
             </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:700;color:var(--white)" id="d-pro">0g</div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:0.5px;color:var(--bone)" id="d-pro">0g</div>
           </div>
-          <div class="card-label" style="margin-top:6px;font-size:0.55rem">PROTEIN</div>
-          <div class="sc-sub" id="d-pro-sub" style="font-size:0.55rem">of —g</div>
+          <div>
+            <div class="card-label" style="margin-bottom:3px">PROTEIN</div>
+            <div class="sc-sub" id="d-pro-sub" style="font-size:0.68rem">of —g</div>
+          </div>
         </div>
-        <div class="stat-card" style="display:flex;flex-direction:column;align-items:center;padding:14px 8px">
-          <div style="position:relative;width:56px;height:56px">
-            <svg viewBox="0 0 100 100" width="56" height="56">
+        <!-- Carbs -->
+        <div class="stat-card" style="display:flex;align-items:center;gap:14px;padding:14px 18px">
+          <div style="position:relative;width:52px;height:52px;flex-shrink:0">
+            <svg viewBox="0 0 100 100" width="52" height="52">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="d-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+              <circle id="d-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
             </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:700;color:var(--white)" id="d-carb">0g</div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:700;color:var(--white)" id="d-carb">0g</div>
           </div>
-          <div class="card-label" style="margin-top:6px;font-size:0.55rem">CARBS</div>
-          <div class="sc-sub" id="d-carb-sub" style="font-size:0.55rem">of —g</div>
+          <div>
+            <div class="card-label" style="margin-bottom:2px">CARBS</div>
+            <div class="sc-sub" id="d-carb-sub" style="font-size:0.62rem">of —g</div>
+          </div>
         </div>
-        <div class="stat-card" style="display:flex;flex-direction:column;align-items:center;padding:14px 8px">
-          <div style="position:relative;width:56px;height:56px">
-            <svg viewBox="0 0 100 100" width="56" height="56">
+        <!-- Fat -->
+        <div class="stat-card" style="display:flex;align-items:center;gap:14px;padding:14px 18px">
+          <div style="position:relative;width:52px;height:52px;flex-shrink:0">
+            <svg viewBox="0 0 100 100" width="52" height="52">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="d-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
+              <circle id="d-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
             </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:700;color:var(--white)" id="d-fat">0g</div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:700;color:var(--white)" id="d-fat">0g</div>
           </div>
-          <div class="card-label" style="margin-top:6px;font-size:0.55rem">FAT</div>
-          <div class="sc-sub" id="d-fat-sub" style="font-size:0.55rem">of —g</div>
+          <div>
+            <div class="card-label" style="margin-bottom:2px">FAT</div>
+            <div class="sc-sub" id="d-fat-sub" style="font-size:0.62rem">of —g</div>
+          </div>
         </div>
         <div style="display:none" id="d-wkt-name" aria-hidden="true"></div><div style="display:none" id="d-wkt-sub" aria-hidden="true"></div><div style="display:none" id="d-wkt-bar" aria-hidden="true"></div>
       </div>
@@ -487,7 +498,7 @@ self.addEventListener('fetch', e => {
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
         <div class="macro-ring-card" id="macro-ring-cal">
           <div class="macro-ring-wrap">
-            <svg viewBox="0 0 100 100" width="56" height="56">
+            <svg viewBox="0 0 100 100" width="72" height="72">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
               <circle id="mr-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
             </svg>
@@ -498,7 +509,7 @@ self.addEventListener('fetch', e => {
         </div>
         <div class="macro-ring-card" id="macro-ring-pro">
           <div class="macro-ring-wrap">
-            <svg viewBox="0 0 100 100" width="56" height="56">
+            <svg viewBox="0 0 100 100" width="72" height="72">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
               <circle id="mr-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
             </svg>
@@ -509,7 +520,7 @@ self.addEventListener('fetch', e => {
         </div>
         <div class="macro-ring-card" id="macro-ring-carb">
           <div class="macro-ring-wrap">
-            <svg viewBox="0 0 100 100" width="56" height="56">
+            <svg viewBox="0 0 100 100" width="72" height="72">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
               <circle id="mr-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
             </svg>
@@ -520,7 +531,7 @@ self.addEventListener('fetch', e => {
         </div>
         <div class="macro-ring-card" id="macro-ring-fat">
           <div class="macro-ring-wrap">
-            <svg viewBox="0 0 100 100" width="56" height="56">
+            <svg viewBox="0 0 100 100" width="72" height="72">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
               <circle id="mr-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
             </svg>
@@ -733,7 +744,7 @@ self.addEventListener('fetch', e => {
           <div class="card-label" style="margin-bottom:12px">Subscription</div>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div><div style="font-size:0.95rem;font-weight:600;margin-bottom:3px">Blueprint Pro &nbsp;<span style="color:var(--orange);font-size:0.75rem;font-weight:700">● ACTIVE</span></div><div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim)">$29.99/month · Cancel anytime</div></div>
-            <button style="padding:9px 18px;border:1px solid var(--border);border-radius:9px;background:none;color:var(--dim);font-family:'Syne',sans-serif;font-size:0.78rem;cursor:pointer">Manage</button>
+            <button style="padding:9px 18px;border:1px solid var(--border);border-radius:9px;background:none;color:var(--dim);font-family:'Inter',sans-serif;font-size:0.78rem;cursor:pointer">Manage</button>
           </div>
         </div>
         <button id="save-btn" onclick="saveSettings()" style="padding:14px;background:var(--gold);color:var(--black);border:none;border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer">SAVE CHANGES</button>
@@ -742,15 +753,15 @@ self.addEventListener('fetch', e => {
         <div style="margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px">
           <div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:14px">Data Management</div>
           <div style="display:flex;flex-direction:column;gap:10px">
-            <button onclick="exportData()" style="padding:12px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Syne',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            <button onclick="exportData()" style="padding:12px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Inter',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Download Backup
             </button>
-            <button onclick="importData()" style="padding:12px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Syne',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            <button onclick="importData()" style="padding:12px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Inter',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Restore from Backup
             </button>
-            <button onclick="clearAllData()" style="padding:12px;background:none;border:1px solid rgba(244,63,94,0.3);border-radius:10px;color:#F43F5E;font-family:'Syne',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            <button onclick="clearAllData()" style="padding:12px;background:none;border:1px solid rgba(244,63,94,0.3);border-radius:10px;color:#F43F5E;font-family:'Inter',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               Clear All Data
             </button>
@@ -1064,13 +1075,13 @@ self.addEventListener('fetch', e => {
     <div class="serving-food-name">CREATE CUSTOM FOOD</div>
     <div style="font-size:0.75rem;color:var(--dim);margin-bottom:16px">Saved to "My Foods" for future use</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-      <input id="mf-name" placeholder="Food name *" style="padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Syne',sans-serif;font-size:0.85rem;color:var(--white);outline:none;">
-      <input id="mf-serving" placeholder="Serving size (e.g. 1 cup, 100g)" style="padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Syne',sans-serif;font-size:0.85rem;color:var(--white);outline:none;">
+      <input id="mf-name" placeholder="Food name *" style="padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;">
+      <input id="mf-serving" placeholder="Serving size (e.g. 1 cup, 100g)" style="padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><div style="font-size:0.65rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;margin-bottom:4px">CALORIES</div><input id="mf-cal" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Syne',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
-        <div><div style="font-size:0.65rem;color:#60a5fa;font-weight:700;margin-bottom:4px">PROTEIN (g)</div><input id="mf-pro" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Syne',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
-        <div><div style="font-size:0.65rem;color:var(--orange);font-weight:700;margin-bottom:4px">CARBS (g)</div><input id="mf-carb" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Syne',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
-        <div><div style="font-size:0.65rem;color:#f472b6;font-weight:700;margin-bottom:4px">FAT (g)</div><input id="mf-fat" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Syne',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
+        <div><div style="font-size:0.65rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;margin-bottom:4px">CALORIES</div><input id="mf-cal" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
+        <div><div style="font-size:0.65rem;color:#60a5fa;font-weight:700;margin-bottom:4px">PROTEIN (g)</div><input id="mf-pro" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
+        <div><div style="font-size:0.65rem;color:var(--orange);font-weight:700;margin-bottom:4px">CARBS (g)</div><input id="mf-carb" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
+        <div><div style="font-size:0.65rem;color:#f472b6;font-weight:700;margin-bottom:4px">FAT (g)</div><input id="mf-fat" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
       </div>
     </div>
     <div class="serving-actions">
