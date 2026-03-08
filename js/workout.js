@@ -1384,50 +1384,95 @@ function startRestTimer() {
   startRestTimerSecs(restTotalSecs);
 }
 
-// Pre-create Audio element for rest timer chime — HTML5 Audio is more reliable than WebAudio on iOS PWA
-// Generate a simple chime as a base64 WAV
+// Pre-create Audio element for rest timer chime
+// Dual approach: Web Audio API (primary, most reliable on iOS) + HTML5 Audio (fallback)
 let _chimeAudio = null;
+let _webAudioCtx = null;
+let _webAudioUnlocked = false;
+let _htmlAudioUnlocked = false;
+
 function _initChimeAudio() {
-  if (_chimeAudio) return;
-  try {
-    // Generate a 0.3s 880Hz sine wave WAV at 22050Hz sample rate
-    const sr = 22050, dur = 0.3, freq = 880;
-    const samples = Math.floor(sr * dur);
-    const buffer = new ArrayBuffer(44 + samples * 2);
-    const view = new DataView(buffer);
-    // WAV header
-    const writeStr = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
-    writeStr(0, 'RIFF'); view.setUint32(4, 36 + samples * 2, true); writeStr(8, 'WAVE');
-    writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true); view.setUint32(24, sr, true); view.setUint32(28, sr * 2, true);
-    view.setUint16(32, 2, true); view.setUint16(34, 16, true);
-    writeStr(36, 'data'); view.setUint32(40, samples * 2, true);
-    for (let i = 0; i < samples; i++) {
-      const t = i / sr;
-      const envelope = Math.max(0, 1 - t / dur);
-      const val = Math.sin(2 * Math.PI * freq * t) * envelope * 0.8;
-      view.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, val * 32767)), true);
-    }
-    const blob = new Blob([buffer], { type: 'audio/wav' });
-    const url = URL.createObjectURL(blob);
-    _chimeAudio = new Audio(url);
-    _chimeAudio.volume = 0.8;
-    // Preload
-    _chimeAudio.load();
-  } catch (e) { console.log('Chime init failed:', e); }
+  // HTML5 Audio fallback — generate a 0.3s 880Hz sine wave WAV
+  if (!_chimeAudio) {
+    try {
+      const sr = 22050, dur = 0.3, freq = 880;
+      const samples = Math.floor(sr * dur);
+      const buffer = new ArrayBuffer(44 + samples * 2);
+      const view = new DataView(buffer);
+      const writeStr = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+      writeStr(0, 'RIFF'); view.setUint32(4, 36 + samples * 2, true); writeStr(8, 'WAVE');
+      writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true); view.setUint32(24, sr, true); view.setUint32(28, sr * 2, true);
+      view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+      writeStr(36, 'data'); view.setUint32(40, samples * 2, true);
+      for (let i = 0; i < samples; i++) {
+        const t = i / sr;
+        const envelope = Math.max(0, 1 - t / dur);
+        const val = Math.sin(2 * Math.PI * freq * t) * envelope * 0.8;
+        view.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, val * 32767)), true);
+      }
+      const blob = new Blob([buffer], { type: 'audio/wav' });
+      _chimeAudio = new Audio(URL.createObjectURL(blob));
+      _chimeAudio.volume = 0.8;
+      _chimeAudio.load();
+    } catch (e) { console.log('HTML5 chime init failed:', e); }
+  }
+
+  // Web Audio API — create AudioContext (survives background on iOS better)
+  if (!_webAudioCtx) {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) _webAudioCtx = new AC();
+    } catch (e) { console.log('WebAudio init failed:', e); }
+  }
 }
-// Unlock audio on first user gesture (required by iOS)
+
+// Unlock BOTH audio systems on user gesture — iOS requires this
 function _unlockChimeAudio() {
   _initChimeAudio();
-  // Unlock by playing at zero volume, then restore
-  if (_chimeAudio) {
-    const origVol = _chimeAudio.volume;
+
+  // Unlock Web Audio API — resume suspended context + play silent buffer
+  if (_webAudioCtx && !_webAudioUnlocked) {
+    try {
+      if (_webAudioCtx.state === 'suspended') {
+        _webAudioCtx.resume().then(function() { _webAudioUnlocked = true; }).catch(function() {});
+      } else {
+        _webAudioUnlocked = true;
+      }
+      // Play a silent buffer to fully activate on iOS
+      var silentBuf = _webAudioCtx.createBuffer(1, 1, 22050);
+      var src = _webAudioCtx.createBufferSource();
+      src.buffer = silentBuf;
+      src.connect(_webAudioCtx.destination);
+      src.start(0);
+    } catch (e) {}
+  }
+
+  // Unlock HTML5 Audio — play at zero volume
+  if (_chimeAudio && !_htmlAudioUnlocked) {
+    var origVol = _chimeAudio.volume;
     _chimeAudio.volume = 0;
-    _chimeAudio.play().then(() => { _chimeAudio.pause(); _chimeAudio.currentTime = 0; _chimeAudio.volume = origVol; }).catch(() => { _chimeAudio.volume = origVol; });
+    _chimeAudio.play().then(function() {
+      _chimeAudio.pause();
+      _chimeAudio.currentTime = 0;
+      _chimeAudio.volume = origVol;
+      _htmlAudioUnlocked = true;
+    }).catch(function() { _chimeAudio.volume = origVol; });
+  }
+}
+
+// Re-unlock on EVERY user gesture inside the workout env (not just once)
+// iOS can re-suspend AudioContext after a period of inactivity
+function _keepAudioAlive() {
+  if (_webAudioCtx && _webAudioCtx.state === 'suspended') {
+    _webAudioCtx.resume().catch(function() {});
   }
 }
 document.addEventListener('touchstart', _unlockChimeAudio, { once: true });
 document.addEventListener('click', _unlockChimeAudio, { once: true });
+// Keep-alive: re-unlock on interactions within the workout screen
+document.addEventListener('touchstart', _keepAudioAlive, { passive: true });
+document.addEventListener('click', _keepAudioAlive, { passive: true });
 
 // On page load: immediately clear any stale rest timer data from previous sessions
 (function() {
@@ -1440,23 +1485,80 @@ document.addEventListener('click', _unlockChimeAudio, { once: true });
 })();
 
 function playRestChime() {
-  try {
-    _initChimeAudio();
-    if (_chimeAudio) {
-      _chimeAudio.currentTime = 0;
-      _chimeAudio.play().catch(() => {});
+  var played = false;
+
+  // PRIMARY: Web Audio API — most reliable on iOS PWA
+  if (_webAudioCtx && _webAudioCtx.state !== 'closed') {
+    try {
+      // Resume if suspended (iOS can suspend between user gestures)
+      if (_webAudioCtx.state === 'suspended') {
+        _webAudioCtx.resume().catch(function() {});
+      }
+      // Generate a pleasant two-tone chime: 880Hz + 1100Hz with decay
+      var ctx = _webAudioCtx;
+      var now = ctx.currentTime;
+
+      // Tone 1: 880Hz
+      var osc1 = ctx.createOscillator();
+      var gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.value = 880;
+      gain1.gain.setValueAtTime(0.5, now);
+      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.4);
+
+      // Tone 2: 1100Hz, slight delay for "ding-ding" feel
+      var osc2 = ctx.createOscillator();
+      var gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.value = 1100;
+      gain2.gain.setValueAtTime(0.4, now + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.15);
+      osc2.stop(now + 0.55);
+
+      played = true;
+    } catch (e) {
+      console.log('WebAudio chime failed:', e);
     }
-    // Haptic
-    if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]);
-  } catch (e) {
-    if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]);
   }
+
+  // FALLBACK: HTML5 Audio (if WebAudio failed or unavailable)
+  if (!played && _chimeAudio) {
+    try {
+      _chimeAudio.currentTime = 0;
+      _chimeAudio.play().catch(function() {});
+    } catch (e) {}
+  }
+
+  // Haptic vibration (always attempt)
+  try {
+    if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 350]);
+  } catch (e) {}
 }
 
 function startRestTimerSecs(secs) {
   stopRestTimer();
-  // Pre-warm audio on iOS so it can play when timer ends
+  // Pre-warm BOTH audio systems — user just tapped so we have gesture context
   _initChimeAudio();
+  if (_webAudioCtx && _webAudioCtx.state === 'suspended') {
+    _webAudioCtx.resume().catch(function() {});
+  }
+  // Play a silent Web Audio buffer to keep iOS context active
+  if (_webAudioCtx) {
+    try {
+      var silentBuf = _webAudioCtx.createBuffer(1, 1, 22050);
+      var src = _webAudioCtx.createBufferSource();
+      src.buffer = silentBuf;
+      src.connect(_webAudioCtx.destination);
+      src.start(0);
+    } catch(e) {}
+  }
   _chimePlayedForCurrentTimer = false;
   restTotalSecs = secs;
   restTimerEndAt = Date.now() + secs * 1000;
