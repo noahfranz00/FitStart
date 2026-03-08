@@ -82,8 +82,8 @@ function minimizeWorkout() {
   const dash = document.getElementById('screen-dash');
   dash.style.display = 'flex';
   dash.style.flexDirection = 'column';
-  dash.style.height = '100dvh';
   dash.style.height = '100vh';
+  try { dash.style.height = '100dvh'; } catch(e) {}
 
   // Show mobile tab bar
   const tabBar = document.getElementById('mobile-tab-bar');
@@ -155,8 +155,8 @@ function exitWorkout() {
   const dashRestore = document.getElementById('screen-dash');
   dashRestore.style.display = 'flex';
   dashRestore.style.flexDirection = 'column';
-  dashRestore.style.height = '100dvh';
   dashRestore.style.height = '100vh';
+  try { dashRestore.style.height = '100dvh'; } catch(e) {}
   // Restore mobile tab bar
   const tabBar = document.getElementById('mobile-tab-bar');
   if (tabBar) tabBar.classList.remove('hidden-in-workout');
@@ -189,8 +189,8 @@ function finishWorkout() {
   const dashRestore = document.getElementById('screen-dash');
   dashRestore.style.display = 'flex';
   dashRestore.style.flexDirection = 'column';
-  dashRestore.style.height = '100dvh';
   dashRestore.style.height = '100vh';
+  try { dashRestore.style.height = '100dvh'; } catch(e) {}
   // Restore mobile tab bar
   const tabBar = document.getElementById('mobile-tab-bar');
   if (tabBar) tabBar.classList.remove('hidden-in-workout');
@@ -1563,13 +1563,10 @@ document.addEventListener('click', _unlockChimeAudio, { once: true });
 document.addEventListener('touchstart', _keepAudioAlive, { passive: true });
 document.addEventListener('click', _keepAudioAlive, { passive: true });
 
-// On page load: immediately clear any stale rest timer data from previous sessions
+// On page load: clear any stale rest timer — NEVER chime on app open
 (function() {
   try {
-    const saved = JSON.parse(localStorage.getItem('fs_rest_timer'));
-    if (saved && saved.endAt && saved.endAt <= Date.now()) {
-      localStorage.removeItem('fs_rest_timer');
-    }
+    localStorage.removeItem('fs_rest_timer');
   } catch(e) {}
 })();
 
@@ -1671,15 +1668,6 @@ function _startTimerUI(totalSecs) {
       const pct = Math.min(100, (elapsed / totalSecs) * 100);
       bar.style.transition = 'width 0.5s linear';
       bar.style.width = pct + '%';
-    }
-    // Keep Web Audio context alive on iOS — play silent buffer every ~15s
-    if (remaining > 0 && remaining % 15 < 1 && _webAudioCtx) {
-      try {
-        if (_webAudioCtx.state === 'suspended') _webAudioCtx.resume();
-        var _kb = _webAudioCtx.createBuffer(1, 1, 22050);
-        var _ks = _webAudioCtx.createBufferSource();
-        _ks.buffer = _kb; _ks.connect(_webAudioCtx.destination); _ks.start(0);
-      } catch(e) {}
     }
     if (remaining <= 0) {
       _fireChimeOnce();
