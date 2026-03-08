@@ -367,60 +367,52 @@ self.addEventListener('fetch', e => {
       </div>
       <div class="today-grid" style="grid-template-columns:repeat(2,1fr);gap:12px">
         <!-- Calories — hero ring -->
-        <div class="stat-card" style="display:flex;align-items:center;gap:16px;padding:18px">
-          <div style="position:relative;width:80px;height:80px;flex-shrink:0">
-            <svg viewBox="0 0 100 100" width="80" height="80">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
-              <circle id="d-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="6" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
+        <div class="stat-card glass-card" style="display:flex;flex-direction:column;align-items:center;padding:20px 14px 16px">
+          <div style="position:relative;width:88px;height:88px">
+            <svg viewBox="0 0 100 100" width="88" height="88">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5"/>
+              <circle id="d-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="5" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
             </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:0.5px;color:var(--bone)" id="d-cal">0</div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.5px;color:var(--bone)" id="d-cal">0</div>
           </div>
-          <div>
-            <div class="card-label" style="margin-bottom:3px">CALORIES</div>
-            <div class="sc-sub" id="d-cal-sub" style="font-size:0.68rem">of —</div>
-          </div>
+          <div class="card-label" style="margin-top:10px;margin-bottom:0">CALORIES</div>
+          <div class="sc-sub" id="d-cal-sub" style="font-size:0.65rem">of —</div>
         </div>
         <!-- Protein — hero ring -->
-        <div class="stat-card" style="display:flex;align-items:center;gap:16px;padding:18px">
-          <div style="position:relative;width:80px;height:80px;flex-shrink:0">
-            <svg viewBox="0 0 100 100" width="80" height="80">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
-              <circle id="d-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="6" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
+        <div class="stat-card glass-card" style="display:flex;flex-direction:column;align-items:center;padding:20px 14px 16px">
+          <div style="position:relative;width:88px;height:88px">
+            <svg viewBox="0 0 100 100" width="88" height="88">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5"/>
+              <circle id="d-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="5" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
             </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:0.5px;color:var(--bone)" id="d-pro">0g</div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.5px;color:var(--bone)" id="d-pro">0g</div>
           </div>
-          <div>
-            <div class="card-label" style="margin-bottom:3px">PROTEIN</div>
-            <div class="sc-sub" id="d-pro-sub" style="font-size:0.68rem">of —g</div>
-          </div>
+          <div class="card-label" style="margin-top:10px;margin-bottom:0">PROTEIN</div>
+          <div class="sc-sub" id="d-pro-sub" style="font-size:0.65rem">of —g</div>
         </div>
         <!-- Carbs -->
-        <div class="stat-card" style="display:flex;align-items:center;gap:14px;padding:14px 18px">
-          <div style="position:relative;width:52px;height:52px;flex-shrink:0">
-            <svg viewBox="0 0 100 100" width="52" height="52">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="d-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
+        <div class="stat-card glass-card" style="display:flex;flex-direction:column;align-items:center;padding:16px 14px 14px">
+          <div style="position:relative;width:60px;height:60px">
+            <svg viewBox="0 0 100 100" width="60" height="60">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+              <circle id="d-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="6" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
             </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:700;color:var(--white)" id="d-carb">0g</div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--white)" id="d-carb">0g</div>
           </div>
-          <div>
-            <div class="card-label" style="margin-bottom:2px">CARBS</div>
-            <div class="sc-sub" id="d-carb-sub" style="font-size:0.62rem">of —g</div>
-          </div>
+          <div class="card-label" style="margin-top:8px;margin-bottom:0">CARBS</div>
+          <div class="sc-sub" id="d-carb-sub" style="font-size:0.62rem">of —g</div>
         </div>
         <!-- Fat -->
-        <div class="stat-card" style="display:flex;align-items:center;gap:14px;padding:14px 18px">
-          <div style="position:relative;width:52px;height:52px;flex-shrink:0">
-            <svg viewBox="0 0 100 100" width="52" height="52">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="d-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
+        <div class="stat-card glass-card" style="display:flex;flex-direction:column;align-items:center;padding:16px 14px 14px">
+          <div style="position:relative;width:60px;height:60px">
+            <svg viewBox="0 0 100 100" width="60" height="60">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+              <circle id="d-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="6" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
             </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:700;color:var(--white)" id="d-fat">0g</div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--white)" id="d-fat">0g</div>
           </div>
-          <div>
-            <div class="card-label" style="margin-bottom:2px">FAT</div>
-            <div class="sc-sub" id="d-fat-sub" style="font-size:0.62rem">of —g</div>
-          </div>
+          <div class="card-label" style="margin-top:8px;margin-bottom:0">FAT</div>
+          <div class="sc-sub" id="d-fat-sub" style="font-size:0.62rem">of —g</div>
         </div>
         <div style="display:none" id="d-wkt-name" aria-hidden="true"></div><div style="display:none" id="d-wkt-sub" aria-hidden="true"></div><div style="display:none" id="d-wkt-bar" aria-hidden="true"></div>
       </div>
