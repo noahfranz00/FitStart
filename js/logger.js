@@ -736,3 +736,93 @@ function saveSettings() {
   btn.textContent='✓ SAVED'; btn.style.background='var(--gold-dim)'; btn.style.color='var(--gold)'; btn.style.border='1px solid rgba(212,165,32,0.3)';
   setTimeout(()=>{ btn.textContent=orig; btn.style.background='var(--gold)'; btn.style.color='var(--black)'; btn.style.border='none'; }, 1800);
 }
+
+// ═══════════════════════════════════════════
+// DATA EXPORT / IMPORT — localStorage safety net
+// ═══════════════════════════════════════════
+
+// All localStorage keys used by the app
+var _FS_KEYS = [
+  'fs_user', 'fs_plan', 'fs_entered', 'fs_program_start',
+  'fs_mealLogs', 'fs_wktDone', 'fs_setLogs', 'fs_targets', 'fs_exlogs',
+  'fs_wo_draft', 'fs_rest_timer', 'fs_water_today', 'fs_water_goal',
+  'fs_water_goal_custom', 'fs_weightLog', 'fs_weight_log', 'fs_workout_dates',
+  'fs_coach_history', 'fs_proactive_msgs', 'fs_proactive_last',
+  'fs_recipes', 'fs_adaptive_last', 'fs_adaptive_insight',
+  'fs_weekly_report', 'fs_weekly_report_ts', 'fs_gym_days',
+  'fs_recent_foods', 'fs_custom_foods', 'fs_water_logs'
+];
+
+function exportData() {
+  try {
+    var data = { _blueprint_backup: true, _version: 1, _date: new Date().toISOString(), _keys: {} };
+    for (var i = 0; i < _FS_KEYS.length; i++) {
+      var key = _FS_KEYS[i];
+      var val = localStorage.getItem(key);
+      if (val !== null) data._keys[key] = val;
+    }
+    // Also grab any fs_ keys we might have missed
+    for (var j = 0; j < localStorage.length; j++) {
+      var k = localStorage.key(j);
+      if (k && k.startsWith('fs_') && !data._keys[k]) {
+        data._keys[k] = localStorage.getItem(k);
+      }
+    }
+    var json = JSON.stringify(data, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    var userName = (USER && USER.name) ? USER.name.replace(/[^a-zA-Z0-9]/g, '') : 'blueprint';
+    a.download = 'blueprint-backup-' + userName + '-' + new Date().toISOString().split('T')[0] + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup downloaded.', 'success');
+  } catch (e) {
+    showToast('Export failed: ' + e.message, 'error');
+  }
+}
+
+function importData() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = function(ev) {
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        if (!data._blueprint_backup || !data._keys) {
+          showToast('This doesn\'t look like a Blueprint backup file.', 'error');
+          return;
+        }
+        var keyCount = Object.keys(data._keys).length;
+        if (!confirm('Restore backup from ' + (data._date ? data._date.split('T')[0] : 'unknown date') + '?\n\nThis will replace your current data with ' + keyCount + ' saved items.\n\nYour current data will be overwritten.')) return;
+
+        // Write all keys
+        var keys = Object.keys(data._keys);
+        for (var i = 0; i < keys.length; i++) {
+          localStorage.setItem(keys[i], data._keys[keys[i]]);
+        }
+        showToast('Backup restored! Reloading...', 'success', 2000);
+        setTimeout(function() { location.reload(); }, 1500);
+      } catch (err) {
+        showToast('Invalid backup file: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function clearAllData() {
+  if (!confirm('Are you sure? This will delete ALL your data — plan, workouts, nutrition logs, progress, everything.\n\nThis cannot be undone. Consider downloading a backup first.')) return;
+  if (!confirm('Really delete everything?')) return;
+  localStorage.clear();
+  showToast('All data cleared. Reloading...', 'info', 2000);
+  setTimeout(function() { location.reload(); }, 1500);
+}
