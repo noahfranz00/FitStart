@@ -884,18 +884,20 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
     min-height: 0;
     overflow: hidden;
     display: flex;
+    height: 0; /* Force flex child to not grow beyond parent — critical for scroll */
   }
   .main-content { 
     flex: 1;
     min-height: 0;
+    height: 0; /* Force flex child to constrain — enables overflow scroll */
     padding: 14px 14px 80px;
     width: 100%;
     box-sizing: border-box;
     overflow-x: hidden;
-    overflow-y: scroll !important;
+    overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
   }
-  .view.active { display: block; padding-bottom: 40px; min-height: min-content; }
+  .view.active { display: block; padding-bottom: 40px; }
 
   /* Bottom tab bar - fixed to bottom of viewport */
   .mobile-tab-bar {
@@ -916,9 +918,14 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
     transform: none !important;
   }
   .mobile-tab-bar.hidden-in-workout { display: none !important; }
-  /* Ensure screen-dash flex layout works without blocking scroll */
-  #screen-dash { overflow: visible !important; }
-  #screen-dash.active { overflow: visible !important; }
+  /* Height constraint on screen-dash is critical — without it, content grows and never scrolls */
+  #screen-dash, #screen-dash.active { 
+    height: 100dvh !important; 
+    height: 100vh !important; 
+    max-height: 100dvh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important; 
+  }
   .mob-tab {
     flex: 1;
     display: flex;
