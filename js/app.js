@@ -992,8 +992,8 @@ function goToDash() {
   // Must use inline flex — CSS #screen-dash{display:none} beats .screen.active{display:block}
   dash.style.display = 'flex';
   dash.style.flexDirection = 'column';
-  dash.style.height = '100dvh';
   dash.style.height = '100vh';
+  try { dash.style.height = '100dvh'; } catch(e) {} // dvh preferred on iOS, silently ignored if unsupported
   dash.classList.add('active');
   window.scrollTo(0,0);
 }
