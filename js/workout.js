@@ -105,7 +105,7 @@ function _showResumeBanner() {
         '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:1px;color:#111">WORKOUT IN PROGRESS</div>' +
         '<div style="font-size:0.7rem;color:rgba(0,0,0,0.6)" id="wo-resume-detail"></div></div>' +
       '</div>' +
-      '<button onclick="resumeWorkout()" style="padding:10px 20px;background:#111;color:var(--gold);border:none;border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1.5px;cursor:pointer;white-space:nowrap">RESUME</button>' +
+      '<button onclick="resumeWorkout()" style="padding:10px 20px;background:#111;color:#F2F0EB;border:none;border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1.5px;cursor:pointer;white-space:nowrap">RESUME</button>' +
     '</div>';
     document.body.appendChild(banner);
   }
@@ -218,7 +218,7 @@ function loadExercise(idx) {
   // Single clean line: SETS × REPS  |  REST  |  [EDIT]  [⋮]
   const setsInfoEl = document.getElementById('wo-sets-info');
   setsInfoEl.innerHTML = 
-    `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${ex.sets} SETS × ${ex.reps} REPS</span>` +
+    `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;color:#F2F0EB">${ex.sets} SETS × ${ex.reps} REPS</span>` +
     `<span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim)">REST ${ex.rest}s</span>` +
     `<span style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-shrink:0">` +
       `<button onclick="openSetRepEditor(${idx})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--dim);font-size:0.6rem;font-family:'DM Mono',monospace;cursor:pointer;letter-spacing:0.5px;display:flex;align-items:center;gap:4px" title="Edit sets & reps">` +
@@ -259,7 +259,7 @@ function loadExercise(idx) {
         badgeText = `${ph.name} PHASE · ${ph.intensityLabel}`;
       }
       phBadgeEl.textContent = badgeText;
-      phBadgeEl.style.cssText = 'display:block;background:rgba(212,165,32,0.07);border:1px solid rgba(212,165,32,0.2);border-radius:8px;padding:8px 14px;font-size:0.75rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px';
+      phBadgeEl.style.cssText = 'display:block;background:rgba(212,165,32,0.07);border:1px solid rgba(212,165,32,0.2);border-radius:8px;padding:8px 14px;font-size:0.75rem;color:#F2F0EB;margin-bottom:10px';
     }
   }
   document.getElementById('wo-muscles-tag').style.display = 'none';
@@ -941,7 +941,7 @@ function _renderAIPreviewList() {
           <div style="font-size:0.75rem;color:var(--dim);margin-top:2px">${ex.muscles}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${ex.sets} × ${ex.reps}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;color:#F2F0EB">${ex.sets} × ${ex.reps}</div>
           <div style="font-size:0.7rem;color:var(--dim)">REST ${ex.rest}s</div>
         </div>
       </div>
@@ -1030,7 +1030,7 @@ function _aiSwapExercise(idx) {
         ${candidates.slice(0, 15).map(([name, db]) =>
           `<div onclick="_aiDoSwap(${idx},'${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
             <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-            <div style="font-size:0.68rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${db.sets}×${db.reps}</div>
+            <div style="font-size:0.68rem;color:#F2F0EB">${db.sets}×${db.reps}</div>
           </div>`
         ).join('')}
       </div>
@@ -1049,7 +1049,7 @@ function _aiFilterSwap(idx, query) {
   list.innerHTML = results.map(([name, db]) =>
     `<div onclick="_aiDoSwap(${idx},'${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
       <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-      <div style="font-size:0.68rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${db.sets}×${db.reps}</div>
+      <div style="font-size:0.68rem;color:#F2F0EB">${db.sets}×${db.reps}</div>
     </div>`
   ).join('') || '<div style="padding:12px;color:var(--dim);font-size:0.78rem;text-align:center">No matches</div>';
 }
@@ -1086,7 +1086,7 @@ function _aiAddExercise() {
         ${candidates.slice(0, 20).map(([name, db]) =>
           `<div onclick="_aiDoAdd('${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
             <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-            <div style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1rem;font-weight:700">+</div>
+            <div style="color:#F2F0EB;font-size:1rem;font-weight:700">+</div>
           </div>`
         ).join('')}
       </div>
@@ -1106,7 +1106,7 @@ function _aiFilterAdd(query) {
   list.innerHTML = results.map(([name, db]) =>
     `<div onclick="_aiDoAdd('${name.replace(/'/g, "\\'")}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--dark);border:1px solid var(--border);border-radius:8px;cursor:pointer">
       <div><div style="font-size:0.82rem;color:var(--white)">${name}</div><div style="font-size:0.68rem;color:var(--dim)">${db.muscles}</div></div>
-      <div style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1rem;font-weight:700">+</div>
+      <div style="color:#F2F0EB;font-size:1rem;font-weight:700">+</div>
     </div>`
   ).join('') || '<div style="padding:12px;color:var(--dim);font-size:0.78rem;text-align:center">No matches</div>';
 }
@@ -1173,7 +1173,7 @@ function renderCustomExList() {
   if (!list) return;
   list.innerHTML = entries.map(([name, ex]) => {
     const selected = _customBuilderSelected.find(e => e.name === name);
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${selected?'var(--gold-dim)':'var(--card)'};border:1px solid ${selected?'rgba(212,165,32,0.3)':'var(--border)'};border-radius:10px;cursor:pointer" onclick="toggleCustomEx('${name}')">
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${selected?'rgba(255,255,255,0.06)':'var(--card)'};border:1px solid ${selected?'rgba(255,255,255,0.12)':'var(--border)'};border-radius:10px;cursor:pointer" onclick="toggleCustomEx('${name}')">
       <div>
         <div style="font-size:0.88rem;font-weight:600;color:var(--white)">${name}</div>
         <div style="font-size:0.72rem;color:var(--dim)">${ex.muscles} · ${ex.sets}×${ex.reps}</div>
@@ -1306,7 +1306,7 @@ function renderTodayMiniLog() {
       <div style="font-size:0.84rem;color:var(--off)">${e.name}</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem" class="gm">${e.cal} cal</div>
     </div>`
-  ).join('') + (entries.length > 5 ? `<div style="padding:8px 18px;font-size:0.75rem;color:var(--dim);text-align:center">+${entries.length-5} more · <a onclick="dashNav('nutrition',document.querySelector('.sb-btn:nth-child(4)'))" style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;cursor:pointer">View all in Nutrition</a></div>` : '');
+  ).join('') + (entries.length > 5 ? `<div style="padding:8px 18px;font-size:0.75rem;color:var(--dim);text-align:center">+${entries.length-5} more · <a onclick="dashNav('nutrition',document.querySelector('.sb-btn:nth-child(4)'))" style="color:#F2F0EB;cursor:pointer">View all in Nutrition</a></div>` : '');
 }
 
 function renderEcList() {
