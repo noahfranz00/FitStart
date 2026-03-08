@@ -878,26 +878,30 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
   .aes-list { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important; }
   
   /* Shell fills screen below nav, above tab bar */
+  /* SCROLL FIX: absolute-position .main-content inside .shell so it gets
+     definite bounds from the flex layout. This bypasses iOS Safari's broken
+     flex + overflow-y behavior in nested containers. */
   .shell { 
     flex-direction: column; 
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    position: relative;
     display: flex;
-    height: 0; /* Force flex child to not grow beyond parent — critical for scroll */
   }
   .main-content { 
-    flex: 1;
-    min-height: 0;
-    height: 0; /* Force flex child to constrain — enables overflow scroll */
-    padding: 14px 14px 80px;
-    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 14px 14px 40px;
     box-sizing: border-box;
     overflow-x: hidden;
-    overflow-y: auto !important;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
-  .view.active { display: block; padding-bottom: 40px; }
+  .view.active { display: block; padding-bottom: 60px; }
 
   /* Bottom tab bar - fixed to bottom of viewport */
   .mobile-tab-bar {
@@ -918,14 +922,9 @@ body.advanced .btn-start-trial { background:linear-gradient(135deg,#B8900B,#D4A5
     transform: none !important;
   }
   .mobile-tab-bar.hidden-in-workout { display: none !important; }
-  /* Height constraint on screen-dash is critical — without it, content grows and never scrolls */
-  #screen-dash, #screen-dash.active { 
-    height: 100dvh !important; 
-    height: 100vh !important; 
-    max-height: 100dvh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important; 
-  }
+  /* screen-dash must allow visible overflow so absolute-positioned scroll container works */
+  #screen-dash { overflow: visible !important; }
+  #screen-dash.active { overflow: visible !important; }
   .mob-tab {
     flex: 1;
     display: flex;
