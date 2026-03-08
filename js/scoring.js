@@ -80,7 +80,7 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
   // Score delta
   var pct = prevScore > 0 ? Math.round(((score - prevScore) / prevScore) * 100) : 0;
   var deltaText = prevScore > 0 ? (pct >= 0 ? '+' + pct + '%' : pct + '%') : '';
-  var deltaColor = pct >= 0 ? '#D4A520' : '#f87171';
+  var deltaColor = pct >= 0 ? '#F2F0EB' : '#f87171';
 
   // Gauge
   var fillPct = Math.min(100, (score / 1000) * 100);
@@ -89,10 +89,10 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
 
   // PR rows
   var prRows = (prs || []).map(function(p) {
-    var gainStr = (p.e1rmGain && p.e1rmGain > 0) ? ' <span style="font-size:0.72rem;color:#D4A520;font-weight:700;letter-spacing:0.5px">+' + p.e1rmGain + ' e1RM</span>' : '';
+    var gainStr = (p.e1rmGain && p.e1rmGain > 0) ? ' <span style="font-size:0.72rem;color:#F2F0EB;font-weight:700;letter-spacing:0.5px">+' + p.e1rmGain + ' e1RM</span>' : '';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.08)">' +
       '<div><span style="font-size:0.95rem;color:#fff;font-weight:600">' + p.exercise + '</span>' + gainStr + '</div>' +
-      '<span style="font-family:\'DM Mono\',monospace;font-size:0.88rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700">' + p.weight + ' lbs × ' + p.reps + ' <span style="font-size:0.7rem;vertical-align:middle;letter-spacing:1px">▲ PR</span></span></div>';
+      '<span style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#F2F0EB;font-weight:700">' + p.weight + ' lbs × ' + p.reps + ' <span style="font-size:0.7rem;vertical-align:middle;letter-spacing:1px">▲ PR</span></span></div>';
   }).join('');
 
   // Stat boxes — always show full numbers with lbs, no abbreviations
@@ -137,15 +137,15 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
           '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;letter-spacing:2px;color:#fff;line-height:1.1;margin-top:4px">' + (workoutName || 'WORKOUT').toUpperCase() + '</div>' +
           (userName ? '<div style="font-size:1rem;color:#ccc;margin-top:4px;font-weight:600">' + userName + '</div>' : '') +
         '</div>' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:right;line-height:1.3">WORKOUT<br>COMPLETE ✓</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:2px;color:#F2F0EB;text-align:right;line-height:1.3">WORKOUT<br>COMPLETE ✓</div>' +
       '</div>' +
       '<div style="display:flex;align-items:center;gap:20px;margin-bottom:22px;padding:20px;background:#1a1a1a;border-radius:16px;border:1px solid #333">' +
         '<div style="position:relative;width:100px;height:56px;flex-shrink:0">' +
           '<svg viewBox="0 0 200 110" style="width:100%;height:100%">' +
             '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#333" stroke-width="14" stroke-linecap="round"/>' +
-            '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#D4A520" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="' + offset + '"/>' +
+            '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#F2F0EB" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="' + offset + '"/>' +
           '</svg>' +
-          '<div style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">' + score + '</div>' +
+          '<div style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:#F2F0EB">' + score + '</div>' +
         '</div>' +
         '<div style="flex:1">' +
           '<div style="font-size:1rem;font-weight:700;letter-spacing:2px;color:#ddd">STRENGTH SCORE</div>' +
@@ -163,12 +163,12 @@ function _showWorkoutSummary(workoutName, prs, durationMs, setsData, exercises) 
         }).join('') +
       '</div>' +
       (heaviestLift.weight > 0 ? '<div style="display:flex;align-items:center;gap:12px;padding:16px 18px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.3);border-radius:12px;margin-bottom:16px">' +
-        '<div style="font-size:1.5rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700">↑</div>' +
-        '<div style="flex:1"><div style="font-size:1rem;font-weight:700;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">HEAVIEST LIFT</div>' +
+        '<div style="font-size:1.5rem;color:#F2F0EB;font-weight:700">↑</div>' +
+        '<div style="flex:1"><div style="font-size:1rem;font-weight:700;letter-spacing:1.5px;color:#F2F0EB">HEAVIEST LIFT</div>' +
         '<div style="font-size:1.2rem;color:#fff;font-weight:700;margin-top:3px">' + heaviestLift.name + ' — ' + heaviestLift.weight + ' lbs × ' + heaviestLift.reps + '</div></div></div>' : '') +
-      (prRows ? '<div style="margin-bottom:16px"><div style="font-size:1rem;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px">PERSONAL RECORDS</div>' + prRows + '</div>' : '') +
+      (prRows ? '<div style="margin-bottom:16px"><div style="font-size:1rem;font-weight:700;letter-spacing:2px;color:#F2F0EB;margin-bottom:10px">PERSONAL RECORDS</div>' + prRows + '</div>' : '') +
       '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid #333">' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;letter-spacing:2px;color:#ccc">BLUE<span style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">●</span>PRINT</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;letter-spacing:2px;color:#ccc">BLUE<span style="color:#F2F0EB">●</span>PRINT</div>' +
         '<div style="font-size:0.85rem;letter-spacing:1.5px;color:#bbb;font-weight:700">AI-POWERED FITNESS</div>' +
       '</div>' +
     '</div>' +
