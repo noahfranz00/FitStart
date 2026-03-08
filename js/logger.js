@@ -445,9 +445,9 @@ function _updateBuildTray() {
     if (beginBtn) beginBtn.style.display = 'none';
   } else {
     sel.innerHTML = _buildPickerSelected.map(function(e, i){
-      return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:6px;padding:3px 8px;font-size:0.7rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:\'Bebas Neue\',sans-serif;letter-spacing:0.5px">'
+      return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 8px;font-size:0.7rem;color:#F2F0EB;font-family:\'Bebas Neue\',sans-serif;letter-spacing:0.5px">'
         + e.name + ' ' + e.sets + '×' + e.reps
-        + '<button onclick="_removeBuildEx('+i+')" style="background:none;border:none;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;cursor:pointer;padding:0;margin-left:2px;font-size:0.75rem;opacity:0.7">✕</button></span>';
+        + '<button onclick="_removeBuildEx('+i+')" style="background:none;border:none;color:#F2F0EB;cursor:pointer;padding:0;margin-left:2px;font-size:0.75rem;opacity:0.7">✕</button></span>';
     }).join('');
     if (beginBtn) beginBtn.style.display = 'block';
   }
@@ -549,7 +549,7 @@ function refreshDashMacros() {
     let color;
     if (pct > 1.05) color = '#ef4444';
     else if (pct >= 0.90) color = '#22c55e';
-    else color = '#D4A520';
+    else color = '#F2F0EB';
     const el = document.getElementById(vid);
     const ring = document.getElementById(rid);
     const sub = document.getElementById(sid);
@@ -568,7 +568,7 @@ function renderWeek() {
     const workout = DAY_WORKOUTS[i];
     let cls = 'wday';
     if (isToday) cls += ' is-today'; else if (isDone) cls += ' is-done';
-    const svgCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="#D4A520" stroke-width="2.5" width="22" height="22"><polyline points="20 6 9 17 4 12"/></svg>';
+    const svgCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="#F2F0EB" stroke-width="2.5" width="22" height="22"><polyline points="20 6 9 17 4 12"/></svg>';
     const svgDumbbell = '<svg viewBox="0 0 28 14" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="12" style="opacity:0.6;color:var(--tier-color)"><rect x="11" y="5" width="6" height="4" rx="1" fill="currentColor"/><rect x="7" y="3" width="4" height="8" rx="1" fill="currentColor"/><rect x="17" y="3" width="4" height="8" rx="1" fill="currentColor"/><rect x="3" y="4" width="4" height="6" rx="1.5" fill="currentColor"/><rect x="21" y="4" width="4" height="6" rx="1.5" fill="currentColor"/></svg>';
     const svgRestBlank = '<svg viewBox="0 0 24 24" fill="none" width="20" height="20" style="opacity:0.18"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M8 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
     const icon = isDone ? svgCheck : isGym ? svgDumbbell : svgRestBlank;
@@ -672,12 +672,12 @@ function renderSettingsGymDays() {
     const active = GYM_DAYS.includes(i);
     const el = document.createElement('div');
     el.textContent = d; el.dataset.idx = i; if(active) el.dataset.active='1';
-    el.style.cssText = `padding:10px 16px;border-radius:8px;border:1px solid ${active?'var(--gold)':'var(--border)'};background:${active?'var(--gold-dim)':'var(--dark)'};color:${active?'var(--gold)':'var(--dim)'};font-family:'DM Mono',monospace;font-size:0.8rem;cursor:pointer;transition:all 0.2s`;
+    el.style.cssText = `padding:10px 16px;border-radius:8px;border:1px solid ${active?'rgba(255,255,255,0.15)':'var(--border)'};background:${active?'rgba(255,255,255,0.06)':'var(--dark)'};color:${active?'var(--bone)':'var(--dim)'};font-family:'DM Mono',monospace;font-size:0.8rem;cursor:pointer;transition:all 0.2s`;
     el.onclick = function(){
       const now = !this.dataset.active; this.dataset.active=now?'1':'';
-      this.style.borderColor=now?'var(--gold)':'var(--border)';
-      this.style.background=now?'var(--gold-dim)':'var(--dark)';
-      this.style.color=now?'var(--gold)':'var(--dim)';
+      this.style.borderColor=now?'rgba(255,255,255,0.15)':'var(--border)';
+      this.style.background=now?'rgba(255,255,255,0.06)':'var(--dark)';
+      this.style.color=now?'var(--bone)':'var(--dim)';
     };
     container.appendChild(el);
   });
@@ -733,7 +733,7 @@ function saveSettings() {
   refreshDashMacros(); renderMacros(); saveToStorage();
 
   const btn = document.getElementById('save-btn'), orig = btn.textContent;
-  btn.textContent='✓ SAVED'; btn.style.background='var(--gold-dim)'; btn.style.color='var(--gold)'; btn.style.border='1px solid rgba(212,165,32,0.3)';
+  btn.textContent='✓ SAVED'; btn.style.background='rgba(255,255,255,0.08)'; btn.style.color='var(--bone)'; btn.style.border='1px solid rgba(255,255,255,0.12)';
   setTimeout(()=>{ btn.textContent=orig; btn.style.background='var(--gold)'; btn.style.color='var(--black)'; btn.style.border='none'; }, 1800);
 }
 
