@@ -110,6 +110,15 @@ function _fuzzySearchMatch(query, name, muscles) {
 }
 
 function dashNav(view, btn) {
+  // Close any open modals/overlays first — prevents blocking tab navigation
+  var unplannedModal = document.getElementById('unplanned-modal');
+  if (unplannedModal && unplannedModal.style.display !== 'none') {
+    if (typeof closeUnplannedModal === 'function') closeUnplannedModal();
+    else unplannedModal.style.display = 'none';
+  }
+  var mobDrawer = document.getElementById('mob-more-drawer');
+  if (mobDrawer) mobDrawer.classList.remove('open');
+
   // Hide all views cleanly — no inline style pollution
   document.querySelectorAll('.view').forEach(v => {
     v.classList.remove('active');
