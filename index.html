@@ -737,6 +737,26 @@ self.addEventListener('fetch', e => {
           </div>
         </div>
         <button id="save-btn" onclick="saveSettings()" style="padding:14px;background:var(--gold);color:var(--black);border:none;border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer">SAVE CHANGES</button>
+
+        <!-- DATA MANAGEMENT -->
+        <div style="margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px">
+          <div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:14px">Data Management</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button onclick="exportData()" style="padding:12px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Syne',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Backup
+            </button>
+            <button onclick="importData()" style="padding:12px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Syne',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Restore from Backup
+            </button>
+            <button onclick="clearAllData()" style="padding:12px;background:none;border:1px solid rgba(244,63,94,0.3);border-radius:10px;color:#F43F5E;font-family:'Syne',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Clear All Data
+            </button>
+          </div>
+          <div style="font-size:0.68rem;color:var(--dim);margin-top:10px;line-height:1.4">Download a backup to protect your data. Your plan, workouts, meals, and progress are stored in your browser — clearing browser data will erase them.</div>
+        </div>
       </div>
     </div>
 
@@ -1235,6 +1255,37 @@ self.addEventListener('fetch', e => {
 <script src="js/logger.js"></script>
 <script src="js/coach.js"></script>
 <script>_bootApp();</script>
+<script>
+// Register service worker for offline support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      console.log('[SW] Registered:', reg.scope);
+      // Notify user when a new version is available
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', function() {
+            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+              if (typeof showToast === 'function') showToast('App updated — refresh for latest version.', 'info', 5000);
+            }
+          });
+        }
+      });
+    }).catch(function(err) {
+      console.log('[SW] Registration failed:', err);
+    });
+  });
+
+  // Show offline/online status
+  window.addEventListener('offline', function() {
+    if (typeof showToast === 'function') showToast('You\'re offline. Workouts still work — AI features need internet.', 'warning', 4000);
+  });
+  window.addEventListener('online', function() {
+    if (typeof showToast === 'function') showToast('Back online.', 'success', 2000);
+  });
+}
+</script>
 
 <!-- WORKOUT PREVIEW MODAL -->
 <div id="workout-preview-modal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.7);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeWorkoutPreview()">
