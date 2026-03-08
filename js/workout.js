@@ -28,12 +28,12 @@ function openWorkoutEnv(dayIdx, startExIdx) {
   woCurrentEx = startExIdx || 0;
   woWorkout = workout;
   woPRs = [];
-  woStartTime = Date.now();
+  woStartTime = woStartTime || Date.now(); // Don't reset if resuming
   const draft = getWorkoutDraft(dayIdx);
   if (draft && draft.sets) {
     woSets = draft.sets;
     if (draft.extraSets) woExtraSets = draft.extraSets;
-  } else {
+  } else if (!Object.keys(woSets).length) {
     woSets = {}; woExtraSets = {};
   }
 
@@ -54,6 +54,9 @@ function openWorkoutEnv(dayIdx, startExIdx) {
   document.body.style.overflow = 'hidden';
   window.scrollTo(0, 0);
 
+  // Hide resume banner if it exists
+  _hideResumeBanner();
+
   // Progress bar
   const fill = document.getElementById('wo-prog-fill');
   const label = document.getElementById('wo-prog-label');
@@ -68,6 +71,81 @@ function openWorkoutEnv(dayIdx, startExIdx) {
 }
 
 
+// Minimize workout — hide overlay, show dash with resume banner
+function minimizeWorkout() {
+  const woEl = document.getElementById('screen-workout');
+  woEl.classList.remove('active');
+  woEl.style.display = 'none';
+  document.body.style.overflow = '';
+
+  // Restore dashboard
+  const dash = document.getElementById('screen-dash');
+  dash.style.display = 'flex';
+  dash.style.flexDirection = 'column';
+  dash.style.height = '100dvh';
+  dash.style.height = '100vh';
+
+  // Show mobile tab bar
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar) tabBar.classList.remove('hidden-in-workout');
+
+  // Show resume banner
+  _showResumeBanner();
+}
+
+function _showResumeBanner() {
+  var banner = document.getElementById('wo-resume-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'wo-resume-banner';
+    banner.style.cssText = 'position:fixed;bottom:70px;left:10px;right:10px;z-index:9998;padding:0;animation:fadeUp 0.25s ease;';
+    banner.innerHTML = '<div style="background:linear-gradient(135deg,rgba(212,165,32,0.95),rgba(184,144,11,0.95));border-radius:14px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="width:36px;height:36px;border-radius:10px;background:rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.5" width="18" height="18"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg></div>' +
+        '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:1px;color:#111">WORKOUT IN PROGRESS</div>' +
+        '<div style="font-size:0.7rem;color:rgba(0,0,0,0.6)" id="wo-resume-detail"></div></div>' +
+      '</div>' +
+      '<button onclick="resumeWorkout()" style="padding:10px 20px;background:#111;color:var(--gold);border:none;border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1.5px;cursor:pointer;white-space:nowrap">RESUME</button>' +
+    '</div>';
+    document.body.appendChild(banner);
+  }
+  banner.style.display = 'block';
+  // Update detail text
+  var detail = document.getElementById('wo-resume-detail');
+  if (detail && woWorkout) {
+    var completedSets = 0;
+    for (var k in woSets) {
+      if (woSets[k]) {
+        for (var si = 0; si < woSets[k].length; si++) {
+          if (woSets[k][si] && woSets[k][si].done) completedSets++;
+        }
+      }
+    }
+    detail.textContent = woWorkout.name + ' · Exercise ' + (woCurrentEx + 1) + '/' + woWorkout.exercises.length;
+  }
+}
+
+function _hideResumeBanner() {
+  var banner = document.getElementById('wo-resume-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function resumeWorkout() {
+  if (!woWorkout) return;
+  // Re-show the workout env
+  document.getElementById('screen-dash').style.display = 'none';
+  var tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar) tabBar.classList.add('hidden-in-workout');
+  var woEl = document.getElementById('screen-workout');
+  woEl.classList.add('active');
+  woEl.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  _hideResumeBanner();
+  // Restore to the exercise they were on
+  loadExercise(woCurrentEx);
+  restoreRestTimerIfActive();
+}
+
 function exitWorkout() {
   stopRestTimer();
   const woEl2 = document.getElementById('screen-workout');
@@ -76,9 +154,15 @@ function exitWorkout() {
   document.body.style.overflow = '';
   const dashRestore = document.getElementById('screen-dash');
   dashRestore.style.display = 'flex';
+  dashRestore.style.flexDirection = 'column';
+  dashRestore.style.height = '100dvh';
+  dashRestore.style.height = '100vh';
   // Restore mobile tab bar
   const tabBar = document.getElementById('mobile-tab-bar');
   if (tabBar) tabBar.classList.remove('hidden-in-workout');
+  _hideResumeBanner();
+  // Reset workout state
+  woStartTime = null;
   window.scrollTo(0, 0);
   renderTodayWorkout();
   renderWeek();
@@ -104,9 +188,14 @@ function finishWorkout() {
   document.body.style.overflow = '';
   const dashRestore = document.getElementById('screen-dash');
   dashRestore.style.display = 'flex';
+  dashRestore.style.flexDirection = 'column';
+  dashRestore.style.height = '100dvh';
+  dashRestore.style.height = '100vh';
   // Restore mobile tab bar
   const tabBar = document.getElementById('mobile-tab-bar');
   if (tabBar) tabBar.classList.remove('hidden-in-workout');
+  _hideResumeBanner();
+  woStartTime = null;
   window.scrollTo(0, 0);
   renderTodayWorkout();
   renderWeek();
@@ -1582,6 +1671,15 @@ function _startTimerUI(totalSecs) {
       const pct = Math.min(100, (elapsed / totalSecs) * 100);
       bar.style.transition = 'width 0.5s linear';
       bar.style.width = pct + '%';
+    }
+    // Keep Web Audio context alive on iOS — play silent buffer every ~15s
+    if (remaining > 0 && remaining % 15 < 1 && _webAudioCtx) {
+      try {
+        if (_webAudioCtx.state === 'suspended') _webAudioCtx.resume();
+        var _kb = _webAudioCtx.createBuffer(1, 1, 22050);
+        var _ks = _webAudioCtx.createBufferSource();
+        _ks.buffer = _kb; _ks.connect(_webAudioCtx.destination); _ks.start(0);
+      } catch(e) {}
     }
     if (remaining <= 0) {
       _fireChimeOnce();
