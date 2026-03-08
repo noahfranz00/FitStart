@@ -204,13 +204,13 @@ function renderMealCategories() {
         <button class="mer-del" onclick="deleteCatMeal('${cat.id}',${i})">✕</button>
       </div>`
     ).join('');
-    const totalRow = entries.length ? `<div class="meal-cat-total"><span>${totalPro}g protein</span><span>${totalCarb}g carbs</span><span>${totalFat}g fat</span><span style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${totalCal} cal</span></div>` : '';
+    const totalRow = entries.length ? `<div class="meal-cat-total"><span>${totalPro}g protein</span><span>${totalCarb}g carbs</span><span>${totalFat}g fat</span><span style="color:#F2F0EB">${totalCal} cal</span></div>` : '';
     return `<div class="meal-cat-card" onclick="openCoachForMeal('${cat.id}','${cat.label}')" style="cursor:pointer">
       <div class="meal-cat-header">
         <div class="meal-cat-left" style="gap:10px;flex:1">
           <div><div class="meal-cat-name">${cat.label}</div>${totalCal>0?`<div class="meal-cat-cals">${totalCal} cal</div>`:''}</div>
         </div>
-        <div style="font-size:0.7rem;color:var(--gold);font-weight:600;letter-spacing:0.5px">+ LOG FOOD</div>
+        <div style="font-size:0.7rem;color:#F2F0EB;font-weight:600;letter-spacing:0.5px">+ LOG FOOD</div>
       </div>
       ${entryRows ? `<div class="meal-cat-entries" onclick="event.stopPropagation()">${entryRows}${totalRow}</div>` : '<div style="padding:8px 12px;font-size:0.75rem;color:var(--dim)">Tap to log via AI Coach</div>'}
     </div>`;
@@ -364,12 +364,12 @@ function renderCustomFoodsInModal() {
   const resultsEl = document.getElementById('food-modal-results');
   if (!customs.length) {
     resultsEl.innerHTML = `<div class="food-modal-empty">No custom foods saved yet.<br><br>
-      <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:10px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">+ CREATE CUSTOM FOOD</button>
+      <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#F2F0EB;font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">+ CREATE CUSTOM FOOD</button>
     </div>`;
     return;
   }
   resultsEl.innerHTML = `<div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end">
-    <button onclick="openManualFoodEntry()" style="padding:8px 14px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:8px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer">+ NEW CUSTOM FOOD</button>
+    <button onclick="openManualFoodEntry()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#F2F0EB;font-family:'Bebas Neue',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer">+ NEW CUSTOM FOOD</button>
   </div>` +
   customs.map((item, i) =>
     `<div class="food-modal-item" onclick="openServingModal(${i}, 'custom')">
@@ -602,7 +602,7 @@ function renderFoodResults(results, resultsEl) {
   }
   resultsEl.innerHTML = results.slice(0, 30).map((item, i) => {
     const srcBadge = item._source === 'usda_branded'
-      ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(212,165,32,0.1);background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;border:1px solid rgba(212,165,32,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
+      ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(212,165,32,0.1);color:#F2F0EB;border:1px solid rgba(212,165,32,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
       : item._source === 'usda_foundation'
       ? '<span style="font-size:0.58rem;font-weight:700;letter-spacing:0.8px;background:rgba(96,165,250,0.1);color:var(--blue);border:1px solid rgba(96,165,250,0.2);border-radius:3px;padding:1px 5px;margin-left:5px">USDA</span>'
       : '';
@@ -729,8 +729,8 @@ async function searchFoodModal() {
       + '<div style="font-size:1.2rem;margin-bottom:8px">\uD83D\uDD0D</div>'
       + 'No results for "<strong>' + rawQuery + '</strong>".<br><br>'
       + 'Try a shorter term like <em>chicken breast</em> or <em>white rice</em>, or add it manually.<br><br>'
-      + '<button onclick="searchFoodModal()" style="padding:10px 20px;background:var(--card);border:1px solid var(--border2);border-radius:10px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">\u21BA RETRY</button>'
-      + ' <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:10px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">+ ADD CUSTOM</button>'
+      + '<button onclick="searchFoodModal()" style="padding:10px 20px;background:var(--card);border:1px solid var(--border2);border-radius:10px;color:#F2F0EB;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">\u21BA RETRY</button>'
+      + ' <button onclick="openManualFoodEntry()" style="padding:10px 20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#F2F0EB;font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">+ ADD CUSTOM</button>'
       + '</div>';
   }
 }
@@ -1016,7 +1016,7 @@ function renderMacros() {
     let color;
     if (pct > 1.05) color = '#ef4444';       // over 5% → red
     else if (pct >= 0.90) color = '#22c55e';  // within 10% → green
-    else color = '#D4A520';                    // default gold
+    else color = '#F2F0EB';                    // default gold
 
     const el = document.getElementById(vid);
     const ring = document.getElementById(rid);
@@ -1101,7 +1101,7 @@ function renderRecipeList() {
         </div>
         <div style="font-size:0.7rem;color:var(--dim);margin-top:1px">${r.ingredients.length} ingredient${r.ingredients.length!==1?'s':''} · ${Math.round(r.totalWeightG)}g total</div>
       </div>
-      <button onclick="logRecipeServing(${i})" style="padding:6px 14px;background:rgba(212,165,32,0.15);border:1px solid rgba(212,165,32,0.3);border-radius:8px;color:#D4A520;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">+ LOG</button>
+      <button onclick="logRecipeServing(${i})" style="padding:6px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#F2F0EB;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap">+ LOG</button>
       <button onclick="viewRecipe(${i})" style="padding:6px 10px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--off);font-size:0.72rem;cursor:pointer">View</button>
       <button onclick="deleteRecipe(${i})" style="padding:6px 8px;background:none;border:none;color:#ef4444;font-size:0.8rem;cursor:pointer">✕</button>
     </div>`;
