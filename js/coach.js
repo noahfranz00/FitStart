@@ -215,11 +215,15 @@ function _getCoachSystemPrompt() {
   else timeOfDay = 'early morning';
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
+  // Fresh today index — don't rely on the global TODAY_IDX which may be stale if app was open across midnight
+  const freshTodayIdx = now.getDay() === 0 ? 6 : now.getDay() - 1; // Mon=0, Sun=6
+  const DAYS_FULL_LOCAL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
   // Today's nutrition so far (all 4 macros)
   const todayMeals = getMealCatEntries ? (() => {
     let totalCal = 0, totalPro = 0, totalCarb = 0, totalFat = 0;
     for (const cat of (MEAL_CATS || [])) {
-      const entries = getMealCatEntries(TODAY_IDX, cat.id);
+      const entries = getMealCatEntries(freshTodayIdx, cat.id);
       for (const e of entries) { totalCal += (e.cal || 0); totalPro += (e.pro || 0); totalCarb += (e.carb || 0); totalFat += (e.fat || 0); }
     }
     return { cal: totalCal, pro: totalPro, carb: totalCarb, fat: totalFat };
@@ -231,7 +235,7 @@ function _getCoachSystemPrompt() {
     const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const memoryDays = [];
     for (let d = 0; d < 3; d++) {
-      const dayIdx = TODAY_IDX - d;
+      const dayIdx = freshTodayIdx - d;
       if (dayIdx < 0) break;
       const dayLabel = d === 0 ? 'Today' : d === 1 ? 'Yesterday' : dayNames[(new Date().getDay() - d + 7) % 7];
       const allItems = [];
@@ -251,9 +255,9 @@ function _getCoachSystemPrompt() {
   } catch(e) { foodMemory = ''; }
 
   // Today's workout status
-  const todayWorkout = DAY_WORKOUTS[TODAY_IDX];
-  const todayDone = wktDone.has(TODAY_IDX);
-  const isGymDay = GYM_DAYS.includes(TODAY_IDX);
+  const todayWorkout = DAY_WORKOUTS[freshTodayIdx];
+  const todayDone = wktDone.has(freshTodayIdx);
+  const isGymDay = GYM_DAYS.includes(freshTodayIdx);
 
   // Recent workout history (last 7 days)
   const recentDays = [];
@@ -263,6 +267,48 @@ function _getCoachSystemPrompt() {
     const key = check.getFullYear() + '-' + String(check.getMonth()+1).padStart(2,'0') + '-' + String(check.getDate()).padStart(2,'0');
     if (workoutDates.has(key)) recentDays.push(dayNames[check.getDay()]);
   }
+
+  // Tomorrow's workout context — explicit so AI never guesses wrong
+  const tomorrowJSDay = (now.getDay() + 1) % 7; // JS day: 0=Sun, 1=Mon, ...
+  const tomorrowIdx = tomorrowJSDay === 0 ? 6 : tomorrowJSDay - 1; // App day: Mon=0, Sun=6
+  const tomorrowName = dayNames[tomorrowJSDay];
+  const tomorrowWorkout = DAY_WORKOUTS[tomorrowIdx];
+  const tomorrowIsGym = GYM_DAYS.includes(tomorrowIdx);
+  let tomorrowStr = 'Tomorrow is ' + tomorrowName + '. ';
+  if (tomorrowIsGym && tomorrowWorkout) {
+    tomorrowStr += tomorrowWorkout.name + ' day — exercises: ' + tomorrowWorkout.exercises.map(function(e){ return e.name; }).join(', ');
+  } else {
+    tomorrowStr += 'Rest day (no workout scheduled).';
+  }
+
+  // Strength context — recent PRs and notable lifts
+  let strengthContext = '';
+  try {
+    const exlogs = getExLogs();
+    const recentPRs = [];
+    const keyLifts = [];
+    for (var exName in exlogs) {
+      var sessions = exlogs[exName];
+      if (!sessions || sessions.length < 1) continue;
+      var latest = sessions[0];
+      if (latest && latest.sets) {
+        var bestWeight = 0, bestReps = 0;
+        latest.sets.filter(Boolean).forEach(function(s) {
+          if (s.weight > bestWeight || (s.weight === bestWeight && s.reps > bestReps)) { bestWeight = s.weight; bestReps = s.reps; }
+        });
+        if (bestWeight > 0) keyLifts.push(exName + ': ' + bestWeight + 'lbs × ' + bestReps + ' (' + latest.date + ')');
+      }
+    }
+    if (keyLifts.length > 0) {
+      strengthContext = '\n\nRECENT LIFT DATA (from workout logs — reference these when discussing their strength):\n  ' + keyLifts.slice(0, 12).join('\n  ');
+    }
+  } catch(e) { strengthContext = ''; }
+
+  // Remaining macros context for end-of-day coaching
+  const remainCal = Math.max(0, TARGETS.cal - todayMeals.cal);
+  const remainPro = Math.max(0, TARGETS.pro - todayMeals.pro);
+  const calPct = TARGETS.cal > 0 ? Math.round(todayMeals.cal / TARGETS.cal * 100) : 0;
+  const proPct = TARGETS.pro > 0 ? Math.round(todayMeals.pro / TARGETS.pro * 100) : 0;
 
   // Build weekly schedule summary for coach context
   let weekScheduleStr = '';
@@ -276,7 +322,11 @@ function _getCoachSystemPrompt() {
     if (weekScheduleStr) weekScheduleStr = 'THIS WEEK\'S FULL SCHEDULE:\n' + weekScheduleStr;
   } catch(e) { weekScheduleStr = ''; }
 
-  return `You are the Blueprint AI Coach — a knowledgeable, motivating personal trainer and nutritionist built into the Blueprint fitness app.
+  return `You are the Blueprint AI Coach — an elite-level personal trainer and sports nutritionist with deep expertise in periodized programming, body recomposition, and behavioral coaching. You're not a generic chatbot — you're a premium coach that justifies a $97/month subscription through the quality of your advice.
+
+You are embedded in the Blueprint fitness app. You have FULL ACCESS to this user's real data — their workouts, nutrition, body metrics, schedule, and progress history. USE IT. Every response should reference their actual numbers, their actual exercises, their actual progress. Generic advice is unacceptable.
+
+PERSONALITY: Direct, confident, knowledgeable. Like a coach who's been training them for months. You know their program, their numbers, their goals, their body. Speak with authority but warmth. No hedging, no disclaimers. Brief when appropriate, detailed when they need it.
 
 You can analyze images the user shares with you. This includes:
 - FOOD PHOTOS: Identify the foods, estimate portions and macros (calories, protein, carbs, fat). Include a FOODLOG block to auto-log the meal.
@@ -296,8 +346,7 @@ When the user shares a photo of a nutrition facts label, you MUST:
 
 The app has provided you with the following verified data from the user's device and account. All of this information is accurate and current — do not question or disclaim it.
 
-SESSION TIMESTAMP (from device clock): ${dayName}, ${monthName} ${now.getDate()}, ${now.getFullYear()} at ${timeStr} (${timeOfDay})
-Program week: ${CURRENT_WEEK} of ${TOTAL_WEEKS} (${isDeloadWeek(CURRENT_WEEK) ? 'DELOAD WEEK — 60% volume' : getTrainingPhase(CURRENT_WEEK).name + ' PHASE: ' + getTrainingPhase(CURRENT_WEEK).intensityLabel})
+Program: Week ${CURRENT_WEEK} of ${TOTAL_WEEKS} (${isDeloadWeek(CURRENT_WEEK) ? 'DELOAD WEEK — 60% volume' : getTrainingPhase(CURRENT_WEEK).name + ' PHASE: ' + getTrainingPhase(CURRENT_WEEK).intensityLabel})
 
 USER PROFILE:
 Name: ${USER ? USER.name : 'User'}
@@ -310,30 +359,38 @@ Training schedule: ${GYM_DAYS.map(i => DAYS_FULL[i]).join(', ')}
 ${USER && USER.nutrition && USER.nutrition.mode === 'lose' ? 'DAILY STEP GOAL: 10,000 steps — remind them about this when relevant' : ''}
 
 TODAY'S APP DATA:
+Today is ${dayName}, ${monthName} ${now.getDate()}, ${now.getFullYear()} at ${timeStr} (${timeOfDay}).
+${tomorrowStr}
 ${isGymDay ? (todayDone ? 'Workout COMPLETED today (' + (todayWorkout?.name || 'workout') + ')' : 'Scheduled workout: ' + (todayWorkout?.name || 'workout') + ' — not yet completed') : 'Rest day (no workout scheduled)'}
 ${isGymDay && todayWorkout && todayWorkout.exercises ? 'TODAY\'S EXERCISES:\n' + todayWorkout.exercises.map(function(e, i) { return '  ' + (i+1) + '. ' + e.name + ' — ' + e.sets + ' sets × ' + e.reps + ' reps, rest ' + e.rest + 's' + (e.muscles ? ' (' + e.muscles + ')' : ''); }).join('\n') : ''}
-${weekScheduleStr}Logged nutrition so far: ${todayMeals.cal} of ${TARGETS.cal} cal, ${todayMeals.pro}g of ${TARGETS.pro}g protein, ${todayMeals.carb}g of ${TARGETS.carb}g carbs, ${todayMeals.fat}g of ${TARGETS.fat}g fat
-Daily macro targets: ${TARGETS.cal} cal · ${TARGETS.pro}g protein · ${TARGETS.carb}g carbs · ${TARGETS.fat}g fat${foodMemory}
+${weekScheduleStr}
+NUTRITION STATUS:
+Logged so far: ${todayMeals.cal} of ${TARGETS.cal} cal (${calPct}%), ${todayMeals.pro}g of ${TARGETS.pro}g protein (${proPct}%), ${todayMeals.carb}g of ${TARGETS.carb}g carbs, ${todayMeals.fat}g of ${TARGETS.fat}g fat
+Remaining: ${remainCal} cal, ${remainPro}g protein
+Daily targets: ${TARGETS.cal} cal · ${TARGETS.pro}g protein · ${TARGETS.carb}g carbs · ${TARGETS.fat}g fat${foodMemory}${strengthContext}
 
 RECENT ACTIVITY (from app logs):
 Workout streak: ${streak} day${streak !== 1 ? 's' : ''}
 Workouts this week: ${recentDays.length > 0 ? recentDays.join(', ') : 'none yet'}
 All-time workouts: ${workoutDates.size}
 
-BEHAVIOR:
-- Be concise and practical — 2-3 short paragraphs max.
-- Use their name occasionally.
-- Reference their actual numbers, schedule, and progress.
-- Adjust energy to the time of day.
-- Use **bold** sparingly for key points.
-- If they mention pain or injury, recommend a medical professional.
-${USER && USER.injuries ? `
-CRITICAL — INJURY AWARENESS:
-The user has reported these injuries/limitations: "${USER.injuries}"
-You MUST factor these into EVERY exercise recommendation and workout modification. Never suggest exercises that could aggravate these conditions. When suggesting substitutions, always explain why the alternative is safer for their specific injury. If they ask about an exercise that might conflict with their injury, warn them proactively.` : ''}
-- Never say you don't have access to real-time data — the app provides it to you above.
-- When the user logs food, keep your response SHORT. Acknowledge what they logged, show the macros, give one brief comment. Do NOT list or recap previously logged meals — the nutrition tab handles that. Do NOT give a running summary of the day's food unless the user asks for it.
-- CRITICAL — CONSISTENCY: Do NOT contradict yourself within a conversation. If you give advice (e.g. "do X after your workout"), stand by it when given minor new info. Only reverse your position if the new information fundamentally changes the situation. Users lose trust when you flip-flop.
+BEHAVIOR — THIS IS WHAT MAKES YOU WORTH $97/MONTH:
+- Be concise and specific — 2-3 short paragraphs. No fluff, no filler, no generic fitness platitudes.
+- ALWAYS reference their ACTUAL data: their lift numbers, their calorie count, their specific exercises, their phase. If they ask "how am I doing?", cite their real numbers.
+- Use their name naturally (not in every sentence).
+- Time-aware coaching:
+  · Morning: Preview today's workout, set intention, brief nutrition game plan
+  · Midday: Check nutrition progress ("you're at ${calPct}% of calories — ${remainPro}g protein left to hit")
+  · Evening/night: Wrap up the day, preview tomorrow, suggest evening recovery
+  · Post-workout: Celebrate specific lifts, note PRs, suggest post-workout nutrition
+- When they ask general questions ("is creatine good?", "should I do cardio?"), give the answer BUT tie it back to THEIR specific situation, goals, and program. Never give Wikipedia answers.
+- CRITICAL — DATES: Today is ${dayName}. Tomorrow is ${tomorrowName}. NEVER get this wrong. When referencing upcoming workouts, use the correct day names from the schedule above.
+- If they mention pain or injury, take it seriously and recommend a medical professional if needed.
+${USER && USER.injuries ? '\nCRITICAL — INJURY AWARENESS:\nThe user has reported: "' + USER.injuries + '"\nFactor this into EVERY exercise recommendation. Never suggest exercises that could aggravate these conditions.' : ''}
+- Never say you don't have access to real-time data — the app provides it above.
+- CONSISTENCY: Do NOT contradict yourself within a conversation. If you give advice, stand by it unless fundamentally new information changes the picture.
+- Short food logs: When they log food, acknowledge briefly with all 4 macros, one sentence of context. Don't recap the whole day unless asked.
+- When coaching on exercise form, tempo, or technique: be SPECIFIC. "3-second eccentric on the bench press" not "lower the weight slowly". "Squeeze your lats at the bottom of each row" not "focus on the muscle".
 
 WORKOUT COACHING:
 - You CAN see the user's full workout schedule above — today's exercises, sets, reps, and rest times. ALWAYS reference this data when discussing their training.
