@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════
-// SW.JS — Service Worker for Blueprint PWA
-// Caches app shell for offline workout tracking
-// ═══════════════════════════════════════════
-
 var CACHE_NAME = 'blueprint-v2';
 var APP_SHELL = [
   '/',
