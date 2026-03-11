@@ -693,6 +693,11 @@ function renderSettingsGymDays() {
 }
 
 function saveSettings() {
+  // Capture previous values for program-affecting fields
+  var prevGoal = USER ? USER.goal : null;
+  var prevInjuries = USER ? USER.injuries : '';
+  var prevRules = USER ? USER.personalRules : '';
+
   // Update user profile
   const newName   = document.getElementById('s-name').value.trim();
   const newWeight = parseFloat(document.getElementById('s-weight').value);
@@ -744,6 +749,39 @@ function saveSettings() {
   const btn = document.getElementById('save-btn'), orig = btn.textContent;
   btn.textContent='✓ SAVED'; btn.style.background='rgba(255,255,255,0.08)'; btn.style.color='var(--bone)'; btn.style.border='1px solid rgba(255,255,255,0.12)';
   setTimeout(()=>{ btn.textContent=orig; btn.style.background='var(--gold)'; btn.style.color='var(--black)'; btn.style.border='none'; }, 1800);
+
+  // Check if program-affecting fields changed → offer to regenerate
+  var goalChanged = newGoal && prevGoal && Math.abs(newGoal - prevGoal) > 2;
+  var injuriesChanged = (USER.injuries || '') !== (prevInjuries || '');
+  var rulesChanged = (USER.personalRules || '') !== (prevRules || '');
+  if (goalChanged || injuriesChanged || rulesChanged) {
+    var changes = [];
+    if (goalChanged) changes.push('goal weight');
+    if (injuriesChanged) changes.push('injuries');
+    if (rulesChanged) changes.push('personal rules');
+    setTimeout(function() {
+      if (confirm('You changed ' + changes.join(' and ') + '. Would you like to regenerate your workout program with the updated info?\n\nYour workout logs and nutrition data will be kept.')) {
+        _regenerateProgramFromSettings();
+      }
+    }, 500);
+  }
+}
+
+// Regenerate the workout program after settings change (injuries, goals, rules)
+async function _regenerateProgramFromSettings() {
+  showToast('Regenerating your program with updated settings...', 'info', 4000);
+  try {
+    // Use the existing plan generation — generatePlan() is in app.js
+    if (typeof generatePlan === 'function') {
+      await generatePlan();
+      showToast('Program updated!', 'success');
+    } else {
+      showToast('Please regenerate your plan from the setup page.', 'warning');
+    }
+  } catch(e) {
+    showToast('Could not regenerate — try from the setup page.', 'error');
+    console.log('Regen error:', e);
+  }
 }
 
 // ═══════════════════════════════════════════
