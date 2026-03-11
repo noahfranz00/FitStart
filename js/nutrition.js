@@ -288,15 +288,12 @@ function openCoachForMeal(catId, catLabel) {
 // ── FOOD MODAL ──
 function openFoodModal(catId) {
   activeFoodCat = catId;
-  foodModalTab = 'search';
+  foodModalTab = 'recent';
   document.getElementById('food-modal').classList.add('open');
   document.getElementById('food-modal-cat-label').textContent =
     MEAL_CATS.find(c=>c.id===catId)?.label || catId;
   document.getElementById('food-modal-search-input').value = '';
-  document.getElementById('food-modal-results').innerHTML = '';
-  showFoodModalTab('search');
-  renderRecentFoods();
-  setTimeout(()=>document.getElementById('food-modal-search-input').focus(), 100);
+  showFoodModalTab('recent');
 }
 
 function closeFoodModal() {
@@ -331,24 +328,53 @@ function renderRecentFoodsInModal() {
   const recents = getRecentFoods();
   const resultsEl = document.getElementById('food-modal-results');
   if (!recents.length) {
-    resultsEl.innerHTML = '<div class="food-modal-empty">No recent foods yet. Search to find and log foods.</div>';
+    resultsEl.innerHTML = '<div class="food-modal-empty">No recent foods yet. Search or ask your AI coach to log food.</div>';
     return;
   }
-  resultsEl.innerHTML = `<div class="recent-foods-section"><div class="rfs-label">Recently Logged</div></div>` +
-    recents.map((item, i) =>
-      `<div class="food-modal-item" onclick="openServingModal(${i}, 'recent')">
+  resultsEl.innerHTML = `<div class="recent-foods-section"><div class="rfs-label">My Foods · Recently Logged</div></div>` +
+    recents.map((item, i) => {
+      var servingLabel = item.lastAmt ? item.lastAmt + (item.lastUnit || 'g') : (item.serving_size || '100g');
+      var displayCal = item.lastCal || Math.round(item.cal100 || item.cal || 0);
+      var displayPro = item.lastPro != null ? item.lastPro : Math.round(item.pro100 || item.pro || 0);
+      var displayCarb = item.lastCarb != null ? item.lastCarb : Math.round(item.carb100 || item.carb || 0);
+      var displayFat = item.lastFat != null ? item.lastFat : Math.round(item.fat100 || item.fat || 0);
+      return `<div class="food-modal-item" onclick="openServingModal(${i}, 'recent')">
         <div>
           <div class="fmi-name">${item.name}</div>
-          ${item.brand ? `<div class="fmi-brand">${item.brand}</div>` : ''}
-          <div class="fmi-macros">${item.pro100 ? Math.round(item.pro100)+'g P · '+Math.round(item.carb100)+'g C · '+Math.round(item.fat100)+'g F per 100g' : item.pro+'g P · '+item.carb+'g C · '+item.fat+'g F'}</div>
+          <div class="fmi-brand">${displayCal} cal, ${servingLabel}${item.brand ? ', ' + item.brand : ''}</div>
+          <div class="fmi-macros">${displayPro}g P · ${displayCarb}g C · ${displayFat}g F</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <div class="fmi-cal">${Math.round(item.cal100 || item.cal)}</div>
-          <button class="fmi-add">+</button>
+          <button class="fmi-add" onclick="event.stopPropagation();quickLogRecent(${i})" title="Log at last serving">+</button>
         </div>
-      </div>`
-    ).join('');
+      </div>`;
+    }).join('');
   window._recentResults = recents;
+}
+
+// Quick-log from recent foods — logs at last serving size, no modal
+function quickLogRecent(idx) {
+  var recents = getRecentFoods();
+  var item = recents[idx];
+  if (!item) return;
+  var amt = item.lastAmt || (item.serving_quantity ? parseFloat(item.serving_quantity) : 100);
+  var unit = item.lastUnit || 'g';
+  var factor;
+  if (unit === 'g') factor = amt / 100;
+  else if (unit === 'oz') factor = (amt * 28.3495) / 100;
+  else factor = amt / 100;
+  var entry = {
+    name: item.name + ' (' + amt + unit + ')',
+    cal: Math.round((item.cal100 || 0) * factor),
+    pro: Math.round((item.pro100 || 0) * factor),
+    carb: Math.round((item.carb100 || 0) * factor),
+    fat: Math.round((item.fat100 || 0) * factor),
+  };
+  getMealCatEntries(nutDay, activeFoodCat).push(entry);
+  saveRecentFood(item); // bump to top of recents
+  renderMealCategories(); renderMacros(); saveToStorage();
+  showToast(item.name + ' logged (' + entry.cal + ' cal)', 'success', 2000);
+  closeFoodModal();
 }
 
 // Custom foods
@@ -777,10 +803,11 @@ function openServingModal(idx, source) {
     onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--off)'">${s.label}</button>`
   ).join('');
   
-  // Default to serving size if available, else 100g
-  const defaultGrams = (item.serving_quantity ? parseFloat(item.serving_quantity) : 100);
+  // Default to last serving if from recents, else serving size, else 100g
+  var defaultGrams = (item.lastAmt ? parseFloat(item.lastAmt) : (item.serving_quantity ? parseFloat(item.serving_quantity) : 100));
+  var defaultUnit = item.lastUnit || 'g';
   document.getElementById('sm-grams').value = defaultGrams;
-  document.getElementById('sm-unit').value = 'g';
+  document.getElementById('sm-unit').value = defaultUnit;
   updateServingCalc();
   document.getElementById('serving-modal').classList.add('open');
 }
@@ -828,7 +855,15 @@ function confirmLogFood() {
     fat: Math.round((currentFoodItem.fat100 || 0) * factor),
   };
   getMealCatEntries(nutDay, activeFoodCat).push(entry);
-  saveRecentFood(currentFoodItem);
+  // Save recent food with last serving info
+  var recentItem = Object.assign({}, currentFoodItem);
+  recentItem.lastAmt = amt;
+  recentItem.lastUnit = unit;
+  recentItem.lastCal = entry.cal;
+  recentItem.lastPro = entry.pro;
+  recentItem.lastCarb = entry.carb;
+  recentItem.lastFat = entry.fat;
+  saveRecentFood(recentItem);
   closeServingModal();
   renderMealCategories(); renderMacros(); saveToStorage();
 }
