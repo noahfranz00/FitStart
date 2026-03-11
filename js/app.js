@@ -954,9 +954,13 @@ Be concise. Use their name. No headers, no bullet points, no markdown.`;
         + '<div style="font-size:0.88rem;color:var(--off);line-height:1.65">' + paragraphs[i].trim() + '</div></div>';
     }
     el.innerHTML = cardsHtml;
+    // Persist the explanation so it's available in My Plan tab
+    lsSet('fs_plan_explanation', cardsHtml);
   } catch(e) {
-    el.innerHTML = statsHtml + '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px">'
+    var fallbackHtml = statsHtml + '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px">'
       + '<div style="font-size:0.88rem;color:var(--off);line-height:1.65">' + plan.name + ' — A ' + selectedWeeks + '-week periodized program with ' + n.calories + ' daily calories and ' + n.protein + 'g protein. Your training phases progress from hypertrophy to strength to power, with deload weeks built in for recovery.</div></div>';
+    el.innerHTML = fallbackHtml;
+    lsSet('fs_plan_explanation', fallbackHtml);
   }
 }
 
@@ -1820,4 +1824,9 @@ function renderMyPlan(plan) {
       ].filter(r=>r[1]).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--dim);font-size:0.82rem">${k}</span><span style="color:var(--white);font-size:0.82rem;font-weight:600">${v}</span></div>`).join('')}
     </div>
   `;
+  // Append saved program summary if available
+  var savedExplanation = lsGet('fs_plan_explanation');
+  if (savedExplanation) {
+    body.innerHTML += '<div style="margin-top:4px">' + savedExplanation + '</div>';
+  }
 }
