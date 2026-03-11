@@ -914,8 +914,9 @@ self.addEventListener('fetch', e => {
       </div>
       <div id="wo-phase-badge" style="display:none"></div>
 
-      <!-- Form Demo Images -->
-      <div class="ex-demo-wrap" id="wo-demo-wrap">
+      <!-- Form Demo Images — swipe/tap to dismiss -->
+      <div class="ex-demo-wrap" id="wo-demo-wrap" style="position:relative">
+        <button id="wo-video-dismiss" onclick="dismissExVideo()" style="position:absolute;top:8px;right:8px;z-index:10;width:28px;height:28px;border-radius:8px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);color:var(--off);font-size:0.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)">✕</button>
         <div class="ex-demo-frames" id="wo-demo-frames">
           <div class="demo-frame"><div class="demo-frame-img-placeholder"><div class="demo-frame-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg></div></div><div class="demo-frame-label">START</div></div>
           <div class="demo-frame"><div class="demo-frame-img-placeholder"><div class="demo-frame-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg></div></div><div class="demo-frame-label">MID</div></div>
