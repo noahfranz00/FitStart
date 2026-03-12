@@ -1096,30 +1096,6 @@ input::placeholder { color: var(--dim) !important; }
 .tl-btn, .split-btn, .day-pill { color: var(--off) !important; font-size: 0.85rem !important; }
 .form-card p, .form-card span:not(.tier-badge) { color: var(--off) !important; }
 
-
-/* ── Agent status pill ── */
-#agent-status-pill {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  background: rgba(212,165,32,0.10);
-  border: 1px solid rgba(212,165,32,0.28);
-  border-radius: 20px;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.7rem;
-  color: #D4A520;
-  letter-spacing: 0.4px;
-  margin-bottom: 4px;
-  transition: opacity 0.3s;
-}
-[data-theme="light"] #agent-status-pill {
-  background: rgba(168,120,32,0.08);
-  border-color: rgba(168,120,32,0.25);
-  color: #A87820;
-}
-
 /* ── AI COACH ── */
 .coach-chat-container { display:flex; flex-direction:column; flex:1; min-height:0; background:var(--dark); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
 .coach-messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; -webkit-overflow-scrolling:touch; min-height:0; }
@@ -1272,4 +1248,21 @@ input::placeholder { color: var(--dim) !important; }
 .wpr-prev {
   color: var(--blue);
   font-size: 0.65rem;
+}
+
+
+/* ── Today exercise thumbnail cards ── */
+.today-ex-thumb-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.today-ex-thumb-card:active {
+  transform: scale(0.985);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.3);
+}
+.today-ex-thumb-card.done {
+  opacity: 0.7;
+}
+[data-theme="light"] .today-ex-thumb-card {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
 }
