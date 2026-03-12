@@ -664,47 +664,49 @@ async function generatePlan() {
   }
 }
 
+// Parse personal rules for banned exercises (e.g. "I don't do lunges" → ["lunge"])
 // Parse personal rules for banned exercises.
-// Two-pass approach: (1) regex for common "no X" patterns, (2) scan EXERCISE_DB for any
-// exercise name that appears as a standalone word/phrase in the rules string.
-// Returns array of lowercase banned tokens to match against exercise names.
+// Two-pass: (1) negation-phrase regex, (2) scan every EXERCISE_DB key against rules string.
+// Returns lowercase tokens that are matched against exercise names at plan-build time.
 function _parseBannedExercises(rulesStr) {
   if (!rulesStr) return [];
   var banned = new Set();
   var lower = rulesStr.toLowerCase();
 
-  // ── Pass 1: regex for explicit negation phrases ──
-  // Extract the word(s) IMMEDIATELY after a negation keyword, stopping at the first non-word boundary
-  var negWords = ['no ','never ','avoid ','hate ','skip ','don\'t do ','dont do ','won\'t do ','wont do ',
-                  'can\'t do ','cant do ','not doing ','refuse ','no more ','absolutely no '];
-  negWords.forEach(function(neg) {
+  // ── Pass 1: explicit negation phrases ──
+  var negPrefixes = [
+    'no ', 'never ', 'avoid ', 'hate ', 'skip ', 'no more ',
+    "don't do ", "dont do ", "won't do ", "wont do ",
+    "can't do ", "cant do ", 'not doing ', 'refuse to do ',
+    'absolutely no ', 'i hate ', 'i avoid '
+  ];
+  negPrefixes.forEach(function(neg) {
     var idx = 0;
     while ((idx = lower.indexOf(neg, idx)) !== -1) {
       var start = idx + neg.length;
-      // Extract up to 30 chars, stopping at .,;!\n or another negation keyword
-      var snippet = lower.slice(start, start + 40).split(/[.,;!\n]/)[0].trim();
-      // Trim to 3-word max (exercise names are at most 3 words)
-      var words = snippet.split(/\s+/).slice(0, 3).join(' ').replace(/s$/, '');
-      if (words.length >= 3) banned.add(words);
-      // Also add just the first word in case of "lunges" vs "lunge day" etc.
-      var firstWord = snippet.split(/\s+/)[0].replace(/s$/, '');
-      if (firstWord.length >= 3) banned.add(firstWord);
+      var snippet = lower.slice(start, start + 50).split(/[.,;!
+]/)[0].trim();
+      // Grab up to 3 words (exercise names max 3 words)
+      var phrase = snippet.split(/\s+/).slice(0, 3).join(' ').replace(/s$/, '');
+      if (phrase.length >= 3) banned.add(phrase);
+      // Also add single first word
+      var word = snippet.split(/\s+/)[0].replace(/s$/, '');
+      if (word.length >= 3) banned.add(word);
       idx = start;
     }
   });
 
-  // ── Pass 2: scan every EXERCISE_DB key against the rules string ──
-  // If any exercise name appears as a substring in the rules, treat it as banned
+  // ── Pass 2: scan EXERCISE_DB keys directly ──
+  // If any exercise name (or its root) appears anywhere in the rules, ban it.
   if (typeof EXERCISE_DB !== 'undefined') {
     Object.keys(EXERCISE_DB).forEach(function(exName) {
       var exL = exName.toLowerCase();
-      // Check full name
       if (lower.includes(exL)) { banned.add(exL); return; }
-      // Check singular (strip trailing s)
-      var singular = exL.replace(/s$/, '');
-      if (singular.length >= 4 && lower.includes(singular)) banned.add(singular);
-      // Check first word only for exercises like "Lunges" (first word = "lunge")
-      var firstWord = exL.split(' ')[0].replace(/s$/, '');
+      // Singular form
+      var sing = exL.replace(/es$/, '').replace(/s$/, '');
+      if (sing.length >= 4 && lower.includes(sing)) { banned.add(sing); return; }
+      // First word of multi-word name (e.g. "Lunges" from "Walking Lunges")
+      var firstWord = exL.split(' ')[0].replace(/es$/, '').replace(/s$/, '');
       if (firstWord.length >= 4 && lower.includes(firstWord)) banned.add(firstWord);
     });
   }
@@ -727,12 +729,10 @@ async function buildPlan(selDays) {
   const exPerSession = u.tier === 'beginner' ? '3-4' : u.tier === 'intermediate' ? '4-5' : '5-6';
   const rulesStr = u.personalRules ? u.personalRules.slice(0, 300) : '';
 
-  // Pre-parse banned exercises to add explicit list to prompt
+  // Pre-parse banned exercises — injected into prompt as an explicit hard constraint
   const bannedForPrompt = _parseBannedExercises(rulesStr);
-  const bannedPromptSection = bannedForPrompt.length > 0
-    ? '\n\u26d4 BANNED EXERCISES (HARD CONSTRAINT - NEVER INCLUDE THESE, NO EXCEPTIONS):\n' +
-      bannedForPrompt.map(function(b) { return '  - Any exercise containing "' + b + '" (e.g. Lunges, Walking Lunges, Reverse Lunges, etc.)'; }).join('\n') +
-      '\nDo NOT include any variation of these. If you would normally use one, substitute a different exercise targeting the same muscle group.'
+  const bannedLine = bannedForPrompt.length > 0
+    ? '\n\u26d4 ABSOLUTE BAN — NEVER include these or ANY variation (e.g. Walking Lunges, Reverse Lunges if lunge is banned): ' + bannedForPrompt.join(', ') + '. If you would use one, substitute a different exercise for the same muscle group.'
     : '';
   const userPrompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
 Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks === 0 ? 'ongoing/maintenance' : u.weeks + 'wk'}.
@@ -748,8 +748,9 @@ CRITICAL RULES:
 - Exercise names: 2-3 words max (e.g. "Bench Press" not "Barbell Flat Bench Press")
 - muscles: single word (e.g. "Chest" not "Chest, Front Delts")
 - philosophy: 1 short sentence only
-- Equipment: ${equipStr}. Avoid: ${injuryStr}${bannedForPrompt.length > 0 ? '\n- ⛔ BANNED (hard constraint, no exceptions): ' + bannedForPrompt.join(', ') + ' — do NOT include any variation of these' : ''}
-${rulesStr ? '- PERSONAL RULES (MUST OBEY): ' + rulesStr : ''}`;
+- Equipment: ${equipStr}. Avoid: ${injuryStr}
+${rulesStr ? '- PERSONAL RULES (MUST OBEY): ' + rulesStr : ''}
+${bannedLine ? bannedLine : ''}`;
 
   // Try up to 3 attempts with progressively simpler prompts
   let parsed;
@@ -845,24 +846,24 @@ RULES: All 7 days Mon-Sun. Gym: ${gymDaysStr}. ${exPerSession} exercises per wor
         return { day: day.day, type: 'rest', badge: day.badge || 'Rest', workout: 'Rest day. Recover, hydrate, and let your muscles rebuild.', exercises: [] };
       }
       const exercises = (day.exercises || []).reduce((acc, ex) => {
-        // Check against banned exercises from personal rules
+        // Check against banned exercises — REPLACE instead of delete to keep exercise count intact
         const exLower = ex.name.toLowerCase();
-        var isBanned = bannedExercises.some(function(b) { return exLower.includes(b); });
+        const isBanned = bannedExercises.some(b => exLower.includes(b));
         if (isBanned) {
-          console.log('[PlanGen] Banned "' + ex.name + '" — finding replacement for same muscle group');
-          // Replace with a non-banned exercise from same category
-          var cat = (getExerciseData(ex.name) || {}).category || 'Other';
-          var replacement = Object.keys(EXERCISE_DB).find(function(name) {
+          console.log('[PlanGen] Banned "' + ex.name + '" — finding same-category replacement');
+          const cat = (getExerciseData(ex.name) || {}).category || '';
+          const replacement = Object.keys(EXERCISE_DB).find(name => {
             if (name === ex.name) return false;
-            if (EXERCISE_DB[name].category !== cat) return false;
-            var nl = name.toLowerCase();
-            return !bannedExercises.some(function(b) { return nl.includes(b); });
+            if (cat && EXERCISE_DB[name].category !== cat) return false;
+            const nl = name.toLowerCase();
+            return !bannedExercises.some(b => nl.includes(b));
           });
           if (replacement) {
             console.log('[PlanGen] Replaced "' + ex.name + '" with "' + replacement + '"');
             acc.push(Object.assign({}, ex, { name: replacement }));
+          } else {
+            console.log('[PlanGen] No replacement found for "' + ex.name + '" — skipping');
           }
-          // If no replacement found, skip (don't add a hole)
           return acc;
         }
         acc.push(ex);
@@ -1242,45 +1243,6 @@ async function callClaude(messages, opts = {}) {
     throw e;
   }
 }
-
-// ── AGENT-CAPABLE CLAUDE CALL ──
-// Returns the full API response (content blocks + stop_reason) for agentic tool use loops.
-// Also supports Anthropic-hosted tools (web_search_20250305).
-async function callClaudeRaw(messages, opts = {}) {
-  if (!navigator.onLine) {
-    showToast("You're offline. Connect and try again.", 'error');
-    throw new Error('No internet connection.');
-  }
-  const body = {
-    model: opts.model || 'claude-sonnet-4-20250514',
-    max_tokens: opts.max_tokens || 2048,
-    messages: messages
-  };
-  if (opts.system) body.system = opts.system;
-  if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
-  if (opts.tool_choice) body.tool_choice = opts.tool_choice;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), opts.timeout || 90000);
-  try {
-    const response = await fetch(AI_PROXY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'AI unavailable (' + response.status + ')');
-    }
-    return await response.json(); // Full response: { content, stop_reason, model, ... }
-  } catch(e) {
-    clearTimeout(timeout);
-    if (e.name === 'AbortError') throw new Error('Request timed out.');
-    throw e;
-  }
-}
-
 
 function loadFromStorage() {
   const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
