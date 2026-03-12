@@ -195,9 +195,36 @@ function renderTodayWorkout() {
   else { btn.textContent = 'START WORKOUT'; btn.classList.remove('done'); }
   document.getElementById('today-ex-list').innerHTML = exes.map((ex,i)=>{
     const prev = getPrevSet(TODAY_IDX,i,0);
-    return `<div class="ex-row ${wktDone.has(TODAY_IDX)?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
+    const ytId = EXERCISE_VIDEOS[ex.name] || null;
+    const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : null;
+    const isDone = wktDone.has(TODAY_IDX);
+    const lastStr = prev ? `Last Session: ${prev.weight} lbs \u00d7 ${prev.reps}` : null;
+    const TIPS = {
+      'Bench Press':'Drive feet into floor','Back Squat':'Brace core, chest tall',
+      'Deadlift':'Push the floor away','Romanian Deadlift':'Hip hinge, soft knees',
+      'Barbell Row':'Lead with elbows','Leg Press':'Full depth, heels flat',
+      'Shoulder Press':'Tuck chin as bar passes','Lat Pulldown':'Initiate with lats',
+      'Hip Thrust':'Squeeze glutes at top','Goblet Squat':'Elbows track inside knees',
+      'Incline DB Press':'45\u00b0 angle, controlled descent','Lateral Raise':'Slight forward lean',
+      'Tricep Pushdown':'Elbows pinned to sides','Barbell Curl':'No momentum, full ROM',
+    };
+    const tip = TIPS[ex.name] || `${ex.sets} sets \u00b7 focus on form`;
+    if (thumbUrl) {
+      return `<div class="today-ex-thumb-card ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})" style="position:relative;border-radius:14px;overflow:hidden;cursor:pointer;margin-bottom:10px;min-height:110px;background:#0a0a0a;-webkit-tap-highlight-color:transparent">
+        <img src="${thumbUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;pointer-events:none" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.10) 0%,rgba(0,0,0,0.76) 100%);pointer-events:none"></div>
+        <div style="position:relative;padding:14px 16px 14px;display:flex;flex-direction:column;justify-content:flex-end;min-height:110px">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:1.5px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.8);margin-bottom:2px">${ex.name}</div>
+          <div style="font-size:0.78rem;color:rgba(255,255,255,0.82);font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,0.9)">${ex.name}: ${ex.sets} sets, ${tip}</div>
+          ${lastStr ? `<div style="font-size:0.68rem;color:rgba(255,255,255,0.48);margin-top:4px;font-family:'DM Mono',monospace;letter-spacing:0.3px">${lastStr}</div>` : ''}
+          ${isDone ? '<div style="position:absolute;top:12px;left:12px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border-radius:6px;padding:3px 10px;font-family:\'Bebas Neue\',sans-serif;font-size:0.7rem;letter-spacing:1.5px;color:#111;pointer-events:none">✓ DONE</div>' : ''}
+        </div>
+        <button class="ex-row-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options" style="position:absolute;top:10px;right:10px;width:30px;height:30px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);border-radius:8px;color:rgba(255,255,255,0.8);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2">⋮</button>
+      </div>`;
+    }
+    return `<div class="ex-row ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
       <button class="ex-row-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options">⋮</button>
-      <div><div class="ex-name">${ex.name}</div><div class="ex-detail">${ex.sets}×${ex.reps} · Rest ${ex.rest}s${prev?` · Last: ${prev.weight}lbs×${prev.reps}`:''}</div></div>
+      <div><div class="ex-name">${ex.name}</div><div class="ex-detail">${ex.sets}\u00d7${ex.reps} \u00b7 Rest ${ex.rest}s${prev?` \u00b7 Last: ${prev.weight}lbs\u00d7${prev.reps}`:''}</div></div>
       <div class="ex-detail">${ex.muscles}</div>
     </div>`;
   }).join('');
