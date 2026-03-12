@@ -1073,32 +1073,6 @@ const LS = {
   woDraft:  'fs_wo_draft', // { [dayIdx]: { sets: woSets, extraSets: woExtraSets } } — every keystroke persisted
 };
 
-// ═══════════════════════════════════════════
-// THEME — light/dark toggle
-// ═══════════════════════════════════════════
-function _applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  const btn = document.getElementById('theme-toggle-btn');
-  const icon = document.getElementById('theme-toggle-icon');
-  const label = document.getElementById('theme-toggle-label');
-  if (theme === 'light') {
-    if (icon) icon.textContent = '🌙';
-    if (label) label.textContent = 'DARK';
-    if (btn) { btn.style.background = 'rgba(168,120,32,0.1)'; btn.style.borderColor = 'rgba(168,120,32,0.3)'; btn.style.color = '#A87820'; }
-  } else {
-    if (icon) icon.textContent = '☀️';
-    if (label) label.textContent = 'LIGHT';
-    if (btn) { btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }
-  }
-}
-
-function toggleAppTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = current === 'dark' ? 'light' : 'dark';
-  lsSet('fs_theme', next);
-  _applyTheme(next);
-}
-
 function lsGet(key) {
   try {
     if (key === 'fs_user' && window.StorageAPI) return StorageAPI.getUser();
@@ -1223,8 +1197,6 @@ function loadFromStorage() {
   const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
   const wd = lsGet(LS.wktDone);  if (wd) wktDone = new Set(wd);
   const tg = lsGet(LS.targets);  if (tg) TARGETS = tg;
-  // Apply saved theme
-  _applyTheme(lsGet('fs_theme') || 'dark');
   // Calculate current training week from program start date
   const startDate = lsGet('fs_program_start');
   if (startDate) {
@@ -1278,18 +1250,22 @@ function saveSet(dayIdx, exIdx, setIdx, weight, reps) {
 }
 
 function getPrevSet(dayIdx, exIdx, setIdx) {
-  const exName = (woWorkout && woWorkout.exercises[exIdx]) ? woWorkout.exercises[exIdx].name : null;
-  if (exName) {
-    const exlogs = getExLogs();
-    const sessions = exlogs[exName] || [];
-    const today = todayDateStr();
-    const prev = sessions.find(s => s.date !== today);
-    if (prev && prev.sets && prev.sets[setIdx]) {
-      return { weight: prev.sets[setIdx].weight, reps: prev.sets[setIdx].reps, date: prev.date };
+  try {
+    const exName = (woWorkout && woWorkout.exercises && woWorkout.exercises[exIdx]) ? woWorkout.exercises[exIdx].name : null;
+    if (exName) {
+      const exlogs = getExLogs();
+      const sessions = exlogs[exName] || [];
+      const today = todayDateStr();
+      const prev = sessions.find(s => s.date !== today);
+      if (prev && prev.sets && prev.sets[setIdx]) {
+        return { weight: prev.sets[setIdx].weight, reps: prev.sets[setIdx].reps, date: prev.date };
+      }
     }
+    const logs = lsGet(LS.setLogs) || {};
+    return logs[`${dayIdx}_${exIdx}_${setIdx}`] || null;
+  } catch(e) {
+    return null;
   }
-  const logs = lsGet(LS.setLogs) || {};
-  return logs[`${dayIdx}_${exIdx}_${setIdx}`] || null;
 }
 
 function getWorkoutDraft(dayIdx) {
@@ -1389,7 +1365,7 @@ function initDashboard() {
     if (dash) {
       const errDiv = document.createElement('div');
       errDiv.style.cssText = 'padding:40px;color:#fff;font-size:1rem;text-align:center';
-      errDiv.innerHTML = '<h2 style="margin-bottom:16px">⚠️ Plan needs to be regenerated</h2><p style="color:#aaa;margin-bottom:20px">Your saved plan is outdated. Please create a new plan.</p><button onclick="localStorage.clear();location.reload()" style="padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-weight:700;cursor:pointer">Start Fresh</button>';
+      errDiv.innerHTML = '<h2 style="margin-bottom:16px;font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem">⚠️ Plan needs to be regenerated</h2><p style="color:#aaa;margin-bottom:20px">Your saved plan is outdated or missing. Please create a new plan.</p><button onclick="(function(){ try{window.generatedPlan=null;window.USER=null;}catch(x){} localStorage.clear(); location.reload(); })()" style="padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer">START FRESH</button>';
       dash.appendChild(errDiv);
     }
     return;
@@ -1510,8 +1486,35 @@ function initDashboard() {
     saveToStorage();
   } catch(e) {
     console.error('Dashboard render error:', e);
+    // Attempt partial recovery first — reset plan version flag and retry
+    try {
+      if (generatedPlan) {
+        generatedPlan._v = null; // force re-upgrade on next load
+        lsSet('fs_plan', generatedPlan);
+      }
+      // Retry the renders that are safe to retry individually
+      try { refreshDashMacros(); } catch(e2) {}
+      try { renderWeek(); } catch(e2) {}
+      try { renderStreak(); } catch(e2) {}
+      // If we got this far without re-throwing, recovery worked — bail out
+      return;
+    } catch(e3) { /* recovery failed, show error UI */ }
+
     const main = document.querySelector('#screen-dash .main-content');
-    if (main) main.innerHTML = '<div style="padding:40px;color:#fff"><h2 style="color:#F43F5E;margin-bottom:12px">Error Loading Dashboard</h2><pre style="background:#111;padding:16px;border-radius:8px;font-size:0.8rem;color:#aaa;white-space:pre-wrap">' + e.stack + '</pre><button onclick="localStorage.clear();location.reload()" style="margin-top:16px;padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-weight:700;cursor:pointer">Clear Data & Restart</button></div>';
+    if (main) main.innerHTML = `
+      <div style="padding:40px;color:#fff">
+        <h2 style="color:#F43F5E;margin-bottom:8px;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:1px">Error Loading Dashboard</h2>
+        <p style="color:#aaa;font-size:0.85rem;margin-bottom:16px">Something went wrong rendering your dashboard. This is usually caused by corrupted data after an unexpected app close.</p>
+        <pre style="background:#111;padding:16px;border-radius:8px;font-size:0.7rem;color:#777;white-space:pre-wrap;margin-bottom:16px;max-height:140px;overflow:auto">${e.stack || e.message}</pre>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button onclick="(function(){ try { generatedPlan=null; USER=null; } catch(x){} localStorage.removeItem('fs_plan'); localStorage.removeItem('fs_user'); localStorage.removeItem('fs_entered'); localStorage.removeItem('fs_setLogs'); localStorage.removeItem('fs_exlogs'); localStorage.removeItem('fs_wo_draft'); location.reload(); })()" style="padding:14px;background:#D4A520;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer;color:#111">
+            CLEAR WORKOUT DATA &amp; RESTART
+          </button>
+          <button onclick="(function(){ try { generatedPlan=null; USER=null; } catch(x){} localStorage.clear(); location.reload(); })()" style="padding:12px;background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.4);border-radius:8px;font-family:'DM Mono',monospace;font-size:0.8rem;cursor:pointer;color:#F43F5E">
+            FULL RESET (clears all data)
+          </button>
+        </div>
+      </div>`;
   }
 }
 
