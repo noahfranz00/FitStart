@@ -3,6 +3,37 @@
 //   Rest Timer, Exercise Customizer, Custom Workout Builder
 // ═══════════════════════════════════════════
 // Dependencies: USER, DAY_WORKOUTS, GYM_DAYS, TODAY_IDX, wktDone,
+
+// ── WGER IMAGE CACHE ──
+// Lazy-loads exercise thumbnail URLs from wger.de API, keyed by exercise name
+var _wgerThumbCache = {}; // { exerciseName: 'url' | null | 'pending' }
+
+function _loadWgerThumb(exerciseName, imgEl) {
+  if (_wgerThumbCache[exerciseName] === 'pending') return;
+  if (_wgerThumbCache[exerciseName] && _wgerThumbCache[exerciseName] !== 'pending') {
+    if (_wgerThumbCache[exerciseName] !== null) imgEl.src = _wgerThumbCache[exerciseName];
+    return;
+  }
+  const db = typeof getExerciseData === 'function' ? getExerciseData(exerciseName) : null;
+  const wgerId = db ? db.wgerId : null;
+  if (!wgerId) { _wgerThumbCache[exerciseName] = null; return; }
+  _wgerThumbCache[exerciseName] = 'pending';
+  fetch('https://wger.de/api/v2/exerciseimage/?format=json&exercise_base=' + wgerId + '&is_main=True&limit=1')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var url = data.results && data.results[0] ? data.results[0].image : null;
+      _wgerThumbCache[exerciseName] = url;
+      if (url && imgEl && imgEl.parentNode) imgEl.src = url;
+    })
+    .catch(function() { _wgerThumbCache[exerciseName] = null; });
+}
+
+// Resolve a wger thumb for a given exercise name — returns cached URL or kicks off fetch
+function _getWgerThumbSync(exerciseName) {
+  return (_wgerThumbCache[exerciseName] && _wgerThumbCache[exerciseName] !== 'pending')
+    ? _wgerThumbCache[exerciseName]
+    : null;
+}
 //   saveSet(), getPrevSet(), getExLogs(), persistWorkoutDraft(),
 //   getWorkoutDraft(), EXERCISE_DB, getExerciseData(), callClaude()
 
@@ -628,15 +659,35 @@ function renderDemoPlaceholder(el, name, muscles) {
         <div style="position:absolute;bottom:8px;left:8px;font-size:0.65rem;color:rgba(255,255,255,0.7);font-family:'DM Mono',monospace;letter-spacing:0.5px">TAP TO PLAY</div>
       </div>`;
   } else {
-    el.innerHTML = `
-      <div style="width:100%;padding:16px 0;display:flex;align-items:center;justify-content:center" onclick="window.open('${ytSearch}','_blank')">
-        <button style="display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--border);border-radius:10px;padding:10px 18px;cursor:pointer;color:var(--dim);font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:0.5px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="16" height="16"><polygon points="6 3 20 12 6 21"/></svg>
-          WATCH FORM TUTORIAL
-        </button>
-      </div>`;
+    // Try to show wger exercise image as hero, fall back to search link
+    const wgerHeroId = document.createElement('div');
+    wgerHeroId.__exName = name;
+    el.innerHTML = `<div id="wo-wger-hero-wrap" style="width:100%;margin-bottom:0">
+      <div id="wo-wger-hero-inner" style="width:100%;min-height:100px;border-radius:14px;overflow:hidden;background:rgba(255,255,255,0.03);border:1px solid var(--border);display:flex;align-items:center;justify-content:center">
+        <span style="color:var(--dim);font-size:0.75rem;font-family:'DM Mono',monospace">Loading image...</span>
+      </div>
+    </div>
+    <div style="width:100%;padding:10px 0 4px;display:flex;align-items:center;justify-content:center">
+      <button style="display:flex;align-items:center;gap:8px;background:none;border:1px solid var(--border);border-radius:10px;padding:10px 18px;cursor:pointer;color:var(--dim);font-family:'DM Mono',monospace;font-size:0.75rem;letter-spacing:0.5px" onclick="window.open('${ytSearch}','_blank')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="16" height="16"><polygon points="6 3 20 12 6 21"/></svg>
+        WATCH FORM TUTORIAL
+      </button>
+    </div>`;
+
+    // Async: load wger image into hero slot
+    const heroInner = el.querySelector('#wo-wger-hero-inner');
+    if (heroInner) {
+      var proxyEl = { set src(url) {
+        if (!url) {
+          heroInner.innerHTML = '';
+          heroInner.style.display = 'none';
+          return;
+        }
+        heroInner.innerHTML = `<img src="${url}" alt="${name}" style="width:100%;max-height:220px;object-fit:cover;display:block;border-radius:13px" onerror="this.parentNode.style.display='none'">`;
+      }};
+      _loadWgerThumb(name, proxyEl);
+    }
   }
-}
 
 function _loadYTPlayer(wrap, videoId) {
   wrap.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1&rel=0&modestbranding=1&playsinline=1" style="position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:14px" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>';
@@ -1349,7 +1400,18 @@ function renderEcList() {
   list.innerHTML = exes.map((ex,i) => {
     const isDone = woSets[i] && woSets[i].some(s => s.done);
     const ssLabel = ex._supersetWith ? '<div style="font-size:0.55rem;color:var(--orange);font-family:\'DM Mono\',monospace;letter-spacing:0.5px">SS</div>' : '';
+    // Thumbnail — use cached wger image or muscle-group color fallback
+    const cachedThumb = _getWgerThumbSync(ex.name);
+    const db2 = typeof getExerciseData === 'function' ? getExerciseData(ex.name) : {};
+    const catColors = { 'Chest':'#fb923c','Back':'#60a5fa','Shoulders':'#a78bfa','Legs':'#34d399','Arms':'#f472b6','Core':'#facc15','Cardio':'#38bdf8' };
+    const cat = db2.category || 'Other';
+    const fallbackBg = catColors[cat] || '#6B6865';
+    const thumbHtml = cachedThumb
+      ? `<img class="wo-ex-sidebar-thumb" src="${cachedThumb}" alt="${ex.name}" onerror="this.style.display='none'">`
+      : `<div class="wo-ex-sidebar-thumb wo-ex-sidebar-thumb-fallback" style="background:${fallbackBg}" data-ex="${i}"></div>`;
+
     return `<div class="wo-ex-sidebar-item ${i===woCurrentEx?'active':''}" onclick="loadExercise(${i})">
+      ${thumbHtml}
       <div class="wo-ex-sidebar-num">${i+1}${ssLabel}</div>
       <div class="wo-ex-sidebar-info">
         <div class="wo-ex-sidebar-name">${ex.name}</div>
@@ -1359,10 +1421,24 @@ function renderEcList() {
       <button class="wo-ex-del" onclick="event.stopPropagation();removeExerciseFromWorkout(${i})" title="Remove">✕</button>
     </div>`;
   }).join('');
+
+  // Async: fetch wger thumbs for any not yet cached, then swap in the real images
+  exes.forEach(function(ex, i) {
+    var fallbackEl = list.querySelector('.wo-ex-sidebar-thumb-fallback[data-ex="' + i + '"]');
+    if (!fallbackEl) return; // Already has real cached image
+    var proxyEl = { set src(url) {
+      if (!url) return;
+      var img = document.createElement('img');
+      img.className = 'wo-ex-sidebar-thumb';
+      img.alt = ex.name;
+      img.onerror = function() { this.style.display='none'; };
+      img.src = url;
+      if (fallbackEl && fallbackEl.parentNode) fallbackEl.parentNode.replaceChild(img, fallbackEl);
+    }};
+    _loadWgerThumb(ex.name, proxyEl);
+  });
 }
-
-
-function removeExercise(e, idx) {
+(e, idx) {
   e.stopPropagation();
   if (woWorkout.exercises.length <= 1) { showToast('Need at least one exercise.', 'warning'); return; }
   woWorkout.exercises.splice(idx, 1);
