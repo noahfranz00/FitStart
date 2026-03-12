@@ -559,6 +559,349 @@ function sendCoachStarter(text) {
   _sendCoachMsg(text);
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  BLUEPRINT AGENT FRAMEWORK
+//  Multi-step AI with real tools. Not a chatbot — an AI Pilot.
+//
+//  Architecture: callClaudeRaw → tool_use loop → client-side execution
+//  Tools:
+//    web_search          — Anthropic hosted, auto-executed server-side
+//    update_workout_plan — client-side: patches generatedPlan + refreshes UI
+//    swap_exercise       — client-side: replaces one exercise across the full plan
+//
+//  Trigger: _detectAgentIntent() routes to _runAgentLoop() when travel/
+//           location/plan-mutation signals are detected.
+// ═══════════════════════════════════════════════════════════════
+
+const AGENT_TOOLS = [
+  {
+    // Anthropic hosted — Claude calls it, server returns results automatically
+    type: 'web_search_20250305',
+    name: 'web_search'
+  },
+  {
+    name: 'update_workout_plan',
+    description: 'Replace the exercises for one or more specific days in the user's workout plan. Use when the user mentions travel, a different gym, limited equipment, or explicitly asks to change upcoming workouts. Always include the full replacement exercise list for each day you modify.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description: 'Brief reason (e.g. "traveling to London, hotel gym only has dumbbells and cables")'
+        },
+        days: {
+          type: 'array',
+          description: 'Array of day objects to update',
+          items: {
+            type: 'object',
+            properties: {
+              day: {
+                type: 'string',
+                description: 'Day name: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, or Sunday'
+              },
+              badge: {
+                type: 'string',
+                description: 'Workout type label (e.g. "Push", "Pull", "Legs", "Hotel Full Body")'
+              },
+              exercises: {
+                type: 'array',
+                description: 'Full list of exercises for this day',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Exercise name, 2-3 words' },
+                    sets: { type: 'integer', description: 'Number of sets' },
+                    reps: { type: 'string', description: 'Reps range e.g. "8-12" or "10"' },
+                    rest: { type: 'integer', description: 'Rest in seconds' },
+                    muscles: { type: 'string', description: 'Primary muscle, single word' }
+                  },
+                  required: ['name', 'sets', 'reps', 'rest', 'muscles']
+                }
+              }
+            },
+            required: ['day', 'badge', 'exercises']
+          }
+        }
+      },
+      required: ['reason', 'days']
+    }
+  },
+  {
+    name: 'swap_exercise',
+    description: 'Permanently swap one specific exercise for another across all occurrences in the user's program. Use when the user wants to remove a specific exercise they dislike, cannot do due to injury, or wants a specific substitution. Also updates personal rules so the removed exercise never comes back.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        remove: {
+          type: 'string',
+          description: 'Exact exercise name to remove (as it appears in the plan)'
+        },
+        replace_with: {
+          type: 'string',
+          description: 'Exact exercise name to substitute in'
+        },
+        reason: {
+          type: 'string',
+          description: 'Why (e.g. "user dislikes lunges", "knee injury")'
+        },
+        add_to_banned: {
+          type: 'boolean',
+          description: 'If true, also add the removed exercise to personal rules so it never appears again'
+        }
+      },
+      required: ['remove', 'replace_with', 'reason']
+    }
+  }
+];
+
+// ── Intent detection ──
+// Returns 'agent' if the message warrants tool use, 'normal' otherwise.
+function _detectAgentIntent(text) {
+  var t = text.toLowerCase();
+  // Travel / location signals
+  if (/traveling|travelling|travel to|going to|visiting|trip to|vacation|holiday|hotel|hostel|airbnb|away this|out of town/.test(t)) return 'agent';
+  // Plan mutation signals
+  if (/update (my|the) (plan|workout|schedule)|change (my|the) (plan|workout)|modify (my|the)|swap.*exercise|replace.*exercise|remove.*exercise/.test(t)) return 'agent';
+  // Restaurant / food search
+  if (/find.*restaurant|high.protein.*restaurant|restaurant.*near|food.*near|where (should|can) i eat|suggest.*restaurant/.test(t)) return 'agent';
+  // Gym search
+  if (/find.*gym|gym.*near|nearest gym|local gym/.test(t)) return 'agent';
+  return 'normal';
+}
+
+// ── Agent status pill ──
+// Shows a small live indicator above the typing dots: "🔍 Searching web..." / "💪 Updating plan..."
+var _agentStatusEl = null;
+function _setAgentStatus(text) {
+  var container = document.getElementById('coach-messages');
+  if (!container) return;
+  if (!text) {
+    if (_agentStatusEl) { _agentStatusEl.remove(); _agentStatusEl = null; }
+    return;
+  }
+  if (!_agentStatusEl) {
+    _agentStatusEl = document.createElement('div');
+    _agentStatusEl.id = 'agent-status-pill';
+    _agentStatusEl.style.cssText = [
+      'align-self:flex-start',
+      'display:inline-flex',
+      'align-items:center',
+      'gap:6px',
+      'padding:6px 12px',
+      'background:rgba(212,165,32,0.12)',
+      'border:1px solid rgba(212,165,32,0.3)',
+      'border-radius:20px',
+      'font-family:"DM Mono",monospace',
+      'font-size:0.72rem',
+      'color:#D4A520',
+      'letter-spacing:0.5px',
+      'margin-bottom:4px'
+    ].join(';');
+    container.appendChild(_agentStatusEl);
+    container.scrollTop = container.scrollHeight;
+  }
+  _agentStatusEl.innerHTML = '<span style="animation:pulse 1s ease-in-out infinite;display:inline-block">●</span> ' + text;
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── Client-side tool executor ──
+function _executeClientTool(name, input) {
+  if (name === 'update_workout_plan') {
+    return _toolUpdateWorkoutPlan(input);
+  }
+  if (name === 'swap_exercise') {
+    return _toolSwapExercise(input);
+  }
+  return { error: 'Unknown tool: ' + name };
+}
+
+function _toolUpdateWorkoutPlan(input) {
+  try {
+    if (!input.days || !input.days.length) return { error: 'No days provided' };
+    var updated = [];
+    input.days.forEach(function(dayUpdate) {
+      var dayIdx = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].indexOf(dayUpdate.day);
+      if (dayIdx === -1) return;
+      // Update generatedPlan.weekly_schedule
+      if (generatedPlan && generatedPlan.weekly_schedule && generatedPlan.weekly_schedule[dayIdx]) {
+        var sched = generatedPlan.weekly_schedule[dayIdx];
+        sched.type = 'workout';
+        sched.badge = dayUpdate.badge || sched.badge;
+        sched.exercises = dayUpdate.exercises;
+        sched.workout = dayUpdate.exercises.map(function(e) { return e.name + ' ' + e.sets + 'x' + e.reps; }).join(', ');
+        // Rebuild DAY_WORKOUTS
+        GYM_DAYS = GYM_DAYS.filter(function(i) { return i !== dayIdx; });
+        if (!GYM_DAYS.includes(dayIdx)) GYM_DAYS.push(dayIdx);
+        DAY_WORKOUTS[dayIdx] = {
+          name: sched.badge,
+          focus: sched.workout.slice(0, 80),
+          exercises: sched.exercises
+        };
+        updated.push(dayUpdate.day);
+      }
+    });
+    if (updated.length === 0) return { error: 'No matching days found in plan' };
+    // Persist
+    lsSet('fs_plan', generatedPlan);
+    // Refresh UI
+    try { renderWeek(); } catch(e) {}
+    try { renderTodayWorkout(); } catch(e) {}
+    try { renderMyPlan(generatedPlan); } catch(e) {}
+    return { success: true, updated_days: updated, message: 'Plan updated for: ' + updated.join(', ') };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+function _toolSwapExercise(input) {
+  try {
+    if (!input.remove || !input.replace_with) return { error: 'remove and replace_with are required' };
+    var removeLower = input.remove.toLowerCase();
+    var swapped = [];
+    if (generatedPlan && generatedPlan.weekly_schedule) {
+      generatedPlan.weekly_schedule.forEach(function(day) {
+        if (!day.exercises) return;
+        day.exercises.forEach(function(ex, i) {
+          if (ex.name.toLowerCase().includes(removeLower)) {
+            ex.name = input.replace_with;
+            swapped.push(day.day);
+          }
+        });
+        // Rebuild workout string
+        if (day.exercises) day.workout = day.exercises.map(function(e) { return e.name; }).join(', ');
+      });
+      // Rebuild DAY_WORKOUTS
+      generatedPlan.weekly_schedule.forEach(function(d, i) {
+        if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
+          if (DAY_WORKOUTS[i]) {
+            DAY_WORKOUTS[i].exercises = d.exercises;
+            DAY_WORKOUTS[i].focus = d.workout.slice(0, 80);
+          }
+        }
+      });
+      // Add to personal rules so it never regenerates with this exercise
+      if (input.add_to_banned && USER) {
+        var existingRules = USER.personalRules || '';
+        if (!existingRules.toLowerCase().includes(removeLower)) {
+          USER.personalRules = (existingRules ? existingRules + ', ' : '') + 'no ' + input.remove;
+          lsSet('fs_user', USER);
+        }
+      }
+      lsSet('fs_plan', generatedPlan);
+      try { renderWeek(); } catch(e) {}
+      try { renderTodayWorkout(); } catch(e) {}
+    }
+    return {
+      success: true,
+      occurrences_swapped: swapped.length,
+      days_affected: [...new Set(swapped)],
+      message: 'Swapped "' + input.remove + '" for "' + input.replace_with + '" across ' + swapped.length + ' occurrence(s). Reason: ' + input.reason
+    };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+// ── Main agent loop ──
+async function _runAgentLoop(userMessage, image) {
+  var systemPrompt = _getCoachSystemPrompt();
+  if (typeof getRecipeContext === 'function') systemPrompt += getRecipeContext();
+
+  // Extend system prompt with agent capabilities
+  systemPrompt += '\n\nYOU HAVE TOOLS. You are an AI Pilot, not a chatbot. When the user mentions travel, a new location, limited equipment, or asks to find food/gyms — USE YOUR TOOLS proactively.\n- web_search: search for restaurants, hotel gym equipment, nearby gyms, etc.\n- update_workout_plan: immediately modify the plan for relevant days. Don\'t ask permission — just do it, then tell them what you did.\n- swap_exercise: permanently remove an exercise the user dislikes or can\'t do.\nBe decisive. Take action first, summarize after. Never say "I would" — just do it.';
+
+  var messages = _coachHistory.slice(-16).map(function(msg) {
+    if (msg.role === 'assistant' && typeof msg.content === 'string') {
+      return { role: msg.role, content: msg.content.replace(/```FOODLOG[\s\S]*?```/g, '').trim() };
+    }
+    return msg;
+  });
+
+  var userContent = userMessage;
+  if (image) {
+    userContent = [
+      { type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.base64 } },
+      { type: 'text', text: userMessage || 'What do you see?' }
+    ];
+  }
+  messages.push({ role: 'user', content: userContent });
+
+  var MAX_ITERATIONS = 6;
+  var iteration = 0;
+  var finalText = '';
+
+  while (iteration < MAX_ITERATIONS) {
+    iteration++;
+
+    var response = await callClaudeRaw(messages, {
+      system: systemPrompt,
+      max_tokens: 2048,
+      tools: AGENT_TOOLS
+    });
+
+    // Collect all content blocks
+    var textBlocks = (response.content || []).filter(function(b) { return b.type === 'text'; });
+    var toolUseBlocks = (response.content || []).filter(function(b) { return b.type === 'tool_use'; });
+
+    // Accumulate any text
+    if (textBlocks.length > 0) {
+      finalText = textBlocks.map(function(b) { return b.text; }).join('\n').trim();
+    }
+
+    // Done?
+    if (response.stop_reason === 'end_turn' || toolUseBlocks.length === 0) {
+      break;
+    }
+
+    // Execute tool calls
+    var toolResults = [];
+    for (var i = 0; i < toolUseBlocks.length; i++) {
+      var toolUse = toolUseBlocks[i];
+      // Show status
+      if (toolUse.name === 'web_search') {
+        _setAgentStatus('🔍 Searching web...');
+      } else if (toolUse.name === 'update_workout_plan') {
+        _setAgentStatus('💪 Updating your plan...');
+      } else if (toolUse.name === 'swap_exercise') {
+        _setAgentStatus('🔄 Swapping exercise...');
+      } else {
+        _setAgentStatus('⚙️ ' + toolUse.name.replace(/_/g, ' ') + '...');
+      }
+
+      var result;
+      if (toolUse.name === 'web_search') {
+        // web_search is Anthropic-hosted — the API already executed it and returned the
+        // result as a tool_result block in response.content. We just pass it back verbatim.
+        var hostedResult = (response.content || []).find(function(b) {
+          return b.type === 'tool_result' && b.tool_use_id === toolUse.id;
+        });
+        if (hostedResult) {
+          toolResults.push(hostedResult);
+          continue;
+        }
+        // Fallback if result not found inline (shouldn't happen but be safe)
+        result = { error: 'web_search result not returned by server' };
+      } else {
+        result = _executeClientTool(toolUse.name, toolUse.input);
+      }
+
+      toolResults.push({
+        type: 'tool_result',
+        tool_use_id: toolUse.id,
+        content: typeof result === 'string' ? result : JSON.stringify(result)
+      });
+    }
+
+    // Add assistant turn and tool results to message history
+    messages.push({ role: 'assistant', content: response.content });
+    messages.push({ role: 'user', content: toolResults });
+  }
+
+  _setAgentStatus(null); // clear status pill
+  return finalText || 'Done.';
+}
+
+
 function sendCoachMessage() {
   const input = document.getElementById('coach-input');
   const text = (input.value || '').trim();
@@ -634,6 +977,46 @@ async function _sendCoachMsg(text, image) {
   typing.innerHTML = '<div class="coach-typing-dot"></div><div class="coach-typing-dot"></div><div class="coach-typing-dot"></div>';
   container.appendChild(typing);
   container.scrollTop = container.scrollHeight;
+
+  // ── AGENT ROUTING ──
+  // If the message signals travel, plan mutation, or location search — use agent loop
+  if (!image && _detectAgentIntent(text) === 'agent') {
+    try {
+      const agentReply = await _runAgentLoop(text, null);
+      const typingEl = document.getElementById('coach-typing');
+      if (typingEl) typingEl.remove();
+      // Handle FOODLOG/WORKOUT blocks in agent reply just like normal flow
+      let reply = agentReply;
+      const foodLogResult = _parseFoodLog(reply);
+      if (foodLogResult) { reply = foodLogResult.cleanReply; _processFoodLog(foodLogResult.data); }
+      const workoutMatch = reply.match(/```WORKOUT\s*([\s\S]*?)```/);
+      if (workoutMatch) {
+        try {
+          const wkData = JSON.parse(workoutMatch[1].trim());
+          if (wkData.exercises && wkData.exercises.length > 0) {
+            window._pendingCoachWorkout = wkData;
+            reply = reply.replace(/```WORKOUT[\s\S]*?```/g, '').trim();
+            reply += '\n\n<div style="display:flex;gap:8px;margin-top:12px">' +
+              '<button onclick="_acceptCoachWorkout()" style="flex:1;padding:12px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:#111;font-family:\'Bebas Neue\',sans-serif;font-size:0.95rem;letter-spacing:1.5px;cursor:pointer">ACCEPT WORKOUT</button>' +
+              '<button onclick="_regenerateCoachWorkout()" style="flex:1;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--dim);font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">REGENERATE</button>' +
+              '</div>';
+          }
+        } catch(e2) { reply = reply.replace(/```WORKOUT[\s\S]*?```/g, '').trim(); }
+      }
+      _appendCoachBubble('assistant', reply || 'Done!');
+      _coachHistory.push({ role: 'assistant', content: reply });
+      _saveCoachHistory();
+    } catch(e) {
+      const typingEl = document.getElementById('coach-typing');
+      if (typingEl) typingEl.remove();
+      _setAgentStatus(null);
+      _appendCoachBubble('assistant', e.message || 'Something went wrong. Try again.');
+    }
+    _coachStreaming = false;
+    if (sendBtn) sendBtn.disabled = false;
+    document.getElementById('coach-input')?.focus();
+    return;
+  }
 
   try {
     // Check if this is a food logging message — if so, try to auto-log from database BEFORE calling AI
