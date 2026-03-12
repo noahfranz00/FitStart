@@ -664,23 +664,52 @@ async function generatePlan() {
   }
 }
 
-// Parse personal rules for banned exercises (e.g. "I don't do lunges" → ["lunge"])
+// Parse personal rules for banned exercises.
+// Two-pass approach: (1) regex for common "no X" patterns, (2) scan EXERCISE_DB for any
+// exercise name that appears as a standalone word/phrase in the rules string.
+// Returns array of lowercase banned tokens to match against exercise names.
 function _parseBannedExercises(rulesStr) {
   if (!rulesStr) return [];
-  var banned = [];
-  // Match patterns like: "no lunges", "don't do lunges", "I hate lunges", "avoid lunges", "never lunges", "not lunges", "skip lunges"
-  var patterns = rulesStr.toLowerCase().match(/(?:no|don'?t\s+do|never\s+do|hate|avoid|skip|can'?t\s+do|not?\s+do|never|don'?t\s+want|won'?t\s+do|refuse)\s+([a-z\s\-]+?)(?:\.|,|;|$|and\s|or\s|\n)/gi);
-  if (patterns) {
-    for (var i = 0; i < patterns.length; i++) {
-      var match = patterns[i].replace(/^(?:no|don'?t\s+do|never\s+do|hate|avoid|skip|can'?t\s+do|not?\s+do|never|don'?t\s+want|won'?t\s+do|refuse)\s+/i, '').replace(/[\.\,\;\n]+$/, '').trim();
-      if (match && match.length >= 3 && match.length < 40) {
-        // Singularize trailing 's' for matching (lunges → lunge)
-        var base = match.replace(/s$/, '');
-        banned.push(base);
-      }
+  var banned = new Set();
+  var lower = rulesStr.toLowerCase();
+
+  // ── Pass 1: regex for explicit negation phrases ──
+  // Extract the word(s) IMMEDIATELY after a negation keyword, stopping at the first non-word boundary
+  var negWords = ['no ','never ','avoid ','hate ','skip ','don\'t do ','dont do ','won\'t do ','wont do ',
+                  'can\'t do ','cant do ','not doing ','refuse ','no more ','absolutely no '];
+  negWords.forEach(function(neg) {
+    var idx = 0;
+    while ((idx = lower.indexOf(neg, idx)) !== -1) {
+      var start = idx + neg.length;
+      // Extract up to 30 chars, stopping at .,;!\n or another negation keyword
+      var snippet = lower.slice(start, start + 40).split(/[.,;!\n]/)[0].trim();
+      // Trim to 3-word max (exercise names are at most 3 words)
+      var words = snippet.split(/\s+/).slice(0, 3).join(' ').replace(/s$/, '');
+      if (words.length >= 3) banned.add(words);
+      // Also add just the first word in case of "lunges" vs "lunge day" etc.
+      var firstWord = snippet.split(/\s+/)[0].replace(/s$/, '');
+      if (firstWord.length >= 3) banned.add(firstWord);
+      idx = start;
     }
+  });
+
+  // ── Pass 2: scan every EXERCISE_DB key against the rules string ──
+  // If any exercise name appears as a substring in the rules, treat it as banned
+  if (typeof EXERCISE_DB !== 'undefined') {
+    Object.keys(EXERCISE_DB).forEach(function(exName) {
+      var exL = exName.toLowerCase();
+      // Check full name
+      if (lower.includes(exL)) { banned.add(exL); return; }
+      // Check singular (strip trailing s)
+      var singular = exL.replace(/s$/, '');
+      if (singular.length >= 4 && lower.includes(singular)) banned.add(singular);
+      // Check first word only for exercises like "Lunges" (first word = "lunge")
+      var firstWord = exL.split(' ')[0].replace(/s$/, '');
+      if (firstWord.length >= 4 && lower.includes(firstWord)) banned.add(firstWord);
+    });
   }
-  return banned;
+
+  return Array.from(banned).filter(function(t) { return t.length >= 3; });
 }
 
 async function buildPlan(selDays) {
@@ -697,6 +726,14 @@ async function buildPlan(selDays) {
 
   const exPerSession = u.tier === 'beginner' ? '3-4' : u.tier === 'intermediate' ? '4-5' : '5-6';
   const rulesStr = u.personalRules ? u.personalRules.slice(0, 300) : '';
+
+  // Pre-parse banned exercises to add explicit list to prompt
+  const bannedForPrompt = _parseBannedExercises(rulesStr);
+  const bannedPromptSection = bannedForPrompt.length > 0
+    ? '\n\u26d4 BANNED EXERCISES (HARD CONSTRAINT - NEVER INCLUDE THESE, NO EXCEPTIONS):\n' +
+      bannedForPrompt.map(function(b) { return '  - Any exercise containing "' + b + '" (e.g. Lunges, Walking Lunges, Reverse Lunges, etc.)'; }).join('\n') +
+      '\nDo NOT include any variation of these. If you would normally use one, substitute a different exercise targeting the same muscle group.'
+    : '';
   const userPrompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
 Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks === 0 ? 'ongoing/maintenance' : u.weeks + 'wk'}.
 ${u.bodyGoals ? 'Body goals: ' + u.bodyGoals.slice(0, 150) : ''}
@@ -711,8 +748,8 @@ CRITICAL RULES:
 - Exercise names: 2-3 words max (e.g. "Bench Press" not "Barbell Flat Bench Press")
 - muscles: single word (e.g. "Chest" not "Chest, Front Delts")
 - philosophy: 1 short sentence only
-- Equipment: ${equipStr}. Avoid: ${injuryStr}
-${rulesStr ? '- USER PERSONAL RULES (MUST OBEY — these override everything else): ' + rulesStr : ''}`;
+- Equipment: ${equipStr}. Avoid: ${injuryStr}${bannedForPrompt.length > 0 ? '\n- ⛔ BANNED (hard constraint, no exceptions): ' + bannedForPrompt.join(', ') + ' — do NOT include any variation of these' : ''}
+${rulesStr ? '- PERSONAL RULES (MUST OBEY): ' + rulesStr : ''}`;
 
   // Try up to 3 attempts with progressively simpler prompts
   let parsed;
@@ -807,17 +844,30 @@ RULES: All 7 days Mon-Sun. Gym: ${gymDaysStr}. ${exPerSession} exercises per wor
       if (day.type === 'rest' || !day.exercises || day.exercises.length === 0) {
         return { day: day.day, type: 'rest', badge: day.badge || 'Rest', workout: 'Rest day. Recover, hydrate, and let your muscles rebuild.', exercises: [] };
       }
-      const exercises = (day.exercises || []).filter(ex => {
+      const exercises = (day.exercises || []).reduce((acc, ex) => {
         // Check against banned exercises from personal rules
         const exLower = ex.name.toLowerCase();
-        for (var bi = 0; bi < bannedExercises.length; bi++) {
-          if (exLower.includes(bannedExercises[bi])) {
-            console.log('[PlanGen] Filtered out "' + ex.name + '" — matches personal rule ban on "' + bannedExercises[bi] + '"');
-            return false;
+        var isBanned = bannedExercises.some(function(b) { return exLower.includes(b); });
+        if (isBanned) {
+          console.log('[PlanGen] Banned "' + ex.name + '" — finding replacement for same muscle group');
+          // Replace with a non-banned exercise from same category
+          var cat = (getExerciseData(ex.name) || {}).category || 'Other';
+          var replacement = Object.keys(EXERCISE_DB).find(function(name) {
+            if (name === ex.name) return false;
+            if (EXERCISE_DB[name].category !== cat) return false;
+            var nl = name.toLowerCase();
+            return !bannedExercises.some(function(b) { return nl.includes(b); });
+          });
+          if (replacement) {
+            console.log('[PlanGen] Replaced "' + ex.name + '" with "' + replacement + '"');
+            acc.push(Object.assign({}, ex, { name: replacement }));
           }
+          // If no replacement found, skip (don't add a hole)
+          return acc;
         }
-        return true;
-      }).map(ex => {
+        acc.push(ex);
+        return acc;
+      }, []).map(ex => {
         const db = getExerciseData(ex.name);
         // Cap rest at 120s — compound lifts get max 120s, accessories less
         const rawRest = ex.rest || db.rest;
@@ -1193,6 +1243,45 @@ async function callClaude(messages, opts = {}) {
   }
 }
 
+// ── AGENT-CAPABLE CLAUDE CALL ──
+// Returns the full API response (content blocks + stop_reason) for agentic tool use loops.
+// Also supports Anthropic-hosted tools (web_search_20250305).
+async function callClaudeRaw(messages, opts = {}) {
+  if (!navigator.onLine) {
+    showToast("You're offline. Connect and try again.", 'error');
+    throw new Error('No internet connection.');
+  }
+  const body = {
+    model: opts.model || 'claude-sonnet-4-20250514',
+    max_tokens: opts.max_tokens || 2048,
+    messages: messages
+  };
+  if (opts.system) body.system = opts.system;
+  if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
+  if (opts.tool_choice) body.tool_choice = opts.tool_choice;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), opts.timeout || 90000);
+  try {
+    const response = await fetch(AI_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'AI unavailable (' + response.status + ')');
+    }
+    return await response.json(); // Full response: { content, stop_reason, model, ... }
+  } catch(e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') throw new Error('Request timed out.');
+    throw e;
+  }
+}
+
+
 function loadFromStorage() {
   const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
   const wd = lsGet(LS.wktDone);  if (wd) wktDone = new Set(wd);
@@ -1250,22 +1339,18 @@ function saveSet(dayIdx, exIdx, setIdx, weight, reps) {
 }
 
 function getPrevSet(dayIdx, exIdx, setIdx) {
-  try {
-    const exName = (woWorkout && woWorkout.exercises && woWorkout.exercises[exIdx]) ? woWorkout.exercises[exIdx].name : null;
-    if (exName) {
-      const exlogs = getExLogs();
-      const sessions = exlogs[exName] || [];
-      const today = todayDateStr();
-      const prev = sessions.find(s => s.date !== today);
-      if (prev && prev.sets && prev.sets[setIdx]) {
-        return { weight: prev.sets[setIdx].weight, reps: prev.sets[setIdx].reps, date: prev.date };
-      }
+  const exName = (woWorkout && woWorkout.exercises[exIdx]) ? woWorkout.exercises[exIdx].name : null;
+  if (exName) {
+    const exlogs = getExLogs();
+    const sessions = exlogs[exName] || [];
+    const today = todayDateStr();
+    const prev = sessions.find(s => s.date !== today);
+    if (prev && prev.sets && prev.sets[setIdx]) {
+      return { weight: prev.sets[setIdx].weight, reps: prev.sets[setIdx].reps, date: prev.date };
     }
-    const logs = lsGet(LS.setLogs) || {};
-    return logs[`${dayIdx}_${exIdx}_${setIdx}`] || null;
-  } catch(e) {
-    return null;
   }
+  const logs = lsGet(LS.setLogs) || {};
+  return logs[`${dayIdx}_${exIdx}_${setIdx}`] || null;
 }
 
 function getWorkoutDraft(dayIdx) {
@@ -1365,7 +1450,7 @@ function initDashboard() {
     if (dash) {
       const errDiv = document.createElement('div');
       errDiv.style.cssText = 'padding:40px;color:#fff;font-size:1rem;text-align:center';
-      errDiv.innerHTML = '<h2 style="margin-bottom:16px;font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem">⚠️ Plan needs to be regenerated</h2><p style="color:#aaa;margin-bottom:20px">Your saved plan is outdated or missing. Please create a new plan.</p><button onclick="(function(){ try{window.generatedPlan=null;window.USER=null;}catch(x){} localStorage.clear(); location.reload(); })()" style="padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer">START FRESH</button>';
+      errDiv.innerHTML = '<h2 style="margin-bottom:16px">⚠️ Plan needs to be regenerated</h2><p style="color:#aaa;margin-bottom:20px">Your saved plan is outdated. Please create a new plan.</p><button onclick="localStorage.clear();location.reload()" style="padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-weight:700;cursor:pointer">Start Fresh</button>';
       dash.appendChild(errDiv);
     }
     return;
@@ -1486,35 +1571,8 @@ function initDashboard() {
     saveToStorage();
   } catch(e) {
     console.error('Dashboard render error:', e);
-    // Attempt partial recovery first — reset plan version flag and retry
-    try {
-      if (generatedPlan) {
-        generatedPlan._v = null; // force re-upgrade on next load
-        lsSet('fs_plan', generatedPlan);
-      }
-      // Retry the renders that are safe to retry individually
-      try { refreshDashMacros(); } catch(e2) {}
-      try { renderWeek(); } catch(e2) {}
-      try { renderStreak(); } catch(e2) {}
-      // If we got this far without re-throwing, recovery worked — bail out
-      return;
-    } catch(e3) { /* recovery failed, show error UI */ }
-
     const main = document.querySelector('#screen-dash .main-content');
-    if (main) main.innerHTML = `
-      <div style="padding:40px;color:#fff">
-        <h2 style="color:#F43F5E;margin-bottom:8px;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:1px">Error Loading Dashboard</h2>
-        <p style="color:#aaa;font-size:0.85rem;margin-bottom:16px">Something went wrong rendering your dashboard. This is usually caused by corrupted data after an unexpected app close.</p>
-        <pre style="background:#111;padding:16px;border-radius:8px;font-size:0.7rem;color:#777;white-space:pre-wrap;margin-bottom:16px;max-height:140px;overflow:auto">${e.stack || e.message}</pre>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <button onclick="(function(){ try { generatedPlan=null; USER=null; } catch(x){} localStorage.removeItem('fs_plan'); localStorage.removeItem('fs_user'); localStorage.removeItem('fs_entered'); localStorage.removeItem('fs_setLogs'); localStorage.removeItem('fs_exlogs'); localStorage.removeItem('fs_wo_draft'); location.reload(); })()" style="padding:14px;background:#D4A520;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer;color:#111">
-            CLEAR WORKOUT DATA &amp; RESTART
-          </button>
-          <button onclick="(function(){ try { generatedPlan=null; USER=null; } catch(x){} localStorage.clear(); location.reload(); })()" style="padding:12px;background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.4);border-radius:8px;font-family:'DM Mono',monospace;font-size:0.8rem;cursor:pointer;color:#F43F5E">
-            FULL RESET (clears all data)
-          </button>
-        </div>
-      </div>`;
+    if (main) main.innerHTML = '<div style="padding:40px;color:#fff"><h2 style="color:#F43F5E;margin-bottom:12px">Error Loading Dashboard</h2><pre style="background:#111;padding:16px;border-radius:8px;font-size:0.8rem;color:#aaa;white-space:pre-wrap">' + e.stack + '</pre><button onclick="localStorage.clear();location.reload()" style="margin-top:16px;padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-weight:700;cursor:pointer">Clear Data & Restart</button></div>';
   }
 }
 
