@@ -65,7 +65,7 @@ function openWorkoutEnv(dayIdx, startExIdx) {
 
   _warmupDismissed = false;
   _renderWarmupBanner(workout.name);
-  _warmChimeAudio(); // unlock audio once, in user gesture context (Start Workout tap)
+  _warmChimeAudio(); // unlock AudioContext once in user-gesture context
   renderEcList();
   loadExercise(woCurrentEx);
   restoreRestTimerIfActive();
@@ -640,7 +640,9 @@ function renderDemoPlaceholder(el, name, muscles) {
 }
 
 function _loadYTPlayer(wrap, videoId) {
-  wrap.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1&rel=0&modestbranding=1&playsinline=1" style="position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:14px" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>';
+  // On mobile, inline iframes intercept ALL touch events including overlaid buttons (iOS Safari limitation).
+  // Open in YouTube app / browser instead — better UX, avoids the issue entirely.
+  window.open('https://www.youtube.com/watch?v=' + videoId, '_blank');
 }
 
 // Dismiss video section — hide it and show a "Show Video" button
@@ -1483,77 +1485,69 @@ function prevExercise() {
 // Audio kept warm by silent play on every touch in workout env.
 // ═══════════════════════════════════════════
 
-// ═══ CHIME AUDIO ═══
-var _chimeAudio = null;
+// ═══ CHIME AUDIO — Web Audio API ═══
+// Web Audio API uses a SUSPENDED context that only activates for the brief beep duration.
+// Unlike new Audio().play(), this does NOT steal the iOS AVAudioSession permanently,
+// so background music (Spotify, Apple Music) resumes after the beep ends.
+var _chimeCtx = null;
 
-function _initChimeAudio() {
-  if (_chimeAudio) return;
+function _initChimeCtx() {
+  if (_chimeCtx) return;
   try {
-    var sr = 22050, dur = 0.5;
-    var samples = Math.floor(sr * dur);
-    var buffer = new ArrayBuffer(44 + samples * 2);
-    var dv = new DataView(buffer);
-    var ws = function(o, s) { for (var i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
-    ws(0,'RIFF'); dv.setUint32(4, 36+samples*2, true); ws(8,'WAVE');
-    ws(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true);
-    dv.setUint16(22,1,true); dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true);
-    dv.setUint16(32,2,true); dv.setUint16(34,16,true);
-    ws(36,'data'); dv.setUint32(40,samples*2,true);
-    for (var i = 0; i < samples; i++) {
-      var t = i / sr;
-      var env = Math.max(0, 1 - t / dur);
-      var v = (Math.sin(2*Math.PI*880*t)*0.5 + Math.sin(2*Math.PI*1100*t)*0.35) * env;
-      dv.setInt16(44+i*2, Math.max(-32768, Math.min(32767, v*32767)), true);
-    }
-    _chimeAudio = new Audio(URL.createObjectURL(new Blob([buffer], {type:'audio/wav'})));
-    _chimeAudio.volume = 1.0;
-    _chimeAudio.load();
-  } catch(e) { console.log('Chime init failed:', e); }
+    _chimeCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Immediately suspend — only resume for actual beep
+    if (_chimeCtx.state === 'running') _chimeCtx.suspend();
+  } catch(e) { console.log('AudioContext init failed:', e); }
 }
 
-// Keep audio authorized on iOS — silent play/pause on explicit user gesture in workout env only
-var _isWarming = false;
+// Called once on workout open (user gesture) to unlock AudioContext on iOS
 function _warmChimeAudio() {
-  _initChimeAudio();
-  if (!_chimeAudio || _isWarming) return;
-  _isWarming = true;
+  _initChimeCtx();
+  if (!_chimeCtx) return;
   try {
-    _chimeAudio.volume = 0;
-    _chimeAudio.currentTime = 0;
-    var p = _chimeAudio.play();
-    if (p && p.then) {
-      p.then(function() {
-        try { _chimeAudio.pause(); _chimeAudio.currentTime = 0; } catch(e) {}
-        _chimeAudio.volume = 1.0;
-        _isWarming = false;
-      }).catch(function() {
-        _chimeAudio.volume = 1.0;
-        _isWarming = false;
-      });
-    } else {
-      try { _chimeAudio.pause(); _chimeAudio.currentTime = 0; } catch(e) {}
-      _chimeAudio.volume = 1.0;
-      _isWarming = false;
-    }
-  } catch(e) { _chimeAudio.volume = 1.0; _isWarming = false; }
+    // Resume and immediately re-suspend to unlock context without making sound
+    _chimeCtx.resume().then(function() {
+      setTimeout(function() {
+        if (_chimeCtx && _chimeCtx.state === 'running') _chimeCtx.suspend();
+      }, 50);
+    }).catch(function() {});
+  } catch(e) {}
 }
-
-// DO NOT attach global touchstart/click warm listeners — they interrupt background
-// music on iOS by stealing audio session focus on every tap.
-// The audio context is warmed once when the workout environment opens.
+// NO global touchstart/click listeners — they interrupt background music on iOS
 
 // Clear stale timer on page load
 (function() { try { localStorage.removeItem('fs_rest_timer'); } catch(e) {} })();
 
 function playRestChime() {
-  _initChimeAudio();
-  if (_chimeAudio) {
-    try {
-      _chimeAudio.currentTime = 0;
-      _chimeAudio.volume = 1.0;
-      _chimeAudio.play().catch(function() {});
-    } catch(e) {}
-  }
+  _initChimeCtx();
+  if (!_chimeCtx) { try { if (navigator.vibrate) navigator.vibrate([200,100,200,100,300]); } catch(e) {} return; }
+  try {
+    _chimeCtx.resume().then(function() {
+      var now = _chimeCtx.currentTime;
+      var dur = 0.55;
+
+      // Two-tone musical chime: 880Hz + 1100Hz with exponential decay
+      [880, 1100].forEach(function(freq, idx) {
+        var osc = _chimeCtx.createOscillator();
+        var gain = _chimeCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(idx === 0 ? 0.5 : 0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        osc.connect(gain);
+        gain.connect(_chimeCtx.destination);
+        osc.start(now);
+        osc.stop(now + dur);
+      });
+
+      // Re-suspend after chime ends so iOS releases the audio session back to music
+      setTimeout(function() {
+        if (_chimeCtx && _chimeCtx.state === 'running') {
+          _chimeCtx.suspend();
+        }
+      }, Math.ceil(dur * 1000) + 100);
+    }).catch(function() {});
+  } catch(e) {}
   try { if (navigator.vibrate) navigator.vibrate([200,100,200,100,300]); } catch(e) {}
 }
 
@@ -1623,7 +1617,7 @@ function _startTimerUI(totalSecs) {
 }
 
 function skipRest() {
-  _chimePlayedForCurrentTimer = true; // arm guard before clearing interval to prevent phantom tick
+  _chimePlayedForCurrentTimer = true; // arm before clearInterval to block any queued tick
   if (restTimerInterval) { clearInterval(restTimerInterval); restTimerInterval = null; }
   restTimerEndAt = 0;
   lsSet('fs_rest_timer', null);
@@ -1657,17 +1651,16 @@ function restoreRestTimerIfActive() {
     lsSet('fs_rest_timer', null); // expired — just clear, no chime
     return;
   }
+  _chimePlayedForCurrentTimer = false;
   restTotalSecs = saved.total || 90;
   restTimerEndAt = saved.endAt;
-  _initChimeAudio();
-  // Double-check: re-compute remaining right before arming, in case time slipped
-  var remainingFinal = Math.ceil((restTimerEndAt - Date.now()) / 1000);
-  if (remainingFinal <= 0) {
+  _initChimeCtx();
+  // Double-check remaining right before arming to prevent edge-case phantom chime
+  if (Math.ceil((restTimerEndAt - Date.now()) / 1000) <= 0) {
     lsSet('fs_rest_timer', null);
-    _chimePlayedForCurrentTimer = true; // stay armed
+    _chimePlayedForCurrentTimer = true;
     return;
   }
-  _chimePlayedForCurrentTimer = false; // arm ONLY when we're certain timer is live
   _startTimerUI(restTotalSecs);
 }
 
