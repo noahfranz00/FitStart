@@ -1073,6 +1073,32 @@ const LS = {
   woDraft:  'fs_wo_draft', // { [dayIdx]: { sets: woSets, extraSets: woExtraSets } } — every keystroke persisted
 };
 
+// ═══════════════════════════════════════════
+// THEME — light/dark toggle
+// ═══════════════════════════════════════════
+function _applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-toggle-btn');
+  const icon = document.getElementById('theme-toggle-icon');
+  const label = document.getElementById('theme-toggle-label');
+  if (theme === 'light') {
+    if (icon) icon.textContent = '🌙';
+    if (label) label.textContent = 'DARK';
+    if (btn) { btn.style.background = 'rgba(168,120,32,0.1)'; btn.style.borderColor = 'rgba(168,120,32,0.3)'; btn.style.color = '#A87820'; }
+  } else {
+    if (icon) icon.textContent = '☀️';
+    if (label) label.textContent = 'LIGHT';
+    if (btn) { btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; }
+  }
+}
+
+function toggleAppTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  lsSet('fs_theme', next);
+  _applyTheme(next);
+}
+
 function lsGet(key) {
   try {
     if (key === 'fs_user' && window.StorageAPI) return StorageAPI.getUser();
@@ -1197,6 +1223,8 @@ function loadFromStorage() {
   const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
   const wd = lsGet(LS.wktDone);  if (wd) wktDone = new Set(wd);
   const tg = lsGet(LS.targets);  if (tg) TARGETS = tg;
+  // Apply saved theme
+  _applyTheme(lsGet('fs_theme') || 'dark');
   // Calculate current training week from program start date
   const startDate = lsGet('fs_program_start');
   if (startDate) {
