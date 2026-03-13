@@ -402,60 +402,101 @@ function getExerciseImages(wgerId) {
 
 // ═══════════════════════════════════════════
 // EXERCISE IMAGE CACHE — lazy-fetches wger thumbnails
+// Throttled to 2 concurrent requests. Uses exerciseinfo endpoint.
+// Failed fetches retry after 6 hours (not cached permanently).
 // ═══════════════════════════════════════════
-var _exImgCache = {};
+var _exImgCache = {};   // { wgerId: { url: string|null, ts: number } }
 var _exImgPending = {};
+var _exImgQueue = [];
+var _exImgActive = 0;
+var _EX_IMG_MAX_CONCURRENT = 2;
+var _EX_IMG_RETRY_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 (function _loadImgCache() {
   try {
-    var stored = localStorage.getItem('fs_ex_img_cache');
+    // Clear old v1 cache (was caching null permanently)
+    localStorage.removeItem('fs_ex_img_cache');
+    var stored = localStorage.getItem('fs_ex_img_cache_v2');
     if (stored) _exImgCache = JSON.parse(stored);
   } catch(e) { _exImgCache = {}; }
 })();
 
 function _saveImgCache() {
-  try { localStorage.setItem('fs_ex_img_cache', JSON.stringify(_exImgCache)); } catch(e) {}
+  try { localStorage.setItem('fs_ex_img_cache_v2', JSON.stringify(_exImgCache)); } catch(e) {}
 }
 
 function getExerciseThumb(exerciseName) {
   var db = getExerciseData(exerciseName);
   var wid = db && db.wgerId;
   if (!wid) return null;
-  if (_exImgCache[wid] !== undefined) return _exImgCache[wid];
+  var cached = _exImgCache[wid];
+  if (cached && cached.url) return cached.url; // got an image
+  if (cached && cached.url === null && cached.ts && (Date.now() - cached.ts < _EX_IMG_RETRY_MS)) return null; // failed recently, don't retry yet
+  // Queue a fetch
   if (!_exImgPending[wid]) {
     _exImgPending[wid] = true;
-    _fetchExImage(wid);
+    _exImgQueue.push(wid);
+    _drainImgQueue();
   }
   return null;
 }
 
+function _drainImgQueue() {
+  while (_exImgActive < _EX_IMG_MAX_CONCURRENT && _exImgQueue.length > 0) {
+    var wid = _exImgQueue.shift();
+    _exImgActive++;
+    _fetchExImage(wid).finally(function() {
+      _exImgActive--;
+      _drainImgQueue();
+    });
+  }
+}
+
 async function _fetchExImage(wgerId) {
-  // Try exercise_base param first, fallback to exercise param
-  var urls = [
-    'https://wger.de/api/v2/exerciseimage/?exercise_base=' + wgerId + '&format=json&limit=1&ordering=-is_main',
-    'https://wger.de/api/v2/exerciseimage/?exercise=' + wgerId + '&format=json&limit=1&ordering=-is_main'
+  // Strategy: try exerciseinfo endpoint (returns images embedded), then fall back to exerciseimage search
+  var endpoints = [
+    'https://wger.de/api/v2/exerciseinfo/' + wgerId + '/?format=json',
+    'https://wger.de/api/v2/exerciseimage/?exercise_base=' + wgerId + '&format=json',
+    'https://wger.de/api/v2/exerciseimage/?exercise=' + wgerId + '&format=json'
   ];
-  for (var ui = 0; ui < urls.length; ui++) {
+  for (var i = 0; i < endpoints.length; i++) {
     try {
       var controller = new AbortController();
-      var timer = setTimeout(function() { controller.abort(); }, 8000);
-      var resp = await fetch(urls[ui], { signal: controller.signal });
+      var timer = setTimeout(function() { controller.abort(); }, 10000);
+      var resp = await fetch(endpoints[i], { signal: controller.signal });
       clearTimeout(timer);
       if (!resp.ok) continue;
       var data = await resp.json();
-      if (data.results && data.results.length > 0 && data.results[0].image) {
-        _exImgCache[wgerId] = data.results[0].image;
+      var imgUrl = null;
+      // exerciseinfo endpoint returns { images: [{ image: url, ... }] }
+      if (data.images && data.images.length > 0) {
+        // Prefer main image
+        var main = data.images.find(function(img) { return img.is_main; });
+        imgUrl = (main || data.images[0]).image;
+      }
+      // exerciseimage endpoint returns { results: [{ image: url }] }
+      if (!imgUrl && data.results && data.results.length > 0) {
+        imgUrl = data.results[0].image;
+      }
+      if (imgUrl) {
+        // Ensure full URL
+        if (imgUrl.startsWith('/')) imgUrl = 'https://wger.de' + imgUrl;
+        _exImgCache[wgerId] = { url: imgUrl, ts: Date.now() };
         _saveImgCache();
+        // Re-render visible lists
         if (typeof renderTodayWorkout === 'function') renderTodayWorkout();
         if (typeof renderEcList === 'function' && typeof woWorkout !== 'undefined' && woWorkout) renderEcList();
         return;
       }
     } catch(e) {
-      // timeout or network error — try next URL
+      // timeout or network error — try next endpoint
+      console.log('[ExImg] Endpoint ' + i + ' failed for ' + wgerId + ':', e.message);
     }
   }
-  _exImgCache[wgerId] = null;
+  // All endpoints failed — cache as null with timestamp (will retry after _EX_IMG_RETRY_MS)
+  _exImgCache[wgerId] = { url: null, ts: Date.now() };
   _saveImgCache();
+  console.log('[ExImg] All endpoints failed for wgerId=' + wgerId);
 }
 
 function buildExThumbHtml(name, size) {
@@ -1495,7 +1536,7 @@ function initDashboard() {
   // Build DAY_WORKOUTS from plan
   GYM_DAYS = [];
   DAY_WORKOUTS = {};
-  // Apply personal rules ban filter every time (not just at generation)
+  // Apply personal rules ban filter on every load (not just generation)
   var _loadBanned = _parseBannedExercises(USER.personalRules || '');
   generatedPlan.weekly_schedule.forEach((d, i) => {
     if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
@@ -1504,7 +1545,7 @@ function initDashboard() {
         var exLower = ex.name.toLowerCase();
         for (var bi = 0; bi < _loadBanned.length; bi++) {
           if (exLower.includes(_loadBanned[bi])) {
-            console.log('[LoadFilter] Removed "' + ex.name + '" — matches personal rule ban on "' + _loadBanned[bi] + '"');
+            console.log('[LoadFilter] Removed "' + ex.name + '" — matches ban on "' + _loadBanned[bi] + '"');
             return false;
           }
         }
@@ -1542,7 +1583,6 @@ function initDashboard() {
   document.getElementById('s-carb').value   = TARGETS.carb;
   document.getElementById('s-fat').value    = TARGETS.fat;
 
-  // Theme toggle — sync checkbox
   var _themeCb = document.getElementById('theme-toggle-cb');
   if (_themeCb) _themeCb.checked = document.body.classList.contains('light-theme');
 
