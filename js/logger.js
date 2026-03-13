@@ -193,76 +193,46 @@ function renderTodayWorkout() {
   btn.style.display = '';
   if (wktDone.has(TODAY_IDX)) { btn.textContent = '✓ COMPLETE'; btn.classList.add('done'); }
   else { btn.textContent = 'START WORKOUT'; btn.classList.remove('done'); }
-  // ── Per-muscle gradient themes ──
-  const EX_THEME = {
-    // Legs
-    'Quads':'linear-gradient(135deg,#0f2027 0%,#1a3a4a 50%,#0d2d3d 100%)',
-    'Hamstrings':'linear-gradient(135deg,#1a0a2e 0%,#2d1b4e 50%,#1a0f35 100%)',
-    'Glutes':'linear-gradient(135deg,#0d1f0d 0%,#1a3320 50%,#0f2414 100%)',
-    'Calves':'linear-gradient(135deg,#1a1a0a 0%,#2d2d10 50%,#1f1f0d 100%)',
-    // Push
-    'Chest':'linear-gradient(135deg,#1a0a0a 0%,#3d1515 50%,#2a0d0d 100%)',
-    'Shoulders':'linear-gradient(135deg,#0a0a1a 0%,#15153d 50%,#0d0d2a 100%)',
-    'Triceps':'linear-gradient(135deg,#1a0f00 0%,#3d2800 50%,#2a1a00 100%)',
-    // Pull
-    'Back':'linear-gradient(135deg,#001a1a 0%,#00333a 50%,#001f25 100%)',
-    'Biceps':'linear-gradient(135deg,#0a001a 0%,#1f0040 50%,#130030 100%)',
-    'Lats':'linear-gradient(135deg,#001a10 0%,#003322 50%,#001f14 100%)',
-    // Core
-    'Core':'linear-gradient(135deg,#1a1500 0%,#332900 50%,#261e00 100%)',
-    'Abs':'linear-gradient(135deg,#1a1500 0%,#332900 50%,#261e00 100%)',
-    // Default
-    'default':'linear-gradient(135deg,#111318 0%,#1c2028 50%,#141820 100%)',
+  const _CARD_GRAD = {
+    'Quads':      '#0f2535,#1a4060',  'Hamstrings':  '#1a0f30,#2d1a50',
+    'Glutes':     '#0d200d,#163a1a',  'Calves':      '#1a1a08,#2d2d10',
+    'Chest':      '#28080a,#4a1015',  'Shoulders':   '#080828,#10104a',
+    'Triceps':    '#1f1000,#3d2200',  'Back':        '#002020,#003838',
+    'Biceps':     '#150028,#28004d',  'Lats':        '#001a0f,#00332a',
+    'Core':       '#1f1800,#3d3000',  'Abs':         '#1f1800,#3d3000',
   };
-
-  // ── Muscle group icons (SVG paths) ──
-  const EX_ICON = {
-    'Quads':   '<path d="M12 3c0 0-4 3-4 9s4 9 4 9" stroke-width="2" fill="none"/><path d="M12 3c0 0 4 3 4 9s-4 9-4 9" stroke-width="2" fill="none"/>',
-    'Hamstrings':'<path d="M8 3 Q12 12 8 21M16 3 Q12 12 16 21" stroke-width="2" fill="none"/>',
-    'Glutes':  '<path d="M5 12 Q12 5 19 12 Q12 21 5 12Z" stroke-width="1.5" fill="none"/>',
-    'Chest':   '<path d="M3 9 Q12 4 21 9" stroke-width="2" fill="none"/><path d="M3 9 Q6 16 12 18 Q18 16 21 9" stroke-width="2" fill="none"/>',
-    'Back':    '<rect x="5" y="3" width="14" height="18" rx="2" stroke-width="2" fill="none"/><line x1="9" y1="8" x2="15" y2="8" stroke-width="1.5"/><line x1="9" y1="12" x2="15" y2="12" stroke-width="1.5"/>',
-    'Shoulders':'<circle cx="5" cy="10" r="3" stroke-width="2" fill="none"/><circle cx="19" cy="10" r="3" stroke-width="2" fill="none"/><path d="M8 10 Q12 6 16 10" stroke-width="2" fill="none"/>',
-    'default': '<circle cx="12" cy="12" r="9" stroke-width="2" fill="none"/><line x1="12" y1="8" x2="12" y2="12" stroke-width="2"/><line x1="12" y1="15" x2="12" y2="15.5" stroke-width="2.5"/>',
+  const _CARD_BORDER = {
+    'Quads':'rgba(56,189,248,0.18)',  'Hamstrings':'rgba(167,139,250,0.18)',
+    'Glutes':'rgba(52,211,153,0.18)', 'Calves':'rgba(251,191,36,0.15)',
+    'Chest':'rgba(248,113,113,0.18)', 'Shoulders':'rgba(129,140,248,0.18)',
+    'Triceps':'rgba(251,146,60,0.18)','Back':'rgba(34,211,238,0.18)',
+    'Biceps':'rgba(192,132,252,0.18)','Lats':'rgba(52,211,153,0.18)',
+    'Core':'rgba(251,191,36,0.18)',   'Abs':'rgba(251,191,36,0.18)',
   };
-
-  // ── Subtle abstract SVG backgrounds per theme ──
-  function _cardBg(muscles, idx) {
-    const key = (muscles || 'default');
-    const grad = EX_THEME[key] || EX_THEME['default'];
-    return grad;
-  }
-
-  function _cardAccent(muscles) {
-    const m = muscles || '';
-    if (['Quads','Hamstrings','Glutes','Calves'].includes(m)) return 'rgba(56,189,248,0.6)';
-    if (['Chest','Triceps'].includes(m)) return 'rgba(248,113,113,0.6)';
-    if (['Back','Lats','Biceps'].includes(m)) return 'rgba(52,211,153,0.6)';
-    if (['Shoulders'].includes(m)) return 'rgba(167,139,250,0.6)';
-    if (['Core','Abs'].includes(m)) return 'rgba(251,191,36,0.6)';
-    return 'rgba(212,165,32,0.6)';
-  }
+  const _CARD_ACCENT = {
+    'Quads':'#38bdf8','Hamstrings':'#a78bfa','Glutes':'#34d399','Calves':'#fbbf24',
+    'Chest':'#f87171','Shoulders':'#818cf8','Triceps':'#fb923c','Back':'#22d3ee',
+    'Biceps':'#c084fc','Lats':'#34d399','Core':'#fbbf24','Abs':'#fbbf24',
+  };
 
   document.getElementById('today-ex-list').innerHTML = exes.map((ex,i)=>{
     const prev = getPrevSet(TODAY_IDX,i,0);
     const isDone = wktDone.has(TODAY_IDX);
-    const muscles = ex.muscles || 'default';
-    const grad = _cardBg(muscles, i);
-    const accent = _cardAccent(muscles);
-    const icon = EX_ICON[muscles] || EX_ICON['default'];
-    const prevStr = prev ? `${prev.weight} lbs × ${prev.reps}` : null;
-
-    return `<div class="ex-card-v2 ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})" style="background:${grad}">
-      <div class="ex-card-v2-accent" style="background:${accent}"></div>
-      <svg class="ex-card-v2-icon" viewBox="0 0 24 24" stroke="${accent.replace('0.6','0.35')}" fill="none" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
-      <div class="ex-card-v2-body">
-        <div class="ex-card-v2-muscle">${muscles.toUpperCase()}</div>
-        <div class="ex-card-v2-name">${ex.name}</div>
-        <div class="ex-card-v2-meta">${ex.sets} sets · ${ex.reps} reps · ${ex.rest}s rest</div>
-        ${prevStr ? `<div class="ex-card-v2-prev">Last session: ${prevStr}</div>` : ''}
+    const m = ex.muscles || '';
+    const [g1,g2] = (_CARD_GRAD[m] || '#111318,#1c2028').split(',');
+    const border = _CARD_BORDER[m] || 'rgba(255,255,255,0.07)';
+    const accent = _CARD_ACCENT[m] || '#D4A520';
+    const prevStr = prev ? `Last: ${prev.weight} lbs × ${prev.reps}` : null;
+    return `<div class="ex-card-v3 ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})" style="background:linear-gradient(135deg,${g1} 0%,${g2} 100%);border-color:${border}">
+      <div class="ex-card-v3-bar" style="background:${accent}"></div>
+      <div class="ex-card-v3-body">
+        <div class="ex-card-v3-tag" style="color:${accent}">${m.toUpperCase()}</div>
+        <div class="ex-card-v3-name">${ex.name}</div>
+        <div class="ex-card-v3-meta">${ex.sets} sets · ${ex.reps} reps · ${ex.rest}s rest</div>
+        ${prevStr ? `<div class="ex-card-v3-prev">${prevStr}</div>` : ''}
       </div>
-      ${isDone ? '<div class="ex-card-v2-done">✓</div>' : ''}
-      <button class="ex-card-v2-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options">⋮</button>
+      ${isDone ? `<div class="ex-card-v3-check" style="color:${accent}">✓</div>` : ''}
+      <button class="ex-card-v3-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})">⋮</button>
     </div>`;
   }).join('');
 }
