@@ -452,6 +452,16 @@ self.addEventListener('fetch', e => {
           </div>
         </div>
       </div>
+      <!-- MEAL SUGGESTION -->
+      <div id="meal-suggest-wrap" style="margin-top:16px">
+        <button class="meal-suggest-btn" id="meal-suggest-btn" onclick="suggestMeal()">
+          <div class="msg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" width="20" height="20"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div>
+          <div class="msg-text">
+            <div class="msg-title">WHAT SHOULD I EAT RIGHT NOW?</div>
+            <div class="msg-sub" id="meal-suggest-sub">AI meal ideas based on your remaining macros</div>
+          </div>
+        </button>
+      </div>
       <div class="workout-card" style="margin-top:16px">
         <div class="wc-header">
           <div>
@@ -571,12 +581,6 @@ self.addEventListener('fetch', e => {
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <button onclick="openRecipeBook()" style="padding:7px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--off);font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;letter-spacing:0.5px">
           📋 RECIPES
-        </button>
-        <button onclick="askWhatToEat()" style="padding:7px 14px;background:linear-gradient(135deg,rgba(200,162,61,0.15),rgba(200,162,61,0.05));border:1px solid rgba(200,162,61,0.35);border-radius:8px;color:var(--gold);font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;letter-spacing:0.5px;flex:1;justify-content:center">
-          ✨ WHAT SHOULD I EAT?
-        </button>
-        <button onclick="openScanPlateModal()" style="padding:7px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--off);font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;letter-spacing:0.5px">
-          📸 SCAN
         </button>
       </div>
       <div id="meal-categories"></div>
@@ -738,19 +742,17 @@ self.addEventListener('fetch', e => {
           </div>
         </div>
         <div class="card"><div class="card-label" style="margin-bottom:16px">Gym Days</div><div style="display:flex;gap:8px;flex-wrap:wrap" id="settings-gym-days"></div></div>
-
-        <!-- APPEARANCE -->
         <div class="card">
-          <div class="card-label" style="margin-bottom:14px">Appearance</div>
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <div style="font-size:0.82rem;font-weight:600;color:var(--off)">Theme</div>
-              <div style="font-size:0.72rem;color:var(--dim);margin-top:2px">Switch between dark and light mode</div>
+          <div class="card-label" style="margin-bottom:8px">Appearance</div>
+          <div class="theme-toggle-row">
+            <div class="theme-toggle-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              Light Mode
             </div>
-            <button id="theme-toggle-btn" onclick="toggleAppTheme()" style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--dark);border:1px solid var(--border2);border-radius:10px;color:var(--off);font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;letter-spacing:0.5px;transition:all 0.2s">
-              <span id="theme-toggle-icon">☀️</span>
-              <span id="theme-toggle-label">LIGHT</span>
-            </button>
+            <label class="theme-switch">
+              <input type="checkbox" id="theme-toggle-cb" onchange="toggleTheme()">
+              <span class="slider"></span>
+            </label>
           </div>
         </div>
         <div class="card" style="border-color:rgba(251,146,60,0.2)">
@@ -800,7 +802,7 @@ self.addEventListener('fetch', e => {
             </div>
             <div class="coach-starter-grid">
               <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">I had 2 eggs and toast for breakfast</button>
-              <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">What should I eat to hit my protein today?</button>
+              <button class="coach-starter-btn" onclick="suggestMeal()">What should I eat right now?</button>
               <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">Is my split good for hypertrophy?</button>
               <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">I missed 3 days — how do I get back on track?</button>
             </div>
@@ -1340,72 +1342,5 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
-<!-- ── SCAN PLATE MODAL ── -->
-<div id="scan-plate-modal" style="display:none" onclick="if(event.target===this)closeScanPlateModal()">
-  <div class="sp-sheet">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1.5px;color:var(--white)">SCAN YOUR PLATE</div>
-      <button onclick="closeScanPlateModal()" style="background:none;border:none;color:var(--dim);font-size:1.2rem;cursor:pointer;padding:4px">✕</button>
-    </div>
-    <div style="font-size:0.8rem;color:var(--dim);margin-bottom:16px">Take a photo of your meal and describe what's on it — your coach will estimate the macros and log them instantly.</div>
-
-    <!-- Hidden file inputs -->
-    <input type="file" id="sp-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleScanPlatePhoto(this,'camera')">
-    <input type="file" id="sp-upload-input" accept="image/*" style="display:none" onchange="handleScanPlatePhoto(this,'upload')">
-
-    <!-- Preview / Add photo -->
-    <div id="sp-preview-wrap" class="sp-preview-wrap" style="display:none">
-      <img id="sp-preview-img" alt="meal photo" style="width:100%;max-height:200px;object-fit:cover">
-    </div>
-    <div id="sp-photo-btns" style="display:flex;gap:8px;margin-bottom:14px">
-      <button class="sp-add-photo-btn" onclick="document.getElementById('sp-photo-input').click()" style="flex:1">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Take Photo
-      </button>
-      <button class="sp-add-photo-btn" onclick="document.getElementById('sp-upload-input').click()" style="flex:1">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Upload
-      </button>
-    </div>
-
-    <!-- Description -->
-    <div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Describe your plate <span style="font-weight:400">(optional but helps accuracy)</span></div>
-    <textarea id="sp-desc" class="sp-desc-input" placeholder="e.g. chicken breast, brown rice, roasted broccoli with olive oil — roughly 6oz chicken, 1 cup rice"></textarea>
-
-    <!-- Meal category -->
-    <div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin:10px 0 6px">Log to</div>
-    <select id="sp-meal-cat" class="sp-meal-select">
-      <option value="breakfast">Breakfast</option>
-      <option value="lunch" selected>Lunch</option>
-      <option value="dinner">Dinner</option>
-      <option value="snacks">Snacks</option>
-      <option value="other">Other</option>
-    </select>
-
-    <!-- Submit -->
-    <button id="sp-submit-btn" onclick="submitScanPlate()" style="width:100%;padding:14px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:12px;color:#111;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;cursor:pointer;transition:opacity 0.2s">
-      ANALYZE &amp; LOG
-    </button>
-  </div>
-</div>
-
-<!-- ── MEAL SUGGESTION PANEL ── -->
-<div id="meal-suggest-panel" style="display:none" onclick="if(event.target===this)closeMealSuggestPanel()">
-  <div class="ms-sheet">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1.5px;color:var(--white)">WHAT TO EAT NOW</div>
-      <button onclick="closeMealSuggestPanel()" style="background:none;border:none;color:var(--dim);font-size:1.2rem;cursor:pointer;padding:4px">✕</button>
-    </div>
-    <div id="ms-remaining-bar" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim);margin-bottom:16px;padding:10px 12px;background:var(--dark);border-radius:8px;border:1px solid var(--border)"></div>
-    <div id="ms-content" style="min-height:120px;display:flex;align-items:center;justify-content:center">
-      <div style="text-align:center;color:var(--dim);font-size:0.8rem">Generating suggestions...</div>
-    </div>
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-      <div style="font-size:0.68rem;color:var(--dim);text-align:center">Tap a meal to open the coach and log it</div>
-    </div>
-  </div>
-</div>
-
 </body>
-
 </html>
