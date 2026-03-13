@@ -452,16 +452,6 @@ self.addEventListener('fetch', e => {
           </div>
         </div>
       </div>
-      <!-- MEAL SUGGESTION -->
-      <div id="meal-suggest-wrap" style="margin-top:16px">
-        <button class="meal-suggest-btn" id="meal-suggest-btn" onclick="suggestMeal()">
-          <div class="msg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" width="20" height="20"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div>
-          <div class="msg-text">
-            <div class="msg-title">WHAT SHOULD I EAT RIGHT NOW?</div>
-            <div class="msg-sub" id="meal-suggest-sub">AI meal ideas based on your remaining macros</div>
-          </div>
-        </button>
-      </div>
       <div class="workout-card" style="margin-top:16px">
         <div class="wc-header">
           <div>
@@ -802,7 +792,7 @@ self.addEventListener('fetch', e => {
             </div>
             <div class="coach-starter-grid">
               <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">I had 2 eggs and toast for breakfast</button>
-              <button class="coach-starter-btn" onclick="suggestMeal()">What should I eat right now?</button>
+              <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">What should I eat to hit my protein today?</button>
               <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">Is my split good for hypertrophy?</button>
               <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">I missed 3 days — how do I get back on track?</button>
             </div>
