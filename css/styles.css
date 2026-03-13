@@ -1251,93 +1251,116 @@ input::placeholder { color: var(--dim) !important; }
 }
 
 
-/* ═══ TODAY EXERCISE CARDS v3 ═══ */
-.ex-card-v3 {
+/* ═══ TODAY EXERCISE PHOTO CARDS ═══ */
+.ex-photo-card {
   position: relative;
-  display: flex;
-  align-items: center;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
-  margin-bottom: 8px;
-  height: 80px;
-  border: 1px solid transparent;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  margin-bottom: 10px;
+  height: 130px;
+  background: #0d0d0f;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.13s ease;
 }
-.ex-card-v3:active { transform: scale(0.987); }
-.ex-card-v3.done { opacity: 0.5; }
+.ex-photo-card:active { transform: scale(0.984); }
+.ex-photo-card.done { opacity: 0.5; }
 
-/* Left accent bar */
-.ex-card-v3-bar {
-  width: 3px;
+/* Photo fills the card */
+.ex-photo-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  flex-shrink: 0;
-  opacity: 0.9;
+  object-fit: cover;
+  object-position: center 30%;
+  transition: opacity 0.3s;
 }
 
-/* Text */
-.ex-card-v3-body {
-  flex: 1;
-  padding: 0 12px 0 14px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
+/* Gradient overlay — heavy at bottom for legibility, light at top */
+.ex-photo-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.08) 0%,
+    rgba(0,0,0,0.25) 35%,
+    rgba(0,0,0,0.78) 75%,
+    rgba(0,0,0,0.88) 100%
+  );
 }
-.ex-card-v3-tag {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.55rem;
-  letter-spacing: 2px;
-  font-weight: 600;
-  opacity: 0.8;
+
+/* Text content — pinned to bottom */
+.ex-photo-card-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 44px;
+  padding: 0 14px 12px;
 }
-.ex-card-v3-name {
+.ex-photo-card-name {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   letter-spacing: 1.5px;
-  color: #F2F0EB;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.1;
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: 3px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
 }
-.ex-card-v3-meta {
-  font-size: 0.72rem;
-  color: rgba(255,255,255,0.45);
-  letter-spacing: 0.2px;
+.ex-photo-card-tip {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.82);
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  line-height: 1.3;
 }
-.ex-card-v3-prev {
+.ex-photo-card-prev {
   font-family: 'DM Mono', monospace;
-  font-size: 0.6rem;
-  color: rgba(255,255,255,0.28);
-  margin-top: 1px;
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.42);
+  margin-top: 3px;
+  letter-spacing: 0.3px;
 }
 
-/* Done checkmark */
-.ex-card-v3-check {
-  font-size: 1rem;
-  font-weight: 700;
-  padding-right: 8px;
-  flex-shrink: 0;
+/* Done badge — top left */
+.ex-photo-card-done {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 1.5px;
+  color: #111;
+  pointer-events: none;
 }
 
-/* Options button */
-.ex-card-v3-dots {
-  width: 32px;
-  height: 100%;
-  flex-shrink: 0;
-  border: none;
-  background: rgba(0,0,0,0.2);
-  color: rgba(255,255,255,0.3);
+/* Options dots — top right */
+.ex-photo-card-dots {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.45);
+  color: rgba(255,255,255,0.7);
   cursor: pointer;
   font-size: 1.1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.1s, color 0.1s;
-  border-left: 1px solid rgba(255,255,255,0.05);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 2;
+  transition: background 0.1s;
 }
-.ex-card-v3-dots:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+.ex-photo-card-dots:hover { background: rgba(0,0,0,0.65); color: #fff; }
+
+@media (max-width: 600px) {
+  .ex-photo-card { height: 115px; }
+  .ex-photo-card-name { font-size: 1.3rem; }
+}
