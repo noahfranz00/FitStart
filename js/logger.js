@@ -568,8 +568,6 @@ function refreshDashMacros() {
     if (ring) { ring.style.strokeDashoffset = offset; ring.setAttribute('stroke', color); }
     if (sub) sub.textContent = 'of ' + (tgt||'\u2014') + (u ? u : '');
   });
-  // Update meal suggestion button with remaining macros
-  if (typeof _updateMealSuggestSub === 'function') _updateMealSuggestSub();
 }
 
 // ── WEEK ──
@@ -878,3 +876,61 @@ function clearAllData() {
   showToast('All data cleared. Reloading...', 'info', 2000);
   setTimeout(function() { location.reload(); }, 1500);
 }
+
+// ═══════════════════════════════════════════
+// AUTO-BACKUP REMINDER — prompts weekly if no export
+// ═══════════════════════════════════════════
+function checkBackupReminder() {
+  try {
+    var lastBackup = localStorage.getItem('fs_last_backup_ts');
+    var now = Date.now();
+    var sevenDays = 7 * 24 * 60 * 60 * 1000;
+    // Don't nag on first use or if no plan exists
+    if (!lsGet('fs_plan')) return;
+    // If never backed up and app has been used for 3+ days, or if last backup > 7 days ago
+    var appStart = localStorage.getItem('fs_program_start');
+    var appAge = appStart ? (now - new Date(appStart).getTime()) : 0;
+    if ((!lastBackup && appAge > 3 * 24 * 60 * 60 * 1000) || (lastBackup && (now - parseInt(lastBackup)) > sevenDays)) {
+      _showBackupBanner();
+    }
+  } catch(e) {}
+}
+
+function _showBackupBanner() {
+  if (document.getElementById('backup-reminder-banner')) return;
+  var banner = document.createElement('div');
+  banner.id = 'backup-reminder-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;background:linear-gradient(135deg,rgba(251,146,60,0.95),rgba(217,119,6,0.95));display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.82rem;color:#111;animation:fadeUp 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
+  banner.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex:1"><strong>Protect your data</strong> — Download a backup to keep your progress safe.</div>' +
+    '<button onclick="_doQuickBackup()" style="padding:7px 14px;background:#111;color:#F2F0EB;border:none;border-radius:8px;font-family:\'Bebas Neue\',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer;white-space:nowrap">BACKUP NOW</button>' +
+    '<button onclick="this.parentNode.remove();localStorage.setItem(\'fs_backup_dismiss\',Date.now())" style="background:none;border:none;color:rgba(0,0,0,0.5);cursor:pointer;font-size:1.1rem;padding:0 4px">✕</button>';
+  document.body.appendChild(banner);
+}
+
+function _doQuickBackup() {
+  exportData();
+  localStorage.setItem('fs_last_backup_ts', String(Date.now()));
+  var banner = document.getElementById('backup-reminder-banner');
+  if (banner) banner.remove();
+}
+
+// Mark backup timestamp when exportData runs
+var _origExportData = typeof exportData === 'function' ? exportData : null;
+// Patch exportData to track backup timestamps
+(function() {
+  var _patchInterval = setInterval(function() {
+    if (typeof exportData === 'function' && !exportData._patched) {
+      var orig = exportData;
+      exportData = function() {
+        orig();
+        localStorage.setItem('fs_last_backup_ts', String(Date.now()));
+      };
+      exportData._patched = true;
+      clearInterval(_patchInterval);
+    }
+  }, 500);
+  setTimeout(function() { clearInterval(_patchInterval); }, 5000);
+})();
+
+// Run backup check on load (with delay to not block rendering)
+setTimeout(checkBackupReminder, 5000);
