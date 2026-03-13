@@ -193,46 +193,97 @@ function renderTodayWorkout() {
   btn.style.display = '';
   if (wktDone.has(TODAY_IDX)) { btn.textContent = '✓ COMPLETE'; btn.classList.add('done'); }
   else { btn.textContent = 'START WORKOUT'; btn.classList.remove('done'); }
-  const _CARD_GRAD = {
-    'Quads':      '#0f2535,#1a4060',  'Hamstrings':  '#1a0f30,#2d1a50',
-    'Glutes':     '#0d200d,#163a1a',  'Calves':      '#1a1a08,#2d2d10',
-    'Chest':      '#28080a,#4a1015',  'Shoulders':   '#080828,#10104a',
-    'Triceps':    '#1f1000,#3d2200',  'Back':        '#002020,#003838',
-    'Biceps':     '#150028,#28004d',  'Lats':        '#001a0f,#00332a',
-    'Core':       '#1f1800,#3d3000',  'Abs':         '#1f1800,#3d3000',
+  // Curated Unsplash photo IDs — real fitness photography, specific shots
+  const _EX_PHOTO = {
+    // Chest
+    'Bench Press':          '1571019614242-c5c5dee9f50b',
+    'Incline Barbell Press':'1571019614242-c5c5dee9f50b',
+    'Dumbbell Bench Press': '1571019614242-c5c5dee9f50b',
+    'Incline DB Press':     '1571019614242-c5c5dee9f50b',
+    'Push-Ups':             '1598971861890-e9b7a5ac4f0e',
+    'Cable Crossover':      '1534438327276-14e5300c3a48',
+    'Chest Dip':            '1598971861890-e9b7a5ac4f0e',
+    // Back
+    'Deadlift':             '1517963879433-6ad2b056d712',
+    'Conventional Deadlift':'1517963879433-6ad2b056d712',
+    'Barbell Row':          '1581009146145-b5ef050c2e1e',
+    'Pull-Ups':             '1605296867304-46d5465a13f1',
+    'Lat Pulldown':         '1534438327276-14e5300c3a48',
+    'Seated Cable Row':     '1534438327276-14e5300c3a48',
+    'Dumbbell Row':         '1581009146145-b5ef050c2e1e',
+    'Face Pulls':           '1534438327276-14e5300c3a48',
+    // Legs
+    'Back Squat':           '1526506118085-60ce8714f8c5',
+    'Front Squat':          '1526506118085-60ce8714f8c5',
+    'Goblet Squat':         '1526506118085-60ce8714f8c5',
+    'Leg Press':            '1593079831268-3381b0db4a77',
+    'Romanian Deadlift':    '1517963879433-6ad2b056d712',
+    'Hip Thrust':           '1570829460005-c840387d1122',
+    'Bulgarian Split Squat':'1526506118085-60ce8714f8c5',
+    'Calf Raises':          '1540497077202-7c8a3999166f',
+    'Leg Curl':             '1540497077202-7c8a3999166f',
+    'Leg Extension':        '1540497077202-7c8a3999166f',
+    // Shoulders
+    'Shoulder Press':       '1581009146145-b5ef050c2e1e',
+    'Overhead Press':       '1581009146145-b5ef050c2e1e',
+    'Arnold Press':         '1581009146145-b5ef050c2e1e',
+    'Lateral Raise':        '1581009146145-b5ef050c2e1e',
+    // Arms
+    'Barbell Curl':         '1581009146145-b5ef050c2e1e',
+    'Hammer Curl':          '1581009146145-b5ef050c2e1e',
+    'Tricep Pushdown':      '1534438327276-14e5300c3a48',
+    'Skull Crushers':       '1571019614242-c5c5dee9f50b',
+    // Core
+    'Plank':                '1598971861890-e9b7a5ac4f0e',
+    'Dead Bug':             '1598971861890-e9b7a5ac4f0e',
   };
-  const _CARD_BORDER = {
-    'Quads':'rgba(56,189,248,0.18)',  'Hamstrings':'rgba(167,139,250,0.18)',
-    'Glutes':'rgba(52,211,153,0.18)', 'Calves':'rgba(251,191,36,0.15)',
-    'Chest':'rgba(248,113,113,0.18)', 'Shoulders':'rgba(129,140,248,0.18)',
-    'Triceps':'rgba(251,146,60,0.18)','Back':'rgba(34,211,238,0.18)',
-    'Biceps':'rgba(192,132,252,0.18)','Lats':'rgba(52,211,153,0.18)',
-    'Core':'rgba(251,191,36,0.18)',   'Abs':'rgba(251,191,36,0.18)',
+  // Generic fallbacks by muscle group
+  const _MUSCLE_PHOTO = {
+    'Quads':'1526506118085-60ce8714f8c5',
+    'Hamstrings':'1517963879433-6ad2b056d712',
+    'Glutes':'1570829460005-c840387d1122',
+    'Calves':'1540497077202-7c8a3999166f',
+    'Chest':'1571019614242-c5c5dee9f50b',
+    'Back':'1517963879433-6ad2b056d712',
+    'Lats':'1605296867304-46d5465a13f1',
+    'Shoulders':'1581009146145-b5ef050c2e1e',
+    'Biceps':'1581009146145-b5ef050c2e1e',
+    'Triceps':'1534438327276-14e5300c3a48',
+    'Core':'1598971861890-e9b7a5ac4f0e',
   };
-  const _CARD_ACCENT = {
-    'Quads':'#38bdf8','Hamstrings':'#a78bfa','Glutes':'#34d399','Calves':'#fbbf24',
-    'Chest':'#f87171','Shoulders':'#818cf8','Triceps':'#fb923c','Back':'#22d3ee',
-    'Biceps':'#c084fc','Lats':'#34d399','Core':'#fbbf24','Abs':'#fbbf24',
+  const _FALLBACK = '1540497077202-7c8a3999166f'; // generic gym interior
+
+  const _TIPS = {
+    'Bench Press':'Drive feet into the floor','Back Squat':'Brace core, chest tall',
+    'Deadlift':'Push the floor away from you','Romanian Deadlift':'Hip hinge, soft knees',
+    'Barbell Row':'Lead with elbows, squeeze at top','Leg Press':'Full depth, heels flat',
+    'Shoulder Press':'Tuck chin as bar passes','Lat Pulldown':'Initiate with lats, not arms',
+    'Hip Thrust':'Squeeze glutes at the top','Goblet Squat':'Elbows track inside knees',
+    'Pull-Ups':'Dead hang, full range','Overhead Press':'Stack wrists over elbows',
+    'Incline DB Press':'45\u00b0 angle, controlled descent','Lateral Raise':'Slight forward lean',
+    'Tricep Pushdown':'Elbows pinned to sides','Barbell Curl':'No momentum, full ROM',
+    'Calf Raises':'Full stretch at bottom','Leg Curl':'Control the eccentric',
+    'Romanian Deadlift':'Bar stays close to legs','Bulgarian Split Squat':'Front foot flat',
+    'Face Pulls':'Pull to nose height, elbows high','Plank':'Posterior pelvic tilt',
   };
 
   document.getElementById('today-ex-list').innerHTML = exes.map((ex,i)=>{
     const prev = getPrevSet(TODAY_IDX,i,0);
     const isDone = wktDone.has(TODAY_IDX);
-    const m = ex.muscles || '';
-    const [g1,g2] = (_CARD_GRAD[m] || '#111318,#1c2028').split(',');
-    const border = _CARD_BORDER[m] || 'rgba(255,255,255,0.07)';
-    const accent = _CARD_ACCENT[m] || '#D4A520';
-    const prevStr = prev ? `Last: ${prev.weight} lbs × ${prev.reps}` : null;
-    return `<div class="ex-card-v3 ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})" style="background:linear-gradient(135deg,${g1} 0%,${g2} 100%);border-color:${border}">
-      <div class="ex-card-v3-bar" style="background:${accent}"></div>
-      <div class="ex-card-v3-body">
-        <div class="ex-card-v3-tag" style="color:${accent}">${m.toUpperCase()}</div>
-        <div class="ex-card-v3-name">${ex.name}</div>
-        <div class="ex-card-v3-meta">${ex.sets} sets · ${ex.reps} reps · ${ex.rest}s rest</div>
-        ${prevStr ? `<div class="ex-card-v3-prev">${prevStr}</div>` : ''}
+    const photoId = _EX_PHOTO[ex.name] || _MUSCLE_PHOTO[ex.muscles] || _FALLBACK;
+    const photoUrl = `https://images.unsplash.com/photo-${photoId}?w=900&h=240&fit=crop&crop=center&q=80&auto=format`;
+    const tip = _TIPS[ex.name] || `${ex.sets} sets \u00b7 focus on form`;
+    const prevStr = prev ? `Last session: ${prev.weight} lbs \u00d7 ${prev.reps}` : null;
+    return `<div class="ex-photo-card ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
+      <img class="ex-photo-card-img" src="${photoUrl}" alt="${ex.name}" onerror="this.style.opacity='0'">
+      <div class="ex-photo-card-overlay"></div>
+      <div class="ex-photo-card-content">
+        <div class="ex-photo-card-name">${ex.name}</div>
+        <div class="ex-photo-card-tip">${ex.name}: ${ex.sets} sets, ${tip}</div>
+        ${prevStr ? `<div class="ex-photo-card-prev">${prevStr}</div>` : ''}
       </div>
-      ${isDone ? `<div class="ex-card-v3-check" style="color:${accent}">✓</div>` : ''}
-      <button class="ex-card-v3-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})">⋮</button>
+      ${isDone ? '<div class="ex-photo-card-done">\u2713 DONE</div>' : ''}
+      <button class="ex-photo-card-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})">&#8942;</button>
     </div>`;
   }).join('');
 }
