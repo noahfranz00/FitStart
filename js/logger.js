@@ -193,39 +193,76 @@ function renderTodayWorkout() {
   btn.style.display = '';
   if (wktDone.has(TODAY_IDX)) { btn.textContent = '✓ COMPLETE'; btn.classList.add('done'); }
   else { btn.textContent = 'START WORKOUT'; btn.classList.remove('done'); }
+  // ── Per-muscle gradient themes ──
+  const EX_THEME = {
+    // Legs
+    'Quads':'linear-gradient(135deg,#0f2027 0%,#1a3a4a 50%,#0d2d3d 100%)',
+    'Hamstrings':'linear-gradient(135deg,#1a0a2e 0%,#2d1b4e 50%,#1a0f35 100%)',
+    'Glutes':'linear-gradient(135deg,#0d1f0d 0%,#1a3320 50%,#0f2414 100%)',
+    'Calves':'linear-gradient(135deg,#1a1a0a 0%,#2d2d10 50%,#1f1f0d 100%)',
+    // Push
+    'Chest':'linear-gradient(135deg,#1a0a0a 0%,#3d1515 50%,#2a0d0d 100%)',
+    'Shoulders':'linear-gradient(135deg,#0a0a1a 0%,#15153d 50%,#0d0d2a 100%)',
+    'Triceps':'linear-gradient(135deg,#1a0f00 0%,#3d2800 50%,#2a1a00 100%)',
+    // Pull
+    'Back':'linear-gradient(135deg,#001a1a 0%,#00333a 50%,#001f25 100%)',
+    'Biceps':'linear-gradient(135deg,#0a001a 0%,#1f0040 50%,#130030 100%)',
+    'Lats':'linear-gradient(135deg,#001a10 0%,#003322 50%,#001f14 100%)',
+    // Core
+    'Core':'linear-gradient(135deg,#1a1500 0%,#332900 50%,#261e00 100%)',
+    'Abs':'linear-gradient(135deg,#1a1500 0%,#332900 50%,#261e00 100%)',
+    // Default
+    'default':'linear-gradient(135deg,#111318 0%,#1c2028 50%,#141820 100%)',
+  };
+
+  // ── Muscle group icons (SVG paths) ──
+  const EX_ICON = {
+    'Quads':   '<path d="M12 3c0 0-4 3-4 9s4 9 4 9" stroke-width="2" fill="none"/><path d="M12 3c0 0 4 3 4 9s-4 9-4 9" stroke-width="2" fill="none"/>',
+    'Hamstrings':'<path d="M8 3 Q12 12 8 21M16 3 Q12 12 16 21" stroke-width="2" fill="none"/>',
+    'Glutes':  '<path d="M5 12 Q12 5 19 12 Q12 21 5 12Z" stroke-width="1.5" fill="none"/>',
+    'Chest':   '<path d="M3 9 Q12 4 21 9" stroke-width="2" fill="none"/><path d="M3 9 Q6 16 12 18 Q18 16 21 9" stroke-width="2" fill="none"/>',
+    'Back':    '<rect x="5" y="3" width="14" height="18" rx="2" stroke-width="2" fill="none"/><line x1="9" y1="8" x2="15" y2="8" stroke-width="1.5"/><line x1="9" y1="12" x2="15" y2="12" stroke-width="1.5"/>',
+    'Shoulders':'<circle cx="5" cy="10" r="3" stroke-width="2" fill="none"/><circle cx="19" cy="10" r="3" stroke-width="2" fill="none"/><path d="M8 10 Q12 6 16 10" stroke-width="2" fill="none"/>',
+    'default': '<circle cx="12" cy="12" r="9" stroke-width="2" fill="none"/><line x1="12" y1="8" x2="12" y2="12" stroke-width="2"/><line x1="12" y1="15" x2="12" y2="15.5" stroke-width="2.5"/>',
+  };
+
+  // ── Subtle abstract SVG backgrounds per theme ──
+  function _cardBg(muscles, idx) {
+    const key = (muscles || 'default');
+    const grad = EX_THEME[key] || EX_THEME['default'];
+    return grad;
+  }
+
+  function _cardAccent(muscles) {
+    const m = muscles || '';
+    if (['Quads','Hamstrings','Glutes','Calves'].includes(m)) return 'rgba(56,189,248,0.6)';
+    if (['Chest','Triceps'].includes(m)) return 'rgba(248,113,113,0.6)';
+    if (['Back','Lats','Biceps'].includes(m)) return 'rgba(52,211,153,0.6)';
+    if (['Shoulders'].includes(m)) return 'rgba(167,139,250,0.6)';
+    if (['Core','Abs'].includes(m)) return 'rgba(251,191,36,0.6)';
+    return 'rgba(212,165,32,0.6)';
+  }
+
   document.getElementById('today-ex-list').innerHTML = exes.map((ex,i)=>{
     const prev = getPrevSet(TODAY_IDX,i,0);
-    const ytId = EXERCISE_VIDEOS[ex.name] || null;
-    const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : null;
     const isDone = wktDone.has(TODAY_IDX);
-    const lastStr = prev ? `Last Session: ${prev.weight} lbs \u00d7 ${prev.reps}` : null;
-    const TIPS = {
-      'Bench Press':'Drive feet into floor','Back Squat':'Brace core, chest tall',
-      'Deadlift':'Push the floor away','Romanian Deadlift':'Hip hinge, soft knees',
-      'Barbell Row':'Lead with elbows','Leg Press':'Full depth, heels flat',
-      'Shoulder Press':'Tuck chin as bar passes','Lat Pulldown':'Initiate with lats',
-      'Hip Thrust':'Squeeze glutes at top','Goblet Squat':'Elbows track inside knees',
-      'Incline DB Press':'45\u00b0 angle, controlled descent','Lateral Raise':'Slight forward lean',
-      'Tricep Pushdown':'Elbows pinned to sides','Barbell Curl':'No momentum, full ROM',
-    };
-    const tip = TIPS[ex.name] || `${ex.sets} sets \u00b7 focus on form`;
-    if (thumbUrl) {
-      return `<div class="today-ex-thumb-card ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})" style="position:relative;border-radius:14px;overflow:hidden;cursor:pointer;margin-bottom:10px;min-height:110px;background:#0a0a0a;-webkit-tap-highlight-color:transparent">
-        <img src="${thumbUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.55;pointer-events:none" onerror="this.style.display='none'">
-        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.10) 0%,rgba(0,0,0,0.76) 100%);pointer-events:none"></div>
-        <div style="position:relative;padding:14px 16px 14px;display:flex;flex-direction:column;justify-content:flex-end;min-height:110px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:1.5px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.8);margin-bottom:2px">${ex.name}</div>
-          <div style="font-size:0.78rem;color:rgba(255,255,255,0.82);font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,0.9)">${ex.name}: ${ex.sets} sets, ${tip}</div>
-          ${lastStr ? `<div style="font-size:0.68rem;color:rgba(255,255,255,0.48);margin-top:4px;font-family:'DM Mono',monospace;letter-spacing:0.3px">${lastStr}</div>` : ''}
-          ${isDone ? '<div style="position:absolute;top:12px;left:12px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border-radius:6px;padding:3px 10px;font-family:\'Bebas Neue\',sans-serif;font-size:0.7rem;letter-spacing:1.5px;color:#111;pointer-events:none">✓ DONE</div>' : ''}
-        </div>
-        <button class="ex-row-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options" style="position:absolute;top:10px;right:10px;width:30px;height:30px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);border-radius:8px;color:rgba(255,255,255,0.8);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2">⋮</button>
-      </div>`;
-    }
-    return `<div class="ex-row ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
-      <button class="ex-row-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options">⋮</button>
-      <div><div class="ex-name">${ex.name}</div><div class="ex-detail">${ex.sets}\u00d7${ex.reps} \u00b7 Rest ${ex.rest}s${prev?` \u00b7 Last: ${prev.weight}lbs\u00d7${prev.reps}`:''}</div></div>
-      <div class="ex-detail">${ex.muscles}</div>
+    const muscles = ex.muscles || 'default';
+    const grad = _cardBg(muscles, i);
+    const accent = _cardAccent(muscles);
+    const icon = EX_ICON[muscles] || EX_ICON['default'];
+    const prevStr = prev ? `${prev.weight} lbs × ${prev.reps}` : null;
+
+    return `<div class="ex-card-v2 ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})" style="background:${grad}">
+      <div class="ex-card-v2-accent" style="background:${accent}"></div>
+      <svg class="ex-card-v2-icon" viewBox="0 0 24 24" stroke="${accent.replace('0.6','0.35')}" fill="none" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
+      <div class="ex-card-v2-body">
+        <div class="ex-card-v2-muscle">${muscles.toUpperCase()}</div>
+        <div class="ex-card-v2-name">${ex.name}</div>
+        <div class="ex-card-v2-meta">${ex.sets} sets · ${ex.reps} reps · ${ex.rest}s rest</div>
+        ${prevStr ? `<div class="ex-card-v2-prev">Last session: ${prevStr}</div>` : ''}
+      </div>
+      ${isDone ? '<div class="ex-card-v2-done">✓</div>' : ''}
+      <button class="ex-card-v2-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options">⋮</button>
     </div>`;
   }).join('');
 }
