@@ -24,7 +24,7 @@ function openWorkoutEnv(dayIdx, startExIdx) {
     openUnplannedWorkout(dayIdx);
     return;
   }
-  _unlockChimeOnGesture(); // pre-unlock audio on this user gesture
+  _unlockChimeOnGesture();
   woDay = dayIdx;
   woCurrentEx = startExIdx || 0;
   woWorkout = workout;
@@ -1480,16 +1480,14 @@ function prevExercise() {
 
 // ═══════════════════════════════════════════
 // REST TIMER + CHIME — Web Audio API
-// Design: Only ONE code path fires the chime (the running interval).
-// Uses AudioContext oscillators which MIX with other audio (music keeps playing).
-// No HTML5 Audio, no global touch listeners, no warm-up needed.
+// Uses AudioContext oscillators that MIX with playing music.
+// No HTML5 Audio, no global touch listeners, no warm-up pings.
+// ONLY the running setInterval fires the chime when timer hits 0.
 // ═══════════════════════════════════════════
 
-// ═══ CHIME AUDIO — Web Audio API ═══
 var _chimeCtx = null;
 var _chimeUnlocked = false;
 
-// Create/resume AudioContext. Must be called from a user gesture at least once.
 function _ensureChimeCtx() {
   if (!_chimeCtx) {
     try { _chimeCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
@@ -1500,8 +1498,6 @@ function _ensureChimeCtx() {
   return _chimeCtx;
 }
 
-// Unlock AudioContext on first user gesture INSIDE workout env only
-// (not global — avoids interrupting music outside workout)
 function _unlockChimeOnGesture() {
   if (_chimeUnlocked) return;
   var ctx = _ensureChimeCtx();
@@ -1514,7 +1510,6 @@ function playRestChime() {
   try {
     var now = ctx.currentTime;
     var dur = 0.5;
-    // Two sine oscillators for a warm chime tone
     var osc1 = ctx.createOscillator();
     var osc2 = ctx.createOscillator();
     osc1.type = 'sine'; osc1.frequency.value = 880;
@@ -1568,7 +1563,7 @@ function startRestTimer() {
 
 function startRestTimerSecs(secs) {
   stopRestTimer();
-  _unlockChimeOnGesture(); // unlock AudioContext on user gesture
+  _unlockChimeOnGesture();
   _chimePlayedForCurrentTimer = false;
   restTotalSecs = secs;
   restTimerEndAt = Date.now() + secs * 1000;
