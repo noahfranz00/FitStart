@@ -193,97 +193,14 @@ function renderTodayWorkout() {
   btn.style.display = '';
   if (wktDone.has(TODAY_IDX)) { btn.textContent = '✓ COMPLETE'; btn.classList.add('done'); }
   else { btn.textContent = 'START WORKOUT'; btn.classList.remove('done'); }
-  // Curated Unsplash photo IDs — real fitness photography, specific shots
-  const _EX_PHOTO = {
-    // Chest
-    'Bench Press':          '1571019614242-c5c5dee9f50b',
-    'Incline Barbell Press':'1571019614242-c5c5dee9f50b',
-    'Dumbbell Bench Press': '1571019614242-c5c5dee9f50b',
-    'Incline DB Press':     '1571019614242-c5c5dee9f50b',
-    'Push-Ups':             '1598971861890-e9b7a5ac4f0e',
-    'Cable Crossover':      '1534438327276-14e5300c3a48',
-    'Chest Dip':            '1598971861890-e9b7a5ac4f0e',
-    // Back
-    'Deadlift':             '1517963879433-6ad2b056d712',
-    'Conventional Deadlift':'1517963879433-6ad2b056d712',
-    'Barbell Row':          '1581009146145-b5ef050c2e1e',
-    'Pull-Ups':             '1605296867304-46d5465a13f1',
-    'Lat Pulldown':         '1534438327276-14e5300c3a48',
-    'Seated Cable Row':     '1534438327276-14e5300c3a48',
-    'Dumbbell Row':         '1581009146145-b5ef050c2e1e',
-    'Face Pulls':           '1534438327276-14e5300c3a48',
-    // Legs
-    'Back Squat':           '1526506118085-60ce8714f8c5',
-    'Front Squat':          '1526506118085-60ce8714f8c5',
-    'Goblet Squat':         '1526506118085-60ce8714f8c5',
-    'Leg Press':            '1593079831268-3381b0db4a77',
-    'Romanian Deadlift':    '1517963879433-6ad2b056d712',
-    'Hip Thrust':           '1570829460005-c840387d1122',
-    'Bulgarian Split Squat':'1526506118085-60ce8714f8c5',
-    'Calf Raises':          '1540497077202-7c8a3999166f',
-    'Leg Curl':             '1540497077202-7c8a3999166f',
-    'Leg Extension':        '1540497077202-7c8a3999166f',
-    // Shoulders
-    'Shoulder Press':       '1581009146145-b5ef050c2e1e',
-    'Overhead Press':       '1581009146145-b5ef050c2e1e',
-    'Arnold Press':         '1581009146145-b5ef050c2e1e',
-    'Lateral Raise':        '1581009146145-b5ef050c2e1e',
-    // Arms
-    'Barbell Curl':         '1581009146145-b5ef050c2e1e',
-    'Hammer Curl':          '1581009146145-b5ef050c2e1e',
-    'Tricep Pushdown':      '1534438327276-14e5300c3a48',
-    'Skull Crushers':       '1571019614242-c5c5dee9f50b',
-    // Core
-    'Plank':                '1598971861890-e9b7a5ac4f0e',
-    'Dead Bug':             '1598971861890-e9b7a5ac4f0e',
-  };
-  // Generic fallbacks by muscle group
-  const _MUSCLE_PHOTO = {
-    'Quads':'1526506118085-60ce8714f8c5',
-    'Hamstrings':'1517963879433-6ad2b056d712',
-    'Glutes':'1570829460005-c840387d1122',
-    'Calves':'1540497077202-7c8a3999166f',
-    'Chest':'1571019614242-c5c5dee9f50b',
-    'Back':'1517963879433-6ad2b056d712',
-    'Lats':'1605296867304-46d5465a13f1',
-    'Shoulders':'1581009146145-b5ef050c2e1e',
-    'Biceps':'1581009146145-b5ef050c2e1e',
-    'Triceps':'1534438327276-14e5300c3a48',
-    'Core':'1598971861890-e9b7a5ac4f0e',
-  };
-  const _FALLBACK = '1540497077202-7c8a3999166f'; // generic gym interior
-
-  const _TIPS = {
-    'Bench Press':'Drive feet into the floor','Back Squat':'Brace core, chest tall',
-    'Deadlift':'Push the floor away from you','Romanian Deadlift':'Hip hinge, soft knees',
-    'Barbell Row':'Lead with elbows, squeeze at top','Leg Press':'Full depth, heels flat',
-    'Shoulder Press':'Tuck chin as bar passes','Lat Pulldown':'Initiate with lats, not arms',
-    'Hip Thrust':'Squeeze glutes at the top','Goblet Squat':'Elbows track inside knees',
-    'Pull-Ups':'Dead hang, full range','Overhead Press':'Stack wrists over elbows',
-    'Incline DB Press':'45\u00b0 angle, controlled descent','Lateral Raise':'Slight forward lean',
-    'Tricep Pushdown':'Elbows pinned to sides','Barbell Curl':'No momentum, full ROM',
-    'Calf Raises':'Full stretch at bottom','Leg Curl':'Control the eccentric',
-    'Romanian Deadlift':'Bar stays close to legs','Bulgarian Split Squat':'Front foot flat',
-    'Face Pulls':'Pull to nose height, elbows high','Plank':'Posterior pelvic tilt',
-  };
-
   document.getElementById('today-ex-list').innerHTML = exes.map((ex,i)=>{
     const prev = getPrevSet(TODAY_IDX,i,0);
-    const isDone = wktDone.has(TODAY_IDX);
-    const photoId = _EX_PHOTO[ex.name] || _MUSCLE_PHOTO[ex.muscles] || _FALLBACK;
-    const photoUrl = `https://images.unsplash.com/photo-${photoId}?w=900&h=240&fit=crop&crop=center&q=80&auto=format`;
-    const tip = _TIPS[ex.name] || `${ex.sets} sets \u00b7 focus on form`;
-    const prevStr = prev ? `Last session: ${prev.weight} lbs \u00d7 ${prev.reps}` : null;
-    return `<div class="ex-photo-card ${isDone?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
-      <img class="ex-photo-card-img" src="${photoUrl}" alt="${ex.name}" onerror="this.style.opacity='0'">
-      <div class="ex-photo-card-overlay"></div>
-      <div class="ex-photo-card-content">
-        <div class="ex-photo-card-name">${ex.name}</div>
-        <div class="ex-photo-card-tip">${ex.name}: ${ex.sets} sets, ${tip}</div>
-        ${prevStr ? `<div class="ex-photo-card-prev">${prevStr}</div>` : ''}
-      </div>
-      ${isDone ? '<div class="ex-photo-card-done">\u2713 DONE</div>' : ''}
-      <button class="ex-photo-card-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})">&#8942;</button>
+    const thumb = typeof buildExThumbHtml === 'function' ? buildExThumbHtml(ex.name) : '';
+    return `<div class="ex-row ${thumb?'ex-row-with-thumb':''} ${wktDone.has(TODAY_IDX)?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
+      <button class="ex-row-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options">⋮</button>
+      ${thumb}
+      <div><div class="ex-name">${ex.name}</div><div class="ex-detail">${ex.sets}×${ex.reps} · Rest ${ex.rest}s${prev?` · Last: ${prev.weight}lbs×${prev.reps}`:''}</div></div>
+      <div class="ex-detail">${ex.muscles}</div>
     </div>`;
   }).join('');
 }
@@ -651,6 +568,8 @@ function refreshDashMacros() {
     if (ring) { ring.style.strokeDashoffset = offset; ring.setAttribute('stroke', color); }
     if (sub) sub.textContent = 'of ' + (tgt||'\u2014') + (u ? u : '');
   });
+  // Update meal suggestion button with remaining macros
+  if (typeof _updateMealSuggestSub === 'function') _updateMealSuggestSub();
 }
 
 // ── WEEK ──
@@ -882,7 +801,8 @@ var _FS_KEYS = [
   'fs_coach_history', 'fs_proactive_msgs', 'fs_proactive_last',
   'fs_recipes', 'fs_adaptive_last', 'fs_adaptive_insight',
   'fs_weekly_report', 'fs_weekly_report_ts', 'fs_gym_days',
-  'fs_recent_foods', 'fs_custom_foods', 'fs_water_logs'
+  'fs_recent_foods', 'fs_custom_foods', 'fs_water_logs',
+  'fs_theme', 'fs_ex_img_cache'
 ];
 
 function exportData() {
