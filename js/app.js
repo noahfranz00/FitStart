@@ -394,10 +394,8 @@ function getExerciseData(name) {
 // wger image URL builder — returns array of image URLs for an exercise
 function getExerciseImages(wgerId) {
   if (!wgerId) return null;
-  // wger hosts exercise images at this pattern
   return {
     start: `https://wger.de/en/exercise/${wgerId}/view/exercise`,
-    // Use wger's exerciseimage API for actual images
     api: `https://wger.de/api/v2/exerciseimage/?exercise=${wgerId}&format=json`
   };
 }
@@ -405,8 +403,8 @@ function getExerciseImages(wgerId) {
 // ═══════════════════════════════════════════
 // EXERCISE IMAGE CACHE — lazy-fetches wger thumbnails
 // ═══════════════════════════════════════════
-var _exImgCache = {};  // { wgerId: imageUrl | null }
-var _exImgPending = {}; // { wgerId: true } — prevents duplicate fetches
+var _exImgCache = {};
+var _exImgPending = {};
 
 (function _loadImgCache() {
   try {
@@ -419,43 +417,49 @@ function _saveImgCache() {
   try { localStorage.setItem('fs_ex_img_cache', JSON.stringify(_exImgCache)); } catch(e) {}
 }
 
-// Returns cached image URL or null. Kicks off async fetch if not cached.
 function getExerciseThumb(exerciseName) {
   var db = getExerciseData(exerciseName);
   var wid = db && db.wgerId;
   if (!wid) return null;
   if (_exImgCache[wid] !== undefined) return _exImgCache[wid];
-  // Not cached — fetch async
   if (!_exImgPending[wid]) {
     _exImgPending[wid] = true;
     _fetchExImage(wid);
   }
-  return null; // placeholder shown while loading
+  return null;
 }
 
 async function _fetchExImage(wgerId) {
-  try {
-    var resp = await fetch('https://wger.de/api/v2/exerciseimage/?exercise_base=' + wgerId + '&format=json&limit=1', { signal: AbortSignal.timeout(6000) });
-    if (!resp.ok) { _exImgCache[wgerId] = null; _saveImgCache(); return; }
-    var data = await resp.json();
-    if (data.results && data.results.length > 0 && data.results[0].image) {
-      _exImgCache[wgerId] = data.results[0].image;
-    } else {
-      _exImgCache[wgerId] = null;
+  // Try exercise_base param first, fallback to exercise param
+  var urls = [
+    'https://wger.de/api/v2/exerciseimage/?exercise_base=' + wgerId + '&format=json&limit=1&ordering=-is_main',
+    'https://wger.de/api/v2/exerciseimage/?exercise=' + wgerId + '&format=json&limit=1&ordering=-is_main'
+  ];
+  for (var ui = 0; ui < urls.length; ui++) {
+    try {
+      var controller = new AbortController();
+      var timer = setTimeout(function() { controller.abort(); }, 8000);
+      var resp = await fetch(urls[ui], { signal: controller.signal });
+      clearTimeout(timer);
+      if (!resp.ok) continue;
+      var data = await resp.json();
+      if (data.results && data.results.length > 0 && data.results[0].image) {
+        _exImgCache[wgerId] = data.results[0].image;
+        _saveImgCache();
+        if (typeof renderTodayWorkout === 'function') renderTodayWorkout();
+        if (typeof renderEcList === 'function' && typeof woWorkout !== 'undefined' && woWorkout) renderEcList();
+        return;
+      }
+    } catch(e) {
+      // timeout or network error — try next URL
     }
-    _saveImgCache();
-    // Re-render any visible exercise lists to show the loaded image
-    if (typeof renderTodayWorkout === 'function') renderTodayWorkout();
-    if (typeof renderEcList === 'function' && typeof woWorkout !== 'undefined' && woWorkout) renderEcList();
-  } catch(e) {
-    _exImgCache[wgerId] = null; // don't retry on failure
-    _saveImgCache();
   }
+  _exImgCache[wgerId] = null;
+  _saveImgCache();
 }
 
-// Build thumbnail HTML for an exercise name
 function buildExThumbHtml(name, size) {
-  var sz = size || 'normal'; // 'normal' (44px) or 'small' (32px)
+  var sz = size || 'normal';
   var cls = sz === 'small' ? 'wo-ex-sidebar-thumb' : 'ex-thumb';
   var url = getExerciseThumb(name);
   if (url) {
@@ -467,7 +471,6 @@ function buildExThumbHtml(name, size) {
 function _getMuscleBadge(name) {
   var db = getExerciseData(name);
   var m = (db && db.muscles) ? db.muscles.split(',')[0].trim() : '';
-  // Return short muscle label
   var map = { 'Chest':'CHEST', 'Lats':'BACK', 'Back':'BACK', 'Quads':'LEGS', 'Hamstrings':'HAMS', 'Glutes':'GLTS', 'Shoulders':'SHLD', 'Biceps':'ARMS', 'Triceps':'ARMS', 'Core':'CORE', 'Calves':'CALV', 'Forearms':'ARMS', 'Traps':'TRAP', 'Abs':'CORE' };
   for (var key in map) { if (m.toLowerCase().includes(key.toLowerCase())) return map[key]; }
   return m.substring(0, 4).toUpperCase() || 'EX';
@@ -483,12 +486,14 @@ function initTheme() {
 function toggleTheme() {
   var isLight = document.body.classList.toggle('light-theme');
   localStorage.setItem('fs_theme', isLight ? 'light' : 'dark');
-  // Update toggle checkbox
   var cb = document.getElementById('theme-toggle-cb');
   if (cb) cb.checked = isLight;
 }
-// Apply on load immediately
 initTheme();
+
+// ═══════════════════════════════════════════
+// ONBOARDING STATE
+// ═══════════════════════════════════════════
 let currentTier = 'beginner';
 let selectedSplit = 'ppl';
 let selectedWeeks = 16;
@@ -1490,13 +1495,25 @@ function initDashboard() {
   // Build DAY_WORKOUTS from plan
   GYM_DAYS = [];
   DAY_WORKOUTS = {};
+  // Apply personal rules ban filter every time (not just at generation)
+  var _loadBanned = _parseBannedExercises(USER.personalRules || '');
   generatedPlan.weekly_schedule.forEach((d, i) => {
     if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
       GYM_DAYS.push(i);
+      var filteredExes = d.exercises.filter(function(ex) {
+        var exLower = ex.name.toLowerCase();
+        for (var bi = 0; bi < _loadBanned.length; bi++) {
+          if (exLower.includes(_loadBanned[bi])) {
+            console.log('[LoadFilter] Removed "' + ex.name + '" — matches personal rule ban on "' + _loadBanned[bi] + '"');
+            return false;
+          }
+        }
+        return true;
+      });
       DAY_WORKOUTS[i] = {
         name: d.badge,
         focus: d.workout.slice(0,80),
-        exercises: d.exercises
+        exercises: filteredExes
       };
     }
   });
@@ -1525,7 +1542,7 @@ function initDashboard() {
   document.getElementById('s-carb').value   = TARGETS.carb;
   document.getElementById('s-fat').value    = TARGETS.fat;
 
-  // Theme toggle — sync checkbox with current state
+  // Theme toggle — sync checkbox
   var _themeCb = document.getElementById('theme-toggle-cb');
   if (_themeCb) _themeCb.checked = document.body.classList.contains('light-theme');
 
