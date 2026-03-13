@@ -403,8 +403,92 @@ function getExerciseImages(wgerId) {
 }
 
 // ═══════════════════════════════════════════
-// ONBOARDING STATE
+// EXERCISE IMAGE CACHE — lazy-fetches wger thumbnails
 // ═══════════════════════════════════════════
+var _exImgCache = {};  // { wgerId: imageUrl | null }
+var _exImgPending = {}; // { wgerId: true } — prevents duplicate fetches
+
+(function _loadImgCache() {
+  try {
+    var stored = localStorage.getItem('fs_ex_img_cache');
+    if (stored) _exImgCache = JSON.parse(stored);
+  } catch(e) { _exImgCache = {}; }
+})();
+
+function _saveImgCache() {
+  try { localStorage.setItem('fs_ex_img_cache', JSON.stringify(_exImgCache)); } catch(e) {}
+}
+
+// Returns cached image URL or null. Kicks off async fetch if not cached.
+function getExerciseThumb(exerciseName) {
+  var db = getExerciseData(exerciseName);
+  var wid = db && db.wgerId;
+  if (!wid) return null;
+  if (_exImgCache[wid] !== undefined) return _exImgCache[wid];
+  // Not cached — fetch async
+  if (!_exImgPending[wid]) {
+    _exImgPending[wid] = true;
+    _fetchExImage(wid);
+  }
+  return null; // placeholder shown while loading
+}
+
+async function _fetchExImage(wgerId) {
+  try {
+    var resp = await fetch('https://wger.de/api/v2/exerciseimage/?exercise_base=' + wgerId + '&format=json&limit=1', { signal: AbortSignal.timeout(6000) });
+    if (!resp.ok) { _exImgCache[wgerId] = null; _saveImgCache(); return; }
+    var data = await resp.json();
+    if (data.results && data.results.length > 0 && data.results[0].image) {
+      _exImgCache[wgerId] = data.results[0].image;
+    } else {
+      _exImgCache[wgerId] = null;
+    }
+    _saveImgCache();
+    // Re-render any visible exercise lists to show the loaded image
+    if (typeof renderTodayWorkout === 'function') renderTodayWorkout();
+    if (typeof renderEcList === 'function' && typeof woWorkout !== 'undefined' && woWorkout) renderEcList();
+  } catch(e) {
+    _exImgCache[wgerId] = null; // don't retry on failure
+    _saveImgCache();
+  }
+}
+
+// Build thumbnail HTML for an exercise name
+function buildExThumbHtml(name, size) {
+  var sz = size || 'normal'; // 'normal' (44px) or 'small' (32px)
+  var cls = sz === 'small' ? 'wo-ex-sidebar-thumb' : 'ex-thumb';
+  var url = getExerciseThumb(name);
+  if (url) {
+    return '<div class="' + cls + '"><img src="' + url + '" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=ex-thumb-placeholder>' + _getMuscleBadge(name) + '</div>\'"></div>';
+  }
+  return '<div class="' + cls + '"><div class="ex-thumb-placeholder">' + _getMuscleBadge(name) + '</div></div>';
+}
+
+function _getMuscleBadge(name) {
+  var db = getExerciseData(name);
+  var m = (db && db.muscles) ? db.muscles.split(',')[0].trim() : '';
+  // Return short muscle label
+  var map = { 'Chest':'CHEST', 'Lats':'BACK', 'Back':'BACK', 'Quads':'LEGS', 'Hamstrings':'HAMS', 'Glutes':'GLTS', 'Shoulders':'SHLD', 'Biceps':'ARMS', 'Triceps':'ARMS', 'Core':'CORE', 'Calves':'CALV', 'Forearms':'ARMS', 'Traps':'TRAP', 'Abs':'CORE' };
+  for (var key in map) { if (m.toLowerCase().includes(key.toLowerCase())) return map[key]; }
+  return m.substring(0, 4).toUpperCase() || 'EX';
+}
+
+// ═══════════════════════════════════════════
+// THEME TOGGLE — Light/Dark mode
+// ═══════════════════════════════════════════
+function initTheme() {
+  var saved = localStorage.getItem('fs_theme');
+  if (saved === 'light') document.body.classList.add('light-theme');
+}
+function toggleTheme() {
+  var isLight = document.body.classList.toggle('light-theme');
+  localStorage.setItem('fs_theme', isLight ? 'light' : 'dark');
+  // Update toggle checkbox
+  var cb = document.getElementById('theme-toggle-cb');
+  if (cb) cb.checked = isLight;
+}
+// Apply on load immediately
+initTheme();
 let currentTier = 'beginner';
 let selectedSplit = 'ppl';
 let selectedWeeks = 16;
@@ -665,52 +749,22 @@ async function generatePlan() {
 }
 
 // Parse personal rules for banned exercises (e.g. "I don't do lunges" → ["lunge"])
-// Parse personal rules for banned exercises.
-// Two-pass: (1) negation-phrase regex, (2) scan every EXERCISE_DB key against rules string.
-// Returns lowercase tokens that are matched against exercise names at plan-build time.
 function _parseBannedExercises(rulesStr) {
   if (!rulesStr) return [];
-  var banned = new Set();
-  var lower = rulesStr.toLowerCase();
-
-  // ── Pass 1: explicit negation phrases ──
-  var negPrefixes = [
-    'no ', 'never ', 'avoid ', 'hate ', 'skip ', 'no more ',
-    "don't do ", "dont do ", "won't do ", "wont do ",
-    "can't do ", "cant do ", 'not doing ', 'refuse to do ',
-    'absolutely no ', 'i hate ', 'i avoid '
-  ];
-  negPrefixes.forEach(function(neg) {
-    var idx = 0;
-    while ((idx = lower.indexOf(neg, idx)) !== -1) {
-      var start = idx + neg.length;
-      var snippet = lower.slice(start, start + 50).split(/[.,;!\n]/)[0].trim();
-      // Grab up to 3 words (exercise names max 3 words)
-      var phrase = snippet.split(/\s+/).slice(0, 3).join(' ').replace(/s$/, '');
-      if (phrase.length >= 3) banned.add(phrase);
-      // Also add single first word
-      var word = snippet.split(/\s+/)[0].replace(/s$/, '');
-      if (word.length >= 3) banned.add(word);
-      idx = start;
+  var banned = [];
+  // Match patterns like: "no lunges", "don't do lunges", "I hate lunges", "avoid lunges", "never lunges", "not lunges", "skip lunges"
+  var patterns = rulesStr.toLowerCase().match(/(?:no|don'?t\s+do|never\s+do|hate|avoid|skip|can'?t\s+do|not?\s+do|never|don'?t\s+want|won'?t\s+do|refuse)\s+([a-z\s\-]+?)(?:\.|,|;|$|and\s|or\s|\n)/gi);
+  if (patterns) {
+    for (var i = 0; i < patterns.length; i++) {
+      var match = patterns[i].replace(/^(?:no|don'?t\s+do|never\s+do|hate|avoid|skip|can'?t\s+do|not?\s+do|never|don'?t\s+want|won'?t\s+do|refuse)\s+/i, '').replace(/[\.\,\;\n]+$/, '').trim();
+      if (match && match.length >= 3 && match.length < 40) {
+        // Singularize trailing 's' for matching (lunges → lunge)
+        var base = match.replace(/s$/, '');
+        banned.push(base);
+      }
     }
-  });
-
-  // ── Pass 2: scan EXERCISE_DB keys directly ──
-  // If any exercise name (or its root) appears anywhere in the rules, ban it.
-  if (typeof EXERCISE_DB !== 'undefined') {
-    Object.keys(EXERCISE_DB).forEach(function(exName) {
-      var exL = exName.toLowerCase();
-      if (lower.includes(exL)) { banned.add(exL); return; }
-      // Singular form
-      var sing = exL.replace(/es$/, '').replace(/s$/, '');
-      if (sing.length >= 4 && lower.includes(sing)) { banned.add(sing); return; }
-      // First word of multi-word name (e.g. "Lunges" from "Walking Lunges")
-      var firstWord = exL.split(' ')[0].replace(/es$/, '').replace(/s$/, '');
-      if (firstWord.length >= 4 && lower.includes(firstWord)) banned.add(firstWord);
-    });
   }
-
-  return Array.from(banned).filter(function(t) { return t.length >= 3; });
+  return banned;
 }
 
 async function buildPlan(selDays) {
@@ -727,12 +781,6 @@ async function buildPlan(selDays) {
 
   const exPerSession = u.tier === 'beginner' ? '3-4' : u.tier === 'intermediate' ? '4-5' : '5-6';
   const rulesStr = u.personalRules ? u.personalRules.slice(0, 300) : '';
-
-  // Pre-parse banned exercises — injected into prompt as an explicit hard constraint
-  const bannedForPrompt = _parseBannedExercises(rulesStr);
-  const bannedLine = bannedForPrompt.length > 0
-    ? '\n\u26d4 ABSOLUTE BAN — NEVER include these or ANY variation (e.g. Walking Lunges, Reverse Lunges if lunge is banned): ' + bannedForPrompt.join(', ') + '. If you would use one, substitute a different exercise for the same muscle group.'
-    : '';
   const userPrompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
 Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks === 0 ? 'ongoing/maintenance' : u.weeks + 'wk'}.
 ${u.bodyGoals ? 'Body goals: ' + u.bodyGoals.slice(0, 150) : ''}
@@ -748,8 +796,7 @@ CRITICAL RULES:
 - muscles: single word (e.g. "Chest" not "Chest, Front Delts")
 - philosophy: 1 short sentence only
 - Equipment: ${equipStr}. Avoid: ${injuryStr}
-${rulesStr ? '- PERSONAL RULES (MUST OBEY): ' + rulesStr : ''}
-${bannedLine ? bannedLine : ''}`;
+${rulesStr ? '- USER PERSONAL RULES (MUST OBEY — these override everything else): ' + rulesStr : ''}`;
 
   // Try up to 3 attempts with progressively simpler prompts
   let parsed;
@@ -844,30 +891,17 @@ RULES: All 7 days Mon-Sun. Gym: ${gymDaysStr}. ${exPerSession} exercises per wor
       if (day.type === 'rest' || !day.exercises || day.exercises.length === 0) {
         return { day: day.day, type: 'rest', badge: day.badge || 'Rest', workout: 'Rest day. Recover, hydrate, and let your muscles rebuild.', exercises: [] };
       }
-      const exercises = (day.exercises || []).reduce((acc, ex) => {
-        // Check against banned exercises — REPLACE instead of delete to keep exercise count intact
+      const exercises = (day.exercises || []).filter(ex => {
+        // Check against banned exercises from personal rules
         const exLower = ex.name.toLowerCase();
-        const isBanned = bannedExercises.some(b => exLower.includes(b));
-        if (isBanned) {
-          console.log('[PlanGen] Banned "' + ex.name + '" — finding same-category replacement');
-          const cat = (getExerciseData(ex.name) || {}).category || '';
-          const replacement = Object.keys(EXERCISE_DB).find(name => {
-            if (name === ex.name) return false;
-            if (cat && EXERCISE_DB[name].category !== cat) return false;
-            const nl = name.toLowerCase();
-            return !bannedExercises.some(b => nl.includes(b));
-          });
-          if (replacement) {
-            console.log('[PlanGen] Replaced "' + ex.name + '" with "' + replacement + '"');
-            acc.push(Object.assign({}, ex, { name: replacement }));
-          } else {
-            console.log('[PlanGen] No replacement found for "' + ex.name + '" — skipping');
+        for (var bi = 0; bi < bannedExercises.length; bi++) {
+          if (exLower.includes(bannedExercises[bi])) {
+            console.log('[PlanGen] Filtered out "' + ex.name + '" — matches personal rule ban on "' + bannedExercises[bi] + '"');
+            return false;
           }
-          return acc;
         }
-        acc.push(ex);
-        return acc;
-      }, []).map(ex => {
+        return true;
+      }).map(ex => {
         const db = getExerciseData(ex.name);
         // Cap rest at 120s — compound lifts get max 120s, accessories less
         const rawRest = ex.rest || db.rest;
@@ -1490,6 +1524,10 @@ function initDashboard() {
   document.getElementById('s-pro').value    = TARGETS.pro;
   document.getElementById('s-carb').value   = TARGETS.carb;
   document.getElementById('s-fat').value    = TARGETS.fat;
+
+  // Theme toggle — sync checkbox with current state
+  var _themeCb = document.getElementById('theme-toggle-cb');
+  if (_themeCb) _themeCb.checked = document.body.classList.contains('light-theme');
 
   // Progress (null-safe - elements may not exist in all views)
   const pwCur = document.getElementById('pw-current');
