@@ -684,8 +684,7 @@ function _parseBannedExercises(rulesStr) {
     var idx = 0;
     while ((idx = lower.indexOf(neg, idx)) !== -1) {
       var start = idx + neg.length;
-      var snippet = lower.slice(start, start + 50).split(/[.,;!
-]/)[0].trim();
+      var snippet = lower.slice(start, start + 50).split(/[.,;!\n]/)[0].trim();
       // Grab up to 3 words (exercise names max 3 words)
       var phrase = snippet.split(/\s+/).slice(0, 3).join(' ').replace(/s$/, '');
       if (phrase.length >= 3) banned.add(phrase);
