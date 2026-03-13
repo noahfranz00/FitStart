@@ -1277,10 +1277,9 @@ body.light-theme::before {
 body.light-theme::after { opacity: 0.012; }
 body.light-theme nav { background: rgba(245,243,238,0.85); border-bottom-color: rgba(0,0,0,0.06); }
 body.light-theme .settings-input { background: #F5F3EE; border-color: rgba(0,0,0,0.1); color: #1A1714; }
-body.light-theme .settings-input:focus { border-color: rgba(0,0,0,0.2); }
 body.light-theme .ex-row { background: #FFFFFF; border-color: rgba(0,0,0,0.06); border-left-color: rgba(0,0,0,0.08); }
 body.light-theme .ex-row:hover { background: #FAFAF8; border-color: rgba(0,0,0,0.1); }
-body.light-theme .ex-row.done { background: rgba(200,162,61,0.04); border-left: 2px solid; border-image: var(--gold-grad) 1; }
+body.light-theme .ex-row.done { background: rgba(200,162,61,0.04); }
 body.light-theme .coach-bubble.user { background: rgba(200,162,61,0.12); color: #1A1714; }
 body.light-theme .coach-bubble.assistant { background: rgba(0,0,0,0.03); color: #1A1714; }
 body.light-theme .coach-text-input { background: #FFFFFF; border-color: rgba(0,0,0,0.1); color: #1A1714; }
@@ -1305,9 +1304,12 @@ body.light-theme input[type="number"], body.light-theme textarea { color: #1A171
 /* ═══ EXERCISE THUMBNAILS ═══ */
 .ex-thumb { width:44px; height:44px; border-radius:10px; overflow:hidden; flex-shrink:0; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; }
 .ex-thumb img { width:100%; height:100%; object-fit:cover; }
-.ex-thumb-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-family:'Bebas Neue',sans-serif; letter-spacing:0.5px; color:var(--dim); text-align:center; line-height:1.1; background:linear-gradient(135deg,rgba(200,162,61,0.06),rgba(200,162,61,0.02)); }
+.ex-thumb-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:0.6rem; font-family:'Bebas Neue',sans-serif; letter-spacing:0.5px; color:var(--dim); text-align:center; line-height:1.1; background:linear-gradient(135deg,rgba(200,162,61,0.06),rgba(200,162,61,0.02)); }
 .ex-row-with-thumb { grid-template-columns:30px 44px 1fr auto !important; }
-.wo-ex-sidebar-thumb { width:32px; height:32px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; }
-.wo-ex-sidebar-thumb img { width:100%; height:100%; object-fit:cover; filter:contrast(1.1); }
-body.light-theme .ex-thumb img, body.light-theme .wo-ex-sidebar-thumb img { filter:none; }
-body.light-theme .ex-thumb { background:#F5F3EE; }
+.wo-ex-sidebar-thumb { width:32px; height:32px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--card); border:1px solid var(--border); }
+.wo-ex-sidebar-thumb img { width:100%; height:100%; object-fit:cover; }
+
+/* ═══ STREAK CALENDAR — clickable days ═══ */
+.sc-day { cursor:pointer; transition:all 0.15s; }
+.sc-day:hover { border-color:rgba(200,162,61,0.4); background:rgba(200,162,61,0.08); }
+.sc-day:active { transform:scale(0.92); }
