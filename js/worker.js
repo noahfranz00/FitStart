@@ -32,11 +32,11 @@ const AGENT_TOOLS = [
   },
   {
     name: "update_workout",
-    description: "Substitute exercises for a specific day. Use when user wants changes, is traveling, or adjusting for injury. Always tell them what you changed.",
+    description: "Modify or assign a workout for a specific day. Can substitute exercises on gym days, OR assign a full workout to a rest day. Use when user wants changes, is traveling, adjusting for injury, or wants to add a workout on a rest day. Always tell them what you changed.",
     input_schema: {
       type: "object",
       properties: {
-        day: { type: "string", description: "Day of week (e.g. 'Monday')" },
+        day: { type: "string", description: "Day of week (e.g. 'Sunday')" },
         substitutions: {
           type: "array",
           items: {
@@ -47,8 +47,22 @@ const AGENT_TOOLS = [
               rest: { type: "integer" }, muscles: { type: "string" }
             },
             required: ["old_exercise", "new_exercise"]
-          }
+          },
+          description: "Exercise substitutions for existing gym days"
         },
+        new_exercises: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" }, sets: { type: "integer" }, reps: { type: "string" },
+              rest: { type: "integer" }, muscles: { type: "string" }
+            },
+            required: ["name", "sets", "reps", "rest", "muscles"]
+          },
+          description: "Full exercise list to assign to a rest day or replace entire workout"
+        },
+        workout_name: { type: "string", description: "Name for the workout (e.g. 'Full Body', 'Hotel Workout')" },
         reason: { type: "string", description: "Why the change was made" }
       },
       required: ["day"]
@@ -158,7 +172,17 @@ async function handleChat(request, env) {
 
   // Attach tools only if we have user data in KV
   const hasTools = !!ud;
-  if (hasTools) apiBody.tools = AGENT_TOOLS;
+  if (hasTools) {
+    apiBody.tools = AGENT_TOOLS;
+    // Inject explicit date context so tool calls use correct day mapping
+    const now = new Date();
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const today = days[now.getUTCDay()];
+    const tomorrow = days[(now.getUTCDay() + 1) % 7];
+    const dateStr = now.toISOString().split('T')[0];
+    const dateContext = `\n\nCRITICAL DATE CONTEXT FOR TOOL CALLS:\nToday is ${today}, ${dateStr}. Tomorrow is ${tomorrow}. When the user says "tomorrow", that means ${tomorrow} — use "${tomorrow}" as the day parameter in tool calls, NOT the next gym day. When the user says "this week" they mean ${today} through the following Sunday. The app's week runs Monday=0 through Sunday=6. Map day names exactly: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday.`;
+    apiBody.system = (apiBody.system || '') + dateContext;
+  }
 
   let resp = await claude(apiBody, apiKey);
   let loops = 0, changed = false;
@@ -246,16 +270,33 @@ async function tUpdate(input, ud, env, did) {
   let plan; try { plan = JSON.parse(ud.fs_plan); } catch (e) { return { error: 'Bad plan.' }; }
   const di = dayIndex(input.day); if (di === -1) return { error: 'Unknown day: ' + input.day };
   const sched = plan.weekly_schedule || [];
-  const day = sched[di]; if (!day || !day.exercises) return { error: input.day + ' is rest.' };
+  const day = sched[di];
+  if (!day) return { error: 'Day not found in schedule.' };
   const changes = [];
-  for (const sub of (input.substitutions || [])) {
-    const ei = day.exercises.findIndex(e => e.name.toLowerCase() === sub.old_exercise.toLowerCase());
-    if (ei !== -1) {
-      const old = day.exercises[ei];
-      day.exercises[ei] = { name: sub.new_exercise, sets: sub.sets||old.sets, reps: sub.reps||old.reps, rest: sub.rest||old.rest, muscles: sub.muscles||old.muscles };
-      changes.push(old.name + ' → ' + sub.new_exercise);
-    } else { changes.push('Not found: ' + sub.old_exercise); }
+
+  // If new_exercises provided — assign full workout (works on rest days too)
+  if (input.new_exercises && input.new_exercises.length > 0) {
+    day.type = 'workout';
+    day.badge = input.workout_name || 'Custom';
+    day.workout = input.reason || 'Custom workout';
+    day.exercises = input.new_exercises.map(function(e) {
+      return { name: e.name, sets: e.sets, reps: e.reps, rest: e.rest, muscles: e.muscles };
+    });
+    changes.push('Assigned ' + day.exercises.length + ' exercises to ' + input.day + ' (' + day.badge + ')');
   }
+  // Substitutions on existing workout
+  else if (input.substitutions && input.substitutions.length > 0) {
+    if (!day.exercises || day.exercises.length === 0) return { error: input.day + ' is a rest day with no exercises. Use new_exercises to assign a workout.' };
+    for (const sub of input.substitutions) {
+      const ei = day.exercises.findIndex(e => e.name.toLowerCase() === sub.old_exercise.toLowerCase());
+      if (ei !== -1) {
+        const old = day.exercises[ei];
+        day.exercises[ei] = { name: sub.new_exercise, sets: sub.sets||old.sets, reps: sub.reps||old.reps, rest: sub.rest||old.rest, muscles: sub.muscles||old.muscles };
+        changes.push(old.name + ' → ' + sub.new_exercise);
+      } else { changes.push('Not found: ' + sub.old_exercise); }
+    }
+  }
+
   ud.fs_plan = JSON.stringify(plan);
   await kvSave(env, did, ud);
   return { updated: input.day, changes: changes, reason: input.reason || '', _changed: true };
