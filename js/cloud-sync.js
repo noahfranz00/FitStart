@@ -222,11 +222,16 @@
           options.headers = options.headers || {};
           if (typeof options.headers === 'object' && !(options.headers instanceof Headers)) {
             options.headers['X-Device-ID'] = deviceId;
-            // Send local date so Worker doesn't rely on UTC
-            var _now = new Date();
-            var _days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-            var _localDate = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0');
-            options.headers['X-Local-Date'] = _days[_now.getDay()] + '|' + _localDate;
+          }
+          // Inject local date into POST body (avoids CORS header issues)
+          if (options.method === 'POST' && options.body) {
+            try {
+              var _body = JSON.parse(options.body);
+              var _now = new Date();
+              var _days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+              _body._local_date = _days[_now.getDay()] + '|' + _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0');
+              options.body = JSON.stringify(_body);
+            } catch(e) {}
           }
         }
         return _origFetch.call(window, url, options);
