@@ -127,23 +127,30 @@
   }
 
   // ═══ SILENT PULL — called when agent tools modified server data ═══
+  // Only pulls plan/nutrition data — never overwrites coach history or local-only state
+  var _SKIP_ON_SILENT_PULL = ['fs_coach_history', 'fs_proactive_msgs', 'fs_proactive_last', 'fs_wo_draft', 'fs_rest_timer', 'fs_device_id'];
+
   async function silentPull() {
     try {
+      // Push current state first so we don't lose anything
+      await _doPush();
       var resp = await fetch(SYNC_API, {
         method: 'GET', headers: { 'X-Device-ID': getDeviceId() }
       });
       if (!resp.ok) return;
       var data = await resp.json();
       if (!data.found || !data.keys) return;
+      var updated = 0;
       for (var k in data.keys) {
-        if (k.startsWith(FS_PREFIX) && data.keys[k] != null) _origSet(k, data.keys[k]);
+        if (!k.startsWith(FS_PREFIX)) continue;
+        if (_SKIP_ON_SILENT_PULL.indexOf(k) !== -1) continue;
+        if (data.keys[k] != null) { _origSet(k, data.keys[k]); updated++; }
       }
-      console.log('[CloudSync] Silent pull complete — reloading app state');
-      // Trigger app reload of data from localStorage
+      console.log('[CloudSync] Silent pull complete — updated ' + updated + ' keys (preserved coach history)');
       if (typeof loadFromStorage === 'function') loadFromStorage();
-      if (typeof buildDayWorkouts === 'function') buildDayWorkouts();
       if (typeof renderTodayWorkout === 'function') renderTodayWorkout();
       if (typeof refreshDashMacros === 'function') refreshDashMacros();
+      if (typeof renderTimeline === 'function') renderTimeline();
     } catch (e) { console.log('[CloudSync] Silent pull failed:', e.message); }
   }
 
