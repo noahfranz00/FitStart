@@ -174,8 +174,8 @@ async function handleChat(request, env) {
   const hasTools = !!ud;
   if (hasTools) {
     apiBody.tools = AGENT_TOOLS;
-    // Read local date from client header (avoids UTC timezone mismatch)
-    const localDate = request.headers.get('X-Local-Date'); // "Saturday|2026-03-14"
+    // Read local date from POST body (client injects it to avoid CORS header issues)
+    const localDate = body._local_date; // "Saturday|2026-03-14"
     let today = 'Saturday', tomorrow = 'Sunday', dateStr = new Date().toISOString().split('T')[0];
     if (localDate && localDate.includes('|')) {
       const parts = localDate.split('|');
@@ -398,6 +398,6 @@ async function syncDel(env, did) {
 // ═══ HELPERS ═══
 function did_(r) { return r.headers.get('X-Device-ID'); }
 function cors204() { return new Response(null, { status: 204, headers: ch() }); }
-function ch() { return { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers':'Content-Type,X-Device-ID,X-Local-Date', 'Access-Control-Max-Age':'86400' }; }
+function ch() { return { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers':'Content-Type,X-Device-ID', 'Access-Control-Max-Age':'86400' }; }
 function json(d, s=200) { return new Response(JSON.stringify(d), { status: s, headers: { 'Content-Type':'application/json', ...ch() } }); }
 function err(s, m) { return json({ error: { message: m } }, s); }
