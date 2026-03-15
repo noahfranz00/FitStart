@@ -175,8 +175,7 @@ async function handleChat(request, env) {
   let _userToday = 'Saturday', _userTomorrow = 'Sunday', _userDateStr = new Date().toISOString().split('T')[0];
   if (hasTools) {
     apiBody.tools = AGENT_TOOLS;
-    // Read local date from POST body (client injects it to avoid CORS header issues)
-    const localDate = body._local_date; // "Saturday|2026-03-14"
+    const localDate = body._local_date;
     if (localDate && localDate.includes('|')) {
       const parts = localDate.split('|');
       _userToday = parts[0];
@@ -185,21 +184,31 @@ async function handleChat(request, env) {
       const todayIdx = dayNames.indexOf(_userToday);
       _userTomorrow = dayNames[(todayIdx + 1) % 7];
     }
-    const dateContext = `\n\nCRITICAL DATE CONTEXT FOR TOOL CALLS — MUST OBEY:
-Today is ${_userToday}, ${_userDateStr}. Tomorrow is ${_userTomorrow}.
-RULES YOU CANNOT BREAK:
-- When the user says "tomorrow", you MUST use day="${_userTomorrow}" in update_workout — NOT the next gym day, THE LITERAL CALENDAR DAY.
-- If ${_userTomorrow} is currently a rest day, use the "new_exercises" parameter to assign a full workout to it. The tool supports this.
-- NEVER skip to a different day than what the user asked for. "Tomorrow" = ${_userTomorrow}. "Today" = ${_userToday}. No exceptions.
-- If assigning a workout to a rest day, include workout_name and new_exercises with the full exercise list.`;
+
+    // REWRITE user messages: replace "tomorrow"/"today" with actual day names
+    // so Claude literally cannot misinterpret them
+    for (let mi = 0; mi < apiBody.messages.length; mi++) {
+      const msg = apiBody.messages[mi];
+      if (msg.role === 'user' && typeof msg.content === 'string') {
+        msg.content = msg.content
+          .replace(/\btomorrow\b/gi, _userTomorrow + ' (tomorrow)')
+          .replace(/\btoday\b/gi, _userToday + ' (today)');
+      }
+    }
+
+    const dateContext = `\n\nDATE CONTEXT: Today is ${_userToday} ${_userDateStr}. Tomorrow is ${_userTomorrow}.
+When you see a day name like "${_userTomorrow} (tomorrow)" in the user's message, use EXACTLY that day name in tool calls.
+If that day is a rest day, use new_exercises to assign a full workout. NEVER substitute a different day.`;
     apiBody.system = (apiBody.system || '') + dateContext;
   }
 
-  // Detect if user's latest message mentions "tomorrow"
+  // Detect which day the user actually asked about (from rewritten message)
   const lastUserMsg = (apiBody.messages.filter(m => m.role === 'user').pop() || {});
   const lastMsgText = typeof lastUserMsg.content === 'string' ? lastUserMsg.content : '';
-  const _userSaidTomorrow = /\btomorrow\b/i.test(lastMsgText);
-  const _userSaidToday = /\btoday\b/i.test(lastMsgText) && !/\btomorrow\b/i.test(lastMsgText);
+  const _userSaidTomorrow = lastMsgText.includes('(tomorrow)');
+  const _userSaidToday = lastMsgText.includes('(today)') && !lastMsgText.includes('(tomorrow)');
+  // The exact day they want
+  const _requestedDay = _userSaidTomorrow ? _userTomorrow : _userSaidToday ? _userToday : null;
 
   let resp = await claude(apiBody, apiKey);
   let loops = 0, changed = false;
@@ -213,14 +222,14 @@ RULES YOU CANNOT BREAK:
     for (const c of calls) {
       console.log(`[Agent] ${c.name}(${JSON.stringify(c.input).substring(0, 150)})`);
 
-      // ENFORCE: if user said "tomorrow" and tool targets wrong day, reject it
-      if ((c.name === 'update_workout' || c.name === 'adjust_plan_for_travel') && c.input.day) {
+      // ENFORCE: if user asked for a specific day, reject tool calls targeting a different day
+      if ((c.name === 'update_workout' || c.name === 'adjust_plan_for_travel') && c.input.day && _requestedDay) {
         const targetDay = c.input.day.toLowerCase();
-        const expectedDay = _userSaidTomorrow ? _userTomorrow.toLowerCase() : _userSaidToday ? _userToday.toLowerCase() : null;
-        if (expectedDay && targetDay !== expectedDay) {
-          console.log(`[Agent] DAY MISMATCH: tool wants "${c.input.day}" but user said "${_userSaidTomorrow ? 'tomorrow' : 'today'}" which is "${expectedDay}". Rejecting.`);
+        const expected = _requestedDay.toLowerCase();
+        if (targetDay !== expected) {
+          console.log(`[Agent] REJECTED: tool wants "${c.input.day}" but user asked for "${_requestedDay}"`);
           results.push({ type: 'tool_result', tool_use_id: c.id, content: JSON.stringify({
-            error: `WRONG DAY. The user said "${_userSaidTomorrow ? 'tomorrow' : 'today'}" which is ${expectedDay.charAt(0).toUpperCase() + expectedDay.slice(1)}, but you tried to modify ${c.input.day}. Call update_workout again with day="${expectedDay.charAt(0).toUpperCase() + expectedDay.slice(1)}" and use new_exercises if it's currently a rest day.`
+            error: `WRONG DAY. The user asked for ${_requestedDay}. You tried ${c.input.day}. Call update_workout with day="${_requestedDay}" and use new_exercises to assign a full workout since it may be a rest day.`
           })});
           continue;
         }
