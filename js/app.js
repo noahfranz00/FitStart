@@ -1621,6 +1621,7 @@ function initDashboard() {
     renderNutritionChart();
     renderFreqChart();
     renderNutritionChart();
+    if (typeof renderTimeline === 'function') renderTimeline();
     renderProgram();
     renderSettingsGymDays();
     renderMyPlan(generatedPlan);
