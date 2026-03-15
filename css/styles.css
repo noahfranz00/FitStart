@@ -1313,3 +1313,34 @@ body.light-theme input[type="number"], body.light-theme textarea { color: #1A171
 .sc-day { cursor:pointer; transition:all 0.15s; }
 .sc-day:hover { border-color:rgba(200,162,61,0.4); background:rgba(200,162,61,0.08); }
 .sc-day:active { transform:scale(0.92); }
+
+/* ═══ WORKOUT TIMELINE ═══ */
+.tl-month { font-family:'Bebas Neue',sans-serif; font-size:0.72rem; letter-spacing:2px; color:var(--dim); padding:12px 18px 6px; }
+.tl-day { display:flex; align-items:center; gap:14px; padding:12px 18px; cursor:pointer; transition:background 0.15s; border-bottom:1px solid var(--border); }
+.tl-day:hover { background:rgba(255,255,255,0.03); }
+.tl-day:active { background:rgba(255,255,255,0.06); }
+.tl-date { width:42px; flex-shrink:0; text-align:center; }
+.tl-date-name { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:0.5px; color:var(--dim); text-transform:uppercase; }
+.tl-date-num { font-family:'Bebas Neue',sans-serif; font-size:1.3rem; color:var(--bone); line-height:1.2; }
+.tl-info { flex:1; min-width:0; }
+.tl-name { font-size:0.88rem; font-weight:600; color:var(--bone); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tl-name.tl-rest { color:var(--dim); font-weight:400; font-style:italic; }
+.tl-name.tl-missed { color:var(--dim); text-decoration:line-through; }
+.tl-exercises { font-size:0.7rem; color:var(--dim); font-family:'DM Mono',monospace; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tl-score { display:flex; align-items:center; gap:8px; margin-top:5px; }
+.tl-score-bar { width:80px; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+.tl-score-fill { height:100%; background:var(--gold-grad); border-radius:3px; transition:width 0.4s; }
+.tl-score-num { font-family:'Bebas Neue',sans-serif; font-size:0.82rem; color:var(--gold); min-width:28px; }
+.tl-status { font-size:0.58rem; font-family:'DM Mono',monospace; letter-spacing:1px; font-weight:700; margin-top:4px; text-transform:uppercase; }
+.tl-status-today { color:var(--gold); }
+.tl-status-upcoming { color:var(--blue); }
+.tl-status-missed { color:var(--red); }
+.tl-chevron { color:var(--dim); font-size:1.3rem; flex-shrink:0; }
+.tl-today { background:rgba(200,162,61,0.05); border-left:3px solid var(--gold); }
+.tl-today .tl-date-num { color:var(--gold); }
+.tl-future { opacity:0.7; }
+.tl-future:hover { opacity:1; }
+.tl-done .tl-date { position:relative; }
+.tl-done .tl-date::after { content:'✓'; position:absolute; top:-2px; right:-4px; font-size:0.55rem; color:#22c55e; font-weight:700; }
+body.light-theme .tl-day:hover { background:rgba(0,0,0,0.02); }
+body.light-theme .tl-today { background:rgba(200,162,61,0.06); }
