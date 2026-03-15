@@ -520,3 +520,58 @@ function renderProgressView() {
   renderStrengthTrends();
   renderTimeline();
 }
+
+// ═══ RENDER PROGRAM — My Program tab (week accordion) ═══
+function renderProgram() {
+  var el = document.getElementById('week-accordion');
+  if (!el) return;
+  if (typeof generatedPlan === 'undefined' || !generatedPlan || !generatedPlan.weekly_schedule) {
+    el.innerHTML = '<div style="padding:20px;color:var(--dim);text-align:center">No program generated yet.</div>';
+    return;
+  }
+  var sched = generatedPlan.weekly_schedule;
+  el.innerHTML = sched.map(function(day, i) {
+    var isRest = day.type === 'rest' || !day.exercises || day.exercises.length === 0;
+    var isToday = i === TODAY_IDX;
+    var headerStyle = isToday
+      ? 'background:rgba(200,162,61,0.08);border:1px solid rgba(200,162,61,0.2)'
+      : 'background:var(--card);border:1px solid var(--border)';
+
+    var html = '<div style="border-radius:var(--radius-md);overflow:hidden;' + headerStyle + '">';
+
+    // Header row
+    html += '<div onclick="_toggleProgramDay(' + i + ')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer">';
+    html += '<div style="display:flex;align-items:center;gap:12px">';
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;color:var(--bone)">' + day.day.toUpperCase() + '</div>';
+    if (!isRest) html += '<div style="font-size:0.68rem;font-family:\'DM Mono\',monospace;color:var(--dim);background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:4px">' + (day.badge || '') + '</div>';
+    if (isToday) html += '<div style="font-size:0.55rem;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase">Today</div>';
+    html += '</div>';
+    if (isRest) {
+      html += '<div style="font-size:0.75rem;color:var(--dim);font-style:italic">Rest</div>';
+    } else {
+      html += '<div style="font-size:0.75rem;color:var(--dim)">' + day.exercises.length + ' exercises</div>';
+    }
+    html += '</div>';
+
+    // Expandable exercise list
+    if (!isRest) {
+      html += '<div id="prog-day-' + i + '" style="display:none;padding:0 18px 14px;border-top:1px solid var(--border)">';
+      day.exercises.forEach(function(ex) {
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">';
+        html += '<div style="font-size:0.85rem;color:var(--off)">' + ex.name + '</div>';
+        html += '<div style="font-family:\'DM Mono\',monospace;font-size:0.72rem;color:var(--dim)">' + ex.sets + '×' + ex.reps + ' · ' + (ex.muscles || '') + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+  }).join('');
+}
+
+function _toggleProgramDay(i) {
+  var el = document.getElementById('prog-day-' + i);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
