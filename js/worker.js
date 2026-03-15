@@ -174,13 +174,24 @@ async function handleChat(request, env) {
   const hasTools = !!ud;
   if (hasTools) {
     apiBody.tools = AGENT_TOOLS;
-    // Inject explicit date context so tool calls use correct day mapping
-    const now = new Date();
-    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const today = days[now.getUTCDay()];
-    const tomorrow = days[(now.getUTCDay() + 1) % 7];
-    const dateStr = now.toISOString().split('T')[0];
-    const dateContext = `\n\nCRITICAL DATE CONTEXT FOR TOOL CALLS:\nToday is ${today}, ${dateStr}. Tomorrow is ${tomorrow}. When the user says "tomorrow", that means ${tomorrow} — use "${tomorrow}" as the day parameter in tool calls, NOT the next gym day. When the user says "this week" they mean ${today} through the following Sunday. The app's week runs Monday=0 through Sunday=6. Map day names exactly: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday.`;
+    // Read local date from client header (avoids UTC timezone mismatch)
+    const localDate = request.headers.get('X-Local-Date'); // "Saturday|2026-03-14"
+    let today = 'Saturday', tomorrow = 'Sunday', dateStr = new Date().toISOString().split('T')[0];
+    if (localDate && localDate.includes('|')) {
+      const parts = localDate.split('|');
+      today = parts[0];
+      dateStr = parts[1];
+      const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const todayIdx = dayNames.indexOf(today);
+      tomorrow = dayNames[(todayIdx + 1) % 7];
+    }
+    const dateContext = `\n\nCRITICAL DATE CONTEXT FOR TOOL CALLS — MUST OBEY:
+Today is ${today}, ${dateStr}. Tomorrow is ${tomorrow}.
+RULES YOU CANNOT BREAK:
+- When the user says "tomorrow", you MUST use day="${tomorrow}" in update_workout — NOT the next gym day, THE LITERAL CALENDAR DAY.
+- If ${tomorrow} is currently a rest day, use the "new_exercises" parameter to assign a full workout to it. The tool supports this.
+- NEVER skip to a different day than what the user asked for. "Tomorrow" = ${tomorrow}. "Today" = ${today}. No exceptions.
+- If assigning a workout to a rest day, include workout_name and new_exercises with the full exercise list.`;
     apiBody.system = (apiBody.system || '') + dateContext;
   }
 
@@ -387,6 +398,6 @@ async function syncDel(env, did) {
 // ═══ HELPERS ═══
 function did_(r) { return r.headers.get('X-Device-ID'); }
 function cors204() { return new Response(null, { status: 204, headers: ch() }); }
-function ch() { return { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers':'Content-Type,X-Device-ID', 'Access-Control-Max-Age':'86400' }; }
+function ch() { return { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers':'Content-Type,X-Device-ID,X-Local-Date', 'Access-Control-Max-Age':'86400' }; }
 function json(d, s=200) { return new Response(JSON.stringify(d), { status: s, headers: { 'Content-Type':'application/json', ...ch() } }); }
 function err(s, m) { return json({ error: { message: m } }, s); }
