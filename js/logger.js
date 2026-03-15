@@ -149,7 +149,7 @@ function dashNav(view, btn) {
 
   if (view === 'nutrition') renderNutrition();
   if (view === 'week') renderWeek();
-  if (view === 'progress') { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); renderStrengthTrends(); }
+  if (view === 'progress') { if (typeof renderProgressView === 'function') renderProgressView(); else { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); renderStrengthTrends(); } }
   if (view === 'today') { renderTodayWorkout(); refreshDashMacros(); renderDashWater(); }
   if (view === 'program') renderProgram();
   if (view === 'settings') renderSettingsGymDays();
@@ -195,10 +195,8 @@ function renderTodayWorkout() {
   else { btn.textContent = 'START WORKOUT'; btn.classList.remove('done'); }
   document.getElementById('today-ex-list').innerHTML = exes.map((ex,i)=>{
     const prev = getPrevSet(TODAY_IDX,i,0);
-    const thumb = typeof buildExThumbHtml === 'function' ? buildExThumbHtml(ex.name) : '';
-    return `<div class="ex-row ${thumb?'ex-row-with-thumb':''} ${wktDone.has(TODAY_IDX)?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
+    return `<div class="ex-row ${wktDone.has(TODAY_IDX)?'done':''}" onclick="openWorkoutEnv(${TODAY_IDX},${i})">
       <button class="ex-row-dots" onclick="event.stopPropagation();toggleExRowMenu(event,${i})" title="Options">⋮</button>
-      ${thumb}
       <div><div class="ex-name">${ex.name}</div><div class="ex-detail">${ex.sets}×${ex.reps} · Rest ${ex.rest}s${prev?` · Last: ${prev.weight}lbs×${prev.reps}`:''}</div></div>
       <div class="ex-detail">${ex.muscles}</div>
     </div>`;
@@ -799,8 +797,7 @@ var _FS_KEYS = [
   'fs_coach_history', 'fs_proactive_msgs', 'fs_proactive_last',
   'fs_recipes', 'fs_adaptive_last', 'fs_adaptive_insight',
   'fs_weekly_report', 'fs_weekly_report_ts', 'fs_gym_days',
-  'fs_recent_foods', 'fs_custom_foods', 'fs_water_logs',
-  'fs_theme', 'fs_ex_img_cache_v2'
+  'fs_recent_foods', 'fs_custom_foods', 'fs_water_logs'
 ];
 
 function exportData() {
@@ -875,174 +872,4 @@ function clearAllData() {
   localStorage.clear();
   showToast('All data cleared. Reloading...', 'info', 2000);
   setTimeout(function() { location.reload(); }, 1500);
-}
-
-// ═══════════════════════════════════════════
-// AUTO-BACKUP REMINDER — prompts weekly
-// ═══════════════════════════════════════════
-function checkBackupReminder() {
-  try {
-    var lastBackup = localStorage.getItem('fs_last_backup_ts');
-    var now = Date.now();
-    if (!lsGet('fs_plan')) return;
-    var appStart = localStorage.getItem('fs_program_start');
-    var appAge = appStart ? (now - new Date(appStart).getTime()) : 0;
-    if ((!lastBackup && appAge > 3 * 24 * 60 * 60 * 1000) || (lastBackup && (now - parseInt(lastBackup)) > 7 * 24 * 60 * 60 * 1000)) {
-      _showBackupBanner();
-    }
-  } catch(e) {}
-}
-
-function _showBackupBanner() {
-  if (document.getElementById('backup-reminder-banner')) return;
-  var b = document.createElement('div');
-  b.id = 'backup-reminder-banner';
-  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;padding:10px 16px;background:linear-gradient(135deg,rgba(251,146,60,0.95),rgba(217,119,6,0.95));display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.82rem;color:#111;animation:fadeUp 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
-  b.innerHTML = '<div style="flex:1"><strong>Protect your data</strong> — Download a backup to keep your progress safe.</div>' +
-    '<button onclick="_doQuickBackup()" style="padding:7px 14px;background:#111;color:#F2F0EB;border:none;border-radius:8px;font-family:\'Bebas Neue\',sans-serif;font-size:0.78rem;letter-spacing:1px;cursor:pointer;white-space:nowrap">BACKUP NOW</button>' +
-    '<button onclick="this.parentNode.remove()" style="background:none;border:none;color:rgba(0,0,0,0.5);cursor:pointer;font-size:1.1rem;padding:0 4px">✕</button>';
-  document.body.appendChild(b);
-}
-
-function _doQuickBackup() {
-  exportData();
-  localStorage.setItem('fs_last_backup_ts', String(Date.now()));
-  var b = document.getElementById('backup-reminder-banner');
-  if (b) b.remove();
-}
-
-setTimeout(checkBackupReminder, 5000);
-
-// ═══════════════════════════════════════════
-// RETROACTIVE DAY LOGGING — tap calendar days in Progress
-// ═══════════════════════════════════════════
-(function _initRetroLog() {
-  // Delegated click handler on the streak calendar
-  document.addEventListener('click', function(e) {
-    var cell = e.target.closest('.sc-day');
-    if (!cell) return;
-    var cal = cell.closest('#streak-cal');
-    if (!cal) return;
-    // Get day number from cell text
-    var dayNum = parseInt(cell.textContent);
-    if (!dayNum || dayNum < 1 || dayNum > 31) return;
-    // Get month/year from the label
-    var label = document.getElementById('streak-month-label');
-    if (!label) return;
-    var labelText = label.textContent.trim(); // e.g. "March 2026" or "MAR 2026"
-    var parsed = _parseMonthLabel(labelText);
-    if (!parsed) return;
-    var dateStr = parsed.year + '-' + String(parsed.month).padStart(2, '0') + '-' + String(dayNum).padStart(2, '0');
-    // Don't allow future dates
-    var today = new Date();
-    var target = new Date(parsed.year, parsed.month - 1, dayNum);
-    if (target > today) { showToast('Can\'t log future dates.', 'warning'); return; }
-    _openRetroLogModal(dateStr, dayNum, labelText);
-  });
-})();
-
-function _parseMonthLabel(text) {
-  var months = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12,
-    january:1, february:2, march:3, april:4, june:6, july:7, august:8, september:9, october:10, november:11, december:12 };
-  var parts = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().split(/\s+/);
-  var month = null, year = null;
-  for (var i = 0; i < parts.length; i++) {
-    if (months[parts[i]]) month = months[parts[i]];
-    var n = parseInt(parts[i]);
-    if (n >= 2020 && n <= 2099) year = n;
-  }
-  if (!month || !year) return null;
-  return { month: month, year: year };
-}
-
-function _openRetroLogModal(dateStr, dayNum, monthLabel) {
-  // Check existing data
-  var workoutDates = lsGet('fs_workout_dates') || [];
-  var hasWorkout = workoutDates.indexOf(dateStr) !== -1;
-  var weightLog = lsGet('fs_weightLog') || [];
-  var existingWeight = null;
-  for (var i = 0; i < weightLog.length; i++) {
-    if (weightLog[i].date === dateStr) { existingWeight = weightLog[i].lbs; break; }
-  }
-
-  var m = document.getElementById('retro-log-modal');
-  if (!m) {
-    m = document.createElement('div');
-    m.id = 'retro-log-modal';
-    m.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;animation:fadeIn 0.15s ease';
-    m.innerHTML = '<div id="retro-log-inner" style="background:var(--card-solid,#151515);border:1px solid var(--border2,rgba(255,255,255,0.12));border-radius:18px;padding:24px;width:90%;max-width:340px;box-shadow:0 16px 48px rgba(0,0,0,0.5)"></div>';
-    m.addEventListener('click', function(e) { if (e.target === m) _closeRetroLogModal(); });
-    document.body.appendChild(m);
-  }
-  m.style.display = 'flex';
-
-  var inner = document.getElementById('retro-log-inner');
-  inner.innerHTML =
-    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;letter-spacing:1.5px;color:var(--bone,#F2F0EB);margin-bottom:4px">LOG FOR ' + monthLabel.split(' ')[0].toUpperCase() + ' ' + dayNum + '</div>' +
-    '<div style="font-size:0.7rem;color:var(--dim,#777);font-family:\'DM Mono\',monospace;margin-bottom:18px">' + dateStr + '</div>' +
-
-    '<div style="margin-bottom:16px">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border,rgba(255,255,255,0.06))">' +
-        '<div style="font-size:0.85rem;color:var(--off,#D8D4CC)">Workout completed</div>' +
-        '<label class="theme-switch" style="width:48px;height:26px"><input type="checkbox" id="retro-workout-cb" ' + (hasWorkout ? 'checked' : '') + '><span class="slider"></span></label>' +
-      '</div>' +
-    '</div>' +
-
-    '<div style="margin-bottom:20px">' +
-      '<div style="font-size:0.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim,#777);margin-bottom:8px">Bodyweight (lbs)</div>' +
-      '<input type="number" id="retro-weight-input" inputmode="decimal" placeholder="' + (existingWeight || (USER ? USER.weight : '')) + '" value="' + (existingWeight || '') + '" style="width:100%;padding:12px 14px;background:var(--dark,#111);border:1px solid var(--border2,rgba(255,255,255,0.12));border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;color:var(--bone,#F2F0EB);letter-spacing:1px;outline:none;text-align:center">' +
-    '</div>' +
-
-    '<div style="display:flex;gap:10px">' +
-      '<button onclick="_closeRetroLogModal()" style="flex:1;padding:12px;background:none;border:1px solid var(--border,rgba(255,255,255,0.06));border-radius:10px;color:var(--dim,#777);font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer">CANCEL</button>' +
-      '<button onclick="_saveRetroLog(\'' + dateStr + '\')" style="flex:1;padding:12px;background:var(--gold-grad,linear-gradient(135deg,#B8900B,#D4A520));border:none;border-radius:10px;color:#111;font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer;font-weight:700">SAVE</button>' +
-    '</div>';
-}
-
-function _closeRetroLogModal() {
-  var m = document.getElementById('retro-log-modal');
-  if (m) m.style.display = 'none';
-}
-
-function _saveRetroLog(dateStr) {
-  var cb = document.getElementById('retro-workout-cb');
-  var weightInput = document.getElementById('retro-weight-input');
-  var saved = false;
-
-  // Save workout date
-  var workoutDates = lsGet('fs_workout_dates') || [];
-  var hadWorkout = workoutDates.indexOf(dateStr) !== -1;
-  if (cb && cb.checked && !hadWorkout) {
-    workoutDates.push(dateStr);
-    lsSet('fs_workout_dates', workoutDates);
-    saved = true;
-  } else if (cb && !cb.checked && hadWorkout) {
-    workoutDates = workoutDates.filter(function(d) { return d !== dateStr; });
-    lsSet('fs_workout_dates', workoutDates);
-    saved = true;
-  }
-
-  // Save bodyweight
-  if (weightInput && weightInput.value) {
-    var lbs = parseFloat(weightInput.value);
-    if (lbs > 0) {
-      var weightLog = lsGet('fs_weightLog') || [];
-      // Remove existing entry for this date
-      weightLog = weightLog.filter(function(e) { return e.date !== dateStr; });
-      weightLog.push({ date: dateStr, lbs: lbs });
-      // Sort by date
-      weightLog.sort(function(a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-      lsSet('fs_weightLog', weightLog);
-      saved = true;
-    }
-  }
-
-  _closeRetroLogModal();
-  if (saved) {
-    showToast('Logged for ' + dateStr, 'success');
-    // Re-render progress views
-    if (typeof renderStreak === 'function') renderStreak();
-    if (typeof renderWeightHistory === 'function') renderWeightHistory();
-    if (typeof renderFreqChart === 'function') renderFreqChart();
-  }
 }
