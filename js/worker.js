@@ -172,28 +172,34 @@ async function handleChat(request, env) {
 
   // Attach tools only if we have user data in KV
   const hasTools = !!ud;
+  let _userToday = 'Saturday', _userTomorrow = 'Sunday', _userDateStr = new Date().toISOString().split('T')[0];
   if (hasTools) {
     apiBody.tools = AGENT_TOOLS;
     // Read local date from POST body (client injects it to avoid CORS header issues)
     const localDate = body._local_date; // "Saturday|2026-03-14"
-    let today = 'Saturday', tomorrow = 'Sunday', dateStr = new Date().toISOString().split('T')[0];
     if (localDate && localDate.includes('|')) {
       const parts = localDate.split('|');
-      today = parts[0];
-      dateStr = parts[1];
+      _userToday = parts[0];
+      _userDateStr = parts[1];
       const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      const todayIdx = dayNames.indexOf(today);
-      tomorrow = dayNames[(todayIdx + 1) % 7];
+      const todayIdx = dayNames.indexOf(_userToday);
+      _userTomorrow = dayNames[(todayIdx + 1) % 7];
     }
     const dateContext = `\n\nCRITICAL DATE CONTEXT FOR TOOL CALLS — MUST OBEY:
-Today is ${today}, ${dateStr}. Tomorrow is ${tomorrow}.
+Today is ${_userToday}, ${_userDateStr}. Tomorrow is ${_userTomorrow}.
 RULES YOU CANNOT BREAK:
-- When the user says "tomorrow", you MUST use day="${tomorrow}" in update_workout — NOT the next gym day, THE LITERAL CALENDAR DAY.
-- If ${tomorrow} is currently a rest day, use the "new_exercises" parameter to assign a full workout to it. The tool supports this.
-- NEVER skip to a different day than what the user asked for. "Tomorrow" = ${tomorrow}. "Today" = ${today}. No exceptions.
+- When the user says "tomorrow", you MUST use day="${_userTomorrow}" in update_workout — NOT the next gym day, THE LITERAL CALENDAR DAY.
+- If ${_userTomorrow} is currently a rest day, use the "new_exercises" parameter to assign a full workout to it. The tool supports this.
+- NEVER skip to a different day than what the user asked for. "Tomorrow" = ${_userTomorrow}. "Today" = ${_userToday}. No exceptions.
 - If assigning a workout to a rest day, include workout_name and new_exercises with the full exercise list.`;
     apiBody.system = (apiBody.system || '') + dateContext;
   }
+
+  // Detect if user's latest message mentions "tomorrow"
+  const lastUserMsg = (apiBody.messages.filter(m => m.role === 'user').pop() || {});
+  const lastMsgText = typeof lastUserMsg.content === 'string' ? lastUserMsg.content : '';
+  const _userSaidTomorrow = /\btomorrow\b/i.test(lastMsgText);
+  const _userSaidToday = /\btoday\b/i.test(lastMsgText) && !/\btomorrow\b/i.test(lastMsgText);
 
   let resp = await claude(apiBody, apiKey);
   let loops = 0, changed = false;
@@ -206,6 +212,20 @@ RULES YOU CANNOT BREAK:
 
     for (const c of calls) {
       console.log(`[Agent] ${c.name}(${JSON.stringify(c.input).substring(0, 150)})`);
+
+      // ENFORCE: if user said "tomorrow" and tool targets wrong day, reject it
+      if ((c.name === 'update_workout' || c.name === 'adjust_plan_for_travel') && c.input.day) {
+        const targetDay = c.input.day.toLowerCase();
+        const expectedDay = _userSaidTomorrow ? _userTomorrow.toLowerCase() : _userSaidToday ? _userToday.toLowerCase() : null;
+        if (expectedDay && targetDay !== expectedDay) {
+          console.log(`[Agent] DAY MISMATCH: tool wants "${c.input.day}" but user said "${_userSaidTomorrow ? 'tomorrow' : 'today'}" which is "${expectedDay}". Rejecting.`);
+          results.push({ type: 'tool_result', tool_use_id: c.id, content: JSON.stringify({
+            error: `WRONG DAY. The user said "${_userSaidTomorrow ? 'tomorrow' : 'today'}" which is ${expectedDay.charAt(0).toUpperCase() + expectedDay.slice(1)}, but you tried to modify ${c.input.day}. Call update_workout again with day="${expectedDay.charAt(0).toUpperCase() + expectedDay.slice(1)}" and use new_exercises if it's currently a rest day.`
+          })});
+          continue;
+        }
+      }
+
       const r = await runTool(c.name, c.input, ud, env, deviceId);
       if (r._changed) { changed = true; delete r._changed; }
       results.push({ type: 'tool_result', tool_use_id: c.id, content: JSON.stringify(r) });
