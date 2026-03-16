@@ -120,13 +120,13 @@ footer{padding:40px 24px;border-top:1px solid var(--border);text-align:center;fo
 </style>
 </head>
 <body>
-<nav><div class="logo"><span class="logo-gold">BLUEPRINT</span></div><a href="https://buy.stripe.com/8x200lgHN5n9eux2IX1gs01" class="nav-cta">START FREE TRIAL</a></nav>
+<nav><div class="logo"><span class="logo-gold">BLUEPRINT</span></div><a href="#pricing" class="nav-cta">START FREE TRIAL</a></nav>
 
 <section class="hero">
   <div class="hero-badge">⚡ AI-POWERED FITNESS COACHING</div>
   <h1>THE HIGHLY PERSONALIZED PROGRAM<br><span class="gold">IN YOUR POCKET.</span></h1>
   <p class="hero-sub">Blueprint is an AI coach that knows your program, your macros, your body, and your schedule. Your progress, highly personalized for your success.</p>
-  <div class="hero-ctas"><a href="https://buy.stripe.com/8x200lgHN5n9eux2IX1gs01" class="btn-primary">START 7-DAY FREE TRIAL</a><a href="#dash" class="btn-secondary">SEE THE APP ↓</a></div>
+  <div class="hero-ctas"><a href="#pricing" class="btn-primary">START 7-DAY FREE TRIAL</a><a href="#dash" class="btn-secondary">SEE THE APP ↓</a></div>
   <div class="hero-price">$29.99/month after trial · Cancel anytime</div>
 </section>
 
@@ -262,12 +262,12 @@ footer{padding:40px 24px;border-top:1px solid var(--border);text-align:center;fo
 <!-- PRICING -->
 <section class="pricing" id="pricing"><h2>SIMPLE PRICING. NO COMMITMENT.</h2><p class="pricing-sub">Try Blueprint free for 7 days. Cancel anytime.</p>
   <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:32px">
-    <span id="toggle-monthly-label" style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;color:var(--bone);transition:color 0.2s">MONTHLY</span>
-    <label class="price-toggle" onclick="togglePricing()">
-      <input type="checkbox" id="price-toggle-cb">
+    <span id="toggle-monthly-label" onclick="document.getElementById('price-toggle-cb').checked=false;togglePricing()" style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;color:var(--bone);transition:color 0.2s;cursor:pointer">MONTHLY</span>
+    <label class="price-toggle">
+      <input type="checkbox" id="price-toggle-cb" onchange="togglePricing()">
       <span class="price-toggle-slider"></span>
     </label>
-    <span id="toggle-annual-label" style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;color:var(--dim);transition:color 0.2s">ANNUAL</span>
+    <span id="toggle-annual-label" onclick="document.getElementById('price-toggle-cb').checked=true;togglePricing()" style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;color:var(--dim);transition:color 0.2s;cursor:pointer">ANNUAL</span>
     <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--green);background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);padding:4px 10px;border-radius:100px">SAVE 33%</span>
   </div>
   <div class="price-card">
@@ -285,7 +285,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);text-align:center;fo
   </div>
 </section>
 
-<section class="final-cta reveal"><h2>YOUR FULLY CUSTOM PROGRAM = $29/MONTH<br>HAVING CERTAINTY IN THE OUTCOME = <span style="background:var(--gold-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">PRICELESS.</span></h2><p>Join Blueprint and get an AI coach that actually knows what you're doing.</p><a href="https://buy.stripe.com/8x200lgHN5n9eux2IX1gs01" class="btn-primary" style="font-size:1.15rem;padding:18px 48px">GET STARTED FREE →</a></section>
+<section class="final-cta reveal"><h2>YOUR FULLY CUSTOM PROGRAM = $29/MONTH<br>HAVING CERTAINTY IN THE OUTCOME = <span style="background:var(--gold-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">PRICELESS.</span></h2><p>Join Blueprint and get an AI coach that actually knows what you're doing.</p><a href="#pricing" class="btn-primary" style="font-size:1.15rem;padding:18px 48px">GET STARTED FREE →</a></section>
 
 <footer><div style="margin-bottom:8px"><span class="logo-gold" style="font-family:'Archivo Black',sans-serif;font-size:1.1rem;letter-spacing:3px;font-weight:400">BLUEPRINT</span></div>© 2026 Blueprint Fitness. All rights reserved.</footer>
 
