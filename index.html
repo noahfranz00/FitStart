@@ -116,7 +116,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);text-align:center;fo
 .reveal{opacity:0;transform:translateY(30px);transition:opacity 0.6s ease,transform 0.6s ease}
 .reveal.visible{opacity:1;transform:none}
 @media(max-width:768px){nav{padding:12px 16px}.hero{padding:100px 20px 60px}.split{grid-template-columns:1fr;gap:32px}.split.rev{direction:ltr}.feat-grid{grid-template-columns:1fr}.mk-stats{grid-template-columns:1fr 1fr}.price-card{margin:0 12px}
-.phase-flow{flex-direction:column !important}.phase-arrow{transform:rotate(90deg);border-left:none !important;border-right:none !important;border-top:1px solid var(--border) !important;border-bottom:1px solid var(--border) !important}.phase-1{border-radius:18px 18px 0 0 !important;border-right:1px solid var(--border) !important;border-bottom:none !important}.phase-3{border-radius:0 0 18px 18px !important;border-left:1px solid var(--border) !important;border-top:none !important}.phase-2{border-left:1px solid var(--border) !important;border-right:1px solid var(--border) !important}}
+.phase-flow{flex-direction:column !important}.phase-arrow{background:transparent !important;border:none !important;height:32px;flex:0 0 32px !important}.phase-arrow-icon{transform:rotate(90deg)}.phase-1{border-radius:18px !important;border:1px solid var(--border) !important}.phase-2{border-radius:18px !important;border:1px solid var(--border) !important}.phase-3{border-radius:18px !important;border:1px solid var(--border) !important}}
 </style>
 </head>
 <body>
@@ -221,7 +221,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);text-align:center;fo
       <div style="margin-top:10px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--bone)">Weeks 1-4</div>
     </div>
     <div class="phase-arrow" style="flex:0 0 32px;display:flex;align-items:center;justify-content:center;background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
-      <div style="color:var(--gold);font-size:1.2rem">→</div>
+      <div style="color:var(--gold);font-size:1.2rem" class="phase-arrow-icon">→</div>
     </div>
     <div class="phase-2" style="flex:1;padding:24px;border:1px solid var(--border);border-left:none;border-right:none;background:var(--card);text-align:center">
       <div style="width:48px;height:48px;border-radius:50%;background:rgba(200,162,61,0.1);border:2px solid rgba(200,162,61,0.3);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gold)">2</div>
@@ -230,7 +230,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);text-align:center;fo
       <div style="margin-top:10px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--bone)">Weeks 5-8</div>
     </div>
     <div class="phase-arrow" style="flex:0 0 32px;display:flex;align-items:center;justify-content:center;background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
-      <div style="color:var(--gold);font-size:1.2rem">→</div>
+      <div style="color:var(--gold);font-size:1.2rem" class="phase-arrow-icon">→</div>
     </div>
     <div class="phase-3" style="flex:1;padding:24px;border-radius:0 18px 18px 0;border:1px solid var(--border);border-left:none;background:var(--card);text-align:center">
       <div style="width:48px;height:48px;border-radius:50%;background:rgba(200,162,61,0.1);border:2px solid rgba(200,162,61,0.3);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gold)">3</div>
@@ -251,7 +251,7 @@ footer{padding:40px 24px;border-top:1px solid var(--border);text-align:center;fo
 <section class="sec reveal"><div style="text-align:center;margin-bottom:48px"><div class="sec-label">Everything included</div><h2>NO MORE GUESSWORK, TRAIN WITH CONFIDENCE.</h2></div>
   <div class="feat-grid">
     <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.5" width="22" height="22"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="feat-title">PERIODIZED PROGRAMMING</div><div class="feat-desc">Hypertrophy, strength, power, and deload phases - automatically cycled based on your level and goals. Not random workouts.</div></div>
-    <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.5" width="22" height="22"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div class="feat-title">PHOTO FOOD LOGGING</div><div class="feat-desc">Snap a picture of your plate and the AI identifies foods, estimates portions, and logs the macros. Or just tell it what you ate.</div></div>
+    <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.5" width="22" height="22"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div><div class="feat-title">EASY FOOD LOGGING</div><div class="feat-desc">Tell the AI coach what you ate and it logs your macros instantly. Or tap "Recent" to pull up your last 20 entries and relog a common meal in one tap.</div></div>
     <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.5" width="22" height="22"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="feat-title">REAL-TIME ADAPTATION</div><div class="feat-desc">Traveling? Injured? Tell the coach and your program updates instantly - real exercise swaps, not generic advice.</div></div>
     <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.5" width="22" height="22"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg></div><div class="feat-title">SMART SET LOGGING</div><div class="feat-desc">Previous session data right next to each set. Rest timer with chime. One-tap completion. PRs highlighted automatically.</div></div>
     <div class="feat-card"><div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.5" width="22" height="22"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="feat-title">CLOUD BACKUP</div><div class="feat-desc">Your data syncs automatically. Switch phones, clear your browser, crash your device - your progress is always safe.</div></div>
@@ -297,7 +297,7 @@ function togglePricing(){
   var cb=document.getElementById('price-toggle-cb');
   var isAnnual=cb.checked;
   document.getElementById('price-display-amount').innerHTML=isAnnual?'$20<span>/mo</span>':'$29<span>.99</span>';
-  document.getElementById('price-display-period').textContent=isAnnual?'$240/year after 7-day free trial':'per month after 7-day free trial';
+  document.getElementById('price-display-period').innerHTML=isAnnual?'<span style="font-size:1.05rem;color:var(--off);font-weight:600">$240 billed annually</span><br><span style="font-size:0.82rem">after 7-day free trial</span>':'per month after 7-day free trial';
   document.getElementById('price-cta-btn').href=isAnnual?'https://link.fastpaydirect.com/payment-link/69b8af13f35c540e14832dcc':'https://link.fastpaydirect.com/payment-link/69b8aec3f35c540e14832dcb';
   document.getElementById('toggle-monthly-label').style.color=isAnnual?'var(--dim)':'var(--bone)';
   document.getElementById('toggle-annual-label').style.color=isAnnual?'var(--bone)':'var(--dim)';
