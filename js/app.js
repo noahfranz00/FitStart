@@ -698,18 +698,32 @@ function calcNutrition(weightLbs, goalLbs, weeks, gender, age, heightCm, activit
     weeklyChange = '0';
   }
 
-  // Evidence-based protein targets (Helms et al., 2014; Morton et al., 2018)
-  // Cutting: 1.0-1.2g/lb to preserve muscle in deficit
-  // Bulking: 0.8-1.0g/lb sufficient for hypertrophy
-  // Maintenance: 0.85g/lb
-  const proteinPerLb = mode === 'lose' ? 1.1 : mode === 'gain' ? 0.9 : 0.85;
-  const protein = Math.round(weightLbs * proteinPerLb);
+  // Evidence-based protein targets
+  // For fat loss: use GOAL weight, not current weight — standard recommendation
+  // for overweight individuals (Helms et al., 2014). Using current weight at 300+ lbs
+  // produces absurd targets that discourage beginners.
+  // Cutting: 1.0g/lb of goal weight (preserves muscle in deficit)
+  // Bulking: 0.9g/lb of current weight (sufficient for hypertrophy)
+  // Maintenance: 0.85g/lb of current weight
+  // Fallback formula — only used if AI fails twice
+  let proteinRefWeight, proteinPerLb;
+  if (mode === 'lose') {
+    proteinRefWeight = goalLbs; // use goal weight, not current
+    proteinPerLb = 0.8;
+  } else if (mode === 'gain') {
+    proteinRefWeight = weightLbs;
+    proteinPerLb = 0.9;
+  } else {
+    proteinRefWeight = weightLbs;
+    proteinPerLb = 0.85;
+  }
+  const protein = Math.round(proteinRefWeight * proteinPerLb);
 
   // Fat: minimum 20% of calories for hormonal health, target 25-30%
   const fat = Math.round(calories * 0.27 / 9);
 
   // Carbs: fill remaining calories — primary fuel for training performance
-  const carbs = Math.round((calories - protein * 4 - fat * 9) / 4);
+  const carbs = Math.max(50, Math.round((calories - protein * 4 - fat * 9) / 4));
 
   return { calories, protein, fat, carbs, weeklyChange, tdee, deficit, surplus, mode, bmr: Math.round(bmr), multiplier };
 }
@@ -752,7 +766,74 @@ async function generatePlan() {
   }
 
   const heightCm = Math.round((heightFt * 12 + heightIn) * 2.54);
-  const nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
+  
+  // AI determines macros — not a formula. The AI sees the full picture.
+  const heightStr = heightFt + "'" + heightIn + '"';
+  const modeHint = weight > goal ? 'fat loss' : weight < goal ? 'muscle gain' : 'maintenance';
+  const nutritionPrompt = `You are an elite sports nutritionist creating a personalized nutrition plan. This is NOT a bodybuilding calculator. You must consider the WHOLE PERSON.
+
+CLIENT PROFILE:
+- ${age}yo ${gender}, ${heightStr} (${heightCm}cm)
+- Current weight: ${weight}lbs, Goal weight: ${goal}lbs
+- Activity level: ${activity}, Experience: ${currentTier}
+- Training: ${selDays.length} days/week, ${duration} sessions
+- Timeline: ${selectedWeeks === 0 ? 'Ongoing' : selectedWeeks + ' weeks'}
+${bodyGoals ? '- Their goals in their own words: "' + bodyGoals + '"' : ''}
+${injuries ? '- Injuries/limitations: ' + injuries : ''}
+
+YOUR JOB: Set calories, protein, carbs, and fat that are RIGHT FOR THIS SPECIFIC PERSON.
+
+CRITICAL RULES:
+- Calculate TDEE using Mifflin-St Jeor with their actual stats.
+- For ${modeHint}: set an appropriate caloric ${weight > goal ? 'deficit. Safe rate: 0.5-1% bodyweight loss per week. Never below 1500cal for men or 1200cal for women.' : weight < goal ? 'surplus. Lean bulk: 200-500cal over TDEE.' : 'intake at TDEE.'}
+- PROTEIN: Base on their GOAL WEIGHT and LEAN BODY MASS, NOT current weight. A ${weight}lb person at ${heightStr} who wants to ${modeHint} does NOT need ${weight}g+ of protein. Estimate their lean mass and use 0.7-1.0g per pound of lean mass. For significantly overweight individuals, using goal weight is standard practice.
+- Consider their STARTING POINT. A ${currentTier} at ${weight}lbs probably eats far less protein than an advanced lifter. Set a target that stretches them but is achievable. The program phases can progressively increase targets later.
+- Fat: 25-30% of calories for hormonal health. Never below 20%.
+- Carbs: remainder after protein and fat are set. Primary fuel for training.
+
+Respond with ONLY this JSON, no explanation:
+{"calories":NUMBER,"protein":NUMBER,"fat":NUMBER,"carbs":NUMBER,"mode":"lose|gain|maintain","weeklyChange":"NUMBER","tdee":NUMBER,"reasoning":"1 sentence explaining why these specific numbers for this person"}`;
+
+  let nutrition;
+  // Try AI twice before falling back
+  for (let _attempt = 0; _attempt < 2; _attempt++) {
+    try {
+      const nutritionRaw = await callClaude(
+        [{ role: 'user', content: nutritionPrompt }],
+        { system: 'You are a sports nutritionist. Respond ONLY with valid JSON. No markdown, no explanation.', max_tokens: 500, timeout: 30000 }
+      );
+      let clean = nutritionRaw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
+      const jsonStart = clean.search(/\{/);
+      if (jsonStart > 0) clean = clean.substring(jsonStart);
+      const aiNutrition = JSON.parse(clean);
+      if (aiNutrition.calories && aiNutrition.protein && aiNutrition.fat && aiNutrition.carbs) {
+        nutrition = {
+          calories: Math.round(aiNutrition.calories),
+          protein: Math.round(aiNutrition.protein),
+          fat: Math.round(aiNutrition.fat),
+          carbs: Math.round(aiNutrition.carbs),
+          mode: aiNutrition.mode || modeHint.replace('fat loss','lose').replace('muscle gain','gain'),
+          weeklyChange: String(aiNutrition.weeklyChange || '0'),
+          tdee: Math.round(aiNutrition.tdee || aiNutrition.calories),
+          reasoning: aiNutrition.reasoning || '',
+          source: 'ai'
+        };
+        console.log('[Nutrition] AI-determined (attempt ' + (_attempt+1) + '):', nutrition.calories + 'cal', nutrition.protein + 'g pro', '—', nutrition.reasoning);
+        break;
+      } else {
+        throw new Error('Missing fields');
+      }
+    } catch (e) {
+      console.warn('[Nutrition] AI attempt ' + (_attempt+1) + ' failed:', e.message);
+      if (_attempt === 1) {
+        // Final fallback — simple formula, but use goal weight for protein
+        console.warn('[Nutrition] Using formula fallback');
+        nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
+        nutrition.source = 'formula';
+      }
+    }
+  }
+
   USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, bodyGoals, personalRules, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
 
   // Auto-calculate water goal: half bodyweight in oz, capped at 128oz (1 gallon)
@@ -1005,7 +1086,7 @@ function renderResults(plan) {
   if (myplanBanner) myplanBanner.innerHTML = `<div class="results-banner" style="border-radius:14px;margin-bottom:0"><div><h2>${plan.name}</h2><p>${plan.tagline}</p></div><div class="results-tier-badge">${USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1)}</div></div>`;
   document.getElementById('results-grid').innerHTML = [
     { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', title:'YOUR GOAL', html:`<ul style="margin-top:4px;margin-left:14px"><li>Current weight: <strong>${USER.weight} lbs</strong></li><li>Goal weight: <strong>${USER.goal} lbs</strong></li><li>Timeline: <strong>${plan.timeline}</strong></li>${n.mode==='maintain'?'<li>Maintaining current weight</li>':`<li>${n.mode==='gain'?'Gaining':'Losing'} <strong>${Math.abs(parseFloat(n.weeklyChange))} lbs/week</strong></li>`}</ul>` },
-    { icon:'🥩', title:'NUTRITION TARGETS', html:`<p><strong>${plan.calorie_target}</strong> daily calories</p><p><strong>${plan.protein_target}</strong> protein</p><p style="margin-top:6px;color:var(--dim);font-size:0.83rem">Carbs: ${USER.nutrition.carbs}g · Fat: ${USER.nutrition.fat}g · TDEE: ${USER.nutrition.tdee} cal</p>` },
+    { icon:'🥩', title:'NUTRITION TARGETS', html:`<p><strong>${plan.calorie_target}</strong> daily calories</p><p><strong>${plan.protein_target}</strong> protein</p><p style="margin-top:6px;color:var(--dim);font-size:0.83rem">Carbs: ${USER.nutrition.carbs}g · Fat: ${USER.nutrition.fat}g${USER.nutrition.tdee ? ' · TDEE: ' + USER.nutrition.tdee + ' cal' : ''}</p>${USER.nutrition.reasoning ? '<p style="margin-top:8px;color:var(--off);font-size:0.82rem;font-style:italic">' + USER.nutrition.reasoning + '</p>' : ''}` },
     { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', title:'TRAINING APPROACH', html:`<ul style="margin-top:4px;margin-left:14px">${(plan.workout_philosophy||plan.philosophy||'Personalized program built for your goals.').split('. ').filter(s=>s.trim()).map(s=>`<li style="margin-bottom:6px">${s.trim().replace(/\.$/,'')}</li>`).join('')}</ul>` },
   ].map(c=>`<div class="r-card"><div class="r-card-icon">${c.icon}</div><h3>${c.title}</h3>${c.html}</div>`).join('');
 
@@ -1041,6 +1122,7 @@ Level: ${USER.tier}, ${USER.selDays.length} days/week, ${USER.duration} sessions
 PROGRAM: "${plan.name}" — ${selectedWeeks} weeks
 Phases: ${phaseOverview}
 Macros: ${n.calories}cal, ${n.protein}g protein, ${n.carbs}g carbs, ${n.fat}g fat (${n.mode} mode, ${n.weeklyChange}lbs/week)
+${n.reasoning ? 'Nutrition rationale: ' + n.reasoning : ''}
 
 Paragraph 1 (3-4 sentences): What this program is and why it fits their goals${USER.injuries ? ' (mention how you adapted for their injuries)' : ''}
 Paragraph 2 (3-4 sentences): Why these specific macro targets — calories, protein amount, the reasoning
