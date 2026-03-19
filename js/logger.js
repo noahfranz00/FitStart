@@ -110,16 +110,12 @@ function _fuzzySearchMatch(query, name, muscles) {
 }
 
 function dashNav(view, btn) {
-  // Close any open modals/overlays first — prevents blocking tab navigation
   var unplannedModal = document.getElementById('unplanned-modal');
   if (unplannedModal && unplannedModal.style.display !== 'none') {
     if (typeof closeUnplannedModal === 'function') closeUnplannedModal();
     else unplannedModal.style.display = 'none';
   }
-  var mobDrawer = document.getElementById('mob-more-drawer');
-  if (mobDrawer) mobDrawer.classList.remove('open');
 
-  // Hide all views cleanly — no inline style pollution
   document.querySelectorAll('.view').forEach(v => {
     v.classList.remove('active');
     v.style.cssText = '';
@@ -132,28 +128,29 @@ function dashNav(view, btn) {
 
   if (btn) btn.classList.add('active');
 
-  // Coach gets its own full-screen layout on mobile
   const mainContent = document.querySelector('.main-content');
   if (mainContent) {
     if (view === 'coach') mainContent.classList.add('coach-active');
     else mainContent.classList.remove('coach-active');
   }
 
-  // Always reset scroll to top when switching views (except coach)
   if (view !== 'coach' && mainContent) mainContent.scrollTop = 0;
 
-  // Sync mobile bottom tabs
+  // Sync mobile bottom tabs — map sub-views to their parent tab
   document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
-  const mobTab = document.getElementById('mob-tab-' + view);
+  var tabMap = { 'week': 'plan', 'program': 'profile', 'myplan': 'profile', 'settings': 'profile', 'progress': 'profile' };
+  var mappedView = tabMap[view] || view;
+  var mobTab = document.getElementById('mob-tab-' + mappedView);
   if (mobTab) mobTab.classList.add('active');
 
   if (view === 'nutrition') renderNutrition();
-  if (view === 'week') renderWeek();
+  if (view === 'plan' || view === 'week') renderWeek();
   if (view === 'progress') { if (typeof renderProgressView === 'function') renderProgressView(); else { renderStreak(); renderWeightHistory(); renderNutritionChart(); renderFreqChart(); renderStrengthTrends(); } }
   if (view === 'today') { renderTodayWorkout(); refreshDashMacros(); renderDashWater(); }
   if (view === 'program') renderProgram();
   if (view === 'settings') renderSettingsGymDays();
   if (view === 'coach') initCoach();
+  if (view === 'profile') { if (typeof renderProfile === 'function') renderProfile(); }
 }
 
 
