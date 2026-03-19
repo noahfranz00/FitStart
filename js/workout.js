@@ -24,7 +24,6 @@ function openWorkoutEnv(dayIdx, startExIdx) {
     openUnplannedWorkout(dayIdx);
     return;
   }
-  _unlockChimeOnGesture();
   woDay = dayIdx;
   woCurrentEx = startExIdx || 0;
   woWorkout = workout;
@@ -170,8 +169,11 @@ function exitWorkout() {
 }
 
 function finishWorkout() {
-  recordWorkoutDate();
-  wktDone.add(woDay);
+  recordWorkoutDate(); // Always records TODAY's date correctly
+  // Mark the actual performed day (today), not just the schedule slot
+  wktDone.add(TODAY_IDX);
+  // Also mark the schedule slot so the week view shows it was covered
+  if (woDay !== TODAY_IDX) wktDone.add(woDay);
   saveToStorage();
   stopRestTimer();
   lsSet('fs_rest_timer', null);
@@ -1350,10 +1352,8 @@ function renderEcList() {
   list.innerHTML = exes.map((ex,i) => {
     const isDone = woSets[i] && woSets[i].some(s => s.done);
     const ssLabel = ex._supersetWith ? '<div style="font-size:0.55rem;color:var(--orange);font-family:\'DM Mono\',monospace;letter-spacing:0.5px">SS</div>' : '';
-    const thumb = typeof buildExThumbHtml === 'function' ? buildExThumbHtml(ex.name, 'small') : '';
     return `<div class="wo-ex-sidebar-item ${i===woCurrentEx?'active':''}" onclick="loadExercise(${i})">
       <div class="wo-ex-sidebar-num">${i+1}${ssLabel}</div>
-      ${thumb}
       <div class="wo-ex-sidebar-info">
         <div class="wo-ex-sidebar-name">${ex.name}</div>
         <div class="wo-ex-sidebar-sets">${ex.sets}×${ex.reps}</div>
@@ -1479,58 +1479,76 @@ function prevExercise() {
 }
 
 // ═══════════════════════════════════════════
-// REST TIMER + CHIME — Web Audio API
-// Uses AudioContext oscillators that MIX with playing music.
-// No HTML5 Audio, no global touch listeners, no warm-up pings.
-// ONLY the running setInterval fires the chime when timer hits 0.
+// REST TIMER + CHIME — REWRITTEN FOR RELIABILITY
+// Design: Only ONE code path fires the chime (the running interval).
+// No chime from restoreRestTimerIfActive, visibilitychange, or page load.
+// Audio kept warm by silent play on every touch in workout env.
 // ═══════════════════════════════════════════
 
-var _chimeCtx = null;
-var _chimeUnlocked = false;
+// ═══ CHIME AUDIO ═══
+var _chimeAudio = null;
 
-function _ensureChimeCtx() {
-  if (!_chimeCtx) {
-    try { _chimeCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
-  }
-  if (_chimeCtx.state === 'suspended') {
-    try { _chimeCtx.resume(); } catch(e) {}
-  }
-  return _chimeCtx;
-}
-
-function _unlockChimeOnGesture() {
-  if (_chimeUnlocked) return;
-  var ctx = _ensureChimeCtx();
-  if (ctx && ctx.state === 'running') _chimeUnlocked = true;
-}
-
-function playRestChime() {
-  var ctx = _ensureChimeCtx();
-  if (!ctx) return;
+function _initChimeAudio() {
+  if (_chimeAudio) return;
   try {
-    var now = ctx.currentTime;
-    var dur = 0.5;
-    var osc1 = ctx.createOscillator();
-    var osc2 = ctx.createOscillator();
-    osc1.type = 'sine'; osc1.frequency.value = 880;
-    osc2.type = 'sine'; osc2.frequency.value = 1100;
-    var gain1 = ctx.createGain();
-    var gain2 = ctx.createGain();
-    var master = ctx.createGain();
-    gain1.gain.value = 0.5; gain2.gain.value = 0.35;
-    osc1.connect(gain1); osc2.connect(gain2);
-    gain1.connect(master); gain2.connect(master);
-    master.connect(ctx.destination);
-    master.gain.setValueAtTime(0.8, now);
-    master.gain.exponentialRampToValueAtTime(0.01, now + dur);
-    osc1.start(now); osc2.start(now);
-    osc1.stop(now + dur); osc2.stop(now + dur);
-  } catch(e) { console.log('Chime play error:', e); }
-  try { if (navigator.vibrate) navigator.vibrate([200,100,200,100,300]); } catch(e) {}
+    var sr = 22050, dur = 0.5;
+    var samples = Math.floor(sr * dur);
+    var buffer = new ArrayBuffer(44 + samples * 2);
+    var dv = new DataView(buffer);
+    var ws = function(o, s) { for (var i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0,'RIFF'); dv.setUint32(4, 36+samples*2, true); ws(8,'WAVE');
+    ws(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true);
+    dv.setUint16(22,1,true); dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true);
+    dv.setUint16(32,2,true); dv.setUint16(34,16,true);
+    ws(36,'data'); dv.setUint32(40,samples*2,true);
+    for (var i = 0; i < samples; i++) {
+      var t = i / sr;
+      var env = Math.max(0, 1 - t / dur);
+      var v = (Math.sin(2*Math.PI*880*t)*0.5 + Math.sin(2*Math.PI*1100*t)*0.35) * env;
+      dv.setInt16(44+i*2, Math.max(-32768, Math.min(32767, v*32767)), true);
+    }
+    _chimeAudio = new Audio(URL.createObjectURL(new Blob([buffer], {type:'audio/wav'})));
+    _chimeAudio.volume = 1.0;
+    _chimeAudio.load();
+  } catch(e) { console.log('Chime init failed:', e); }
 }
+
+// Keep audio authorized on iOS — silent play/pause on every touch
+function _warmChimeAudio() {
+  _initChimeAudio();
+  if (!_chimeAudio) return;
+  try {
+    var vol = _chimeAudio.volume;
+    _chimeAudio.volume = 0;
+    _chimeAudio.currentTime = 0;
+    var p = _chimeAudio.play();
+    if (p && p.then) {
+      p.then(function() {
+        _chimeAudio.pause();
+        _chimeAudio.currentTime = 0;
+        _chimeAudio.volume = vol;
+      }).catch(function() { _chimeAudio.volume = vol; });
+    }
+  } catch(e) {}
+}
+
+document.addEventListener('touchstart', _warmChimeAudio, { passive: true });
+document.addEventListener('click', _warmChimeAudio, { passive: true });
 
 // Clear stale timer on page load
 (function() { try { localStorage.removeItem('fs_rest_timer'); } catch(e) {} })();
+
+function playRestChime() {
+  _initChimeAudio();
+  if (_chimeAudio) {
+    try {
+      _chimeAudio.currentTime = 0;
+      _chimeAudio.volume = 1.0;
+      _chimeAudio.play().catch(function() {});
+    } catch(e) {}
+  }
+  try { if (navigator.vibrate) navigator.vibrate([200,100,200,100,300]); } catch(e) {}
+}
 
 // ═══ REST TIMER ═══
 var restTotalSecs = 90;
@@ -1563,7 +1581,7 @@ function startRestTimer() {
 
 function startRestTimerSecs(secs) {
   stopRestTimer();
-  _unlockChimeOnGesture();
+  _warmChimeAudio(); // user gesture context
   _chimePlayedForCurrentTimer = false;
   restTotalSecs = secs;
   restTimerEndAt = Date.now() + secs * 1000;
@@ -1633,7 +1651,7 @@ function restoreRestTimerIfActive() {
   _chimePlayedForCurrentTimer = false;
   restTotalSecs = saved.total || 90;
   restTimerEndAt = saved.endAt;
-  _ensureChimeCtx();
+  _initChimeAudio();
   _startTimerUI(restTotalSecs);
 }
 
