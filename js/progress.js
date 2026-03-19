@@ -575,3 +575,37 @@ function _toggleProgramDay(i) {
   if (!el) return;
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
+
+// ═══ RENDER PROFILE ═══
+function renderProfile() {
+  var nameEl = document.getElementById('profile-name');
+  var avatarEl = document.getElementById('profile-avatar');
+  var tierEl = document.getElementById('profile-tier');
+  var streakEl = document.getElementById('profile-streak');
+  var goalEl = document.getElementById('profile-goal');
+  if (USER && USER.name) {
+    if (nameEl) nameEl.textContent = USER.name;
+    if (avatarEl) avatarEl.textContent = USER.name.charAt(0).toUpperCase();
+    if (tierEl) {
+      var tierLabel = USER.tier ? USER.tier.charAt(0).toUpperCase() + USER.tier.slice(1) : '';
+      var phaseLabel = '';
+      if (typeof TRAINING_PHASES !== 'undefined' && TRAINING_PHASES && TRAINING_PHASES.length > 0) {
+        var currentPhase = typeof getTrainingPhase === 'function' ? getTrainingPhase(CURRENT_WEEK) : TRAINING_PHASES[0];
+        if (currentPhase && currentPhase.name) phaseLabel = ' · ' + currentPhase.name + ' Phase';
+      }
+      tierEl.textContent = tierLabel + phaseLabel;
+    }
+  }
+  if (streakEl) {
+    var dates = typeof getWorkoutDates === 'function' ? getWorkoutDates() : new Set();
+    var streak = 0;
+    var now = new Date();
+    for (var i = 0; i < 60; i++) {
+      var d = new Date(now); d.setDate(now.getDate() - i);
+      var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      if (dates.has(ds)) streak++; else if (i > 0) break;
+    }
+    streakEl.innerHTML = '<span style="font-weight:700;color:var(--gold)">' + streak + '</span> day streak';
+  }
+  if (goalEl && USER) goalEl.textContent = USER.weight + ' lbs → ' + USER.goal + ' lbs';
+}
