@@ -395,7 +395,12 @@ ${USER && USER.injuries ? '\nCRITICAL — INJURY AWARENESS:\nThe user has report
 WORKOUT COACHING:
 - You CAN see the user's full workout schedule above — today's exercises, sets, reps, and rest times. ALWAYS reference this data when discussing their training.
 - When the user asks about their workout, exercises, or schedule, refer to the ACTUAL exercises listed above. Never say you can't see their workout or that you don't have access to it.
-- If the user wants to SUBSTITUTE an exercise, suggest a specific replacement that targets the same muscle group. Explain WHY the substitute works. Tell them to use the "Edit" button on the exercise to swap it.
+- CRITICAL — EXERCISE FEEDBACK: When a user expresses concern about ANY exercise or combination of exercises (e.g. "heavy squats and deadlifts back to back is too much", "I don't like this exercise", "this doesn't feel right"), you MUST:
+  1. Acknowledge their concern and explain why they're right or wrong
+  2. ALWAYS offer a specific alternative exercise that solves the problem
+  3. Include a WORKOUT block with the modified workout so they can accept the change with one tap
+  4. Never dismiss exercise feedback — the user knows their body
+- If the user wants to SUBSTITUTE a single exercise, suggest a specific replacement AND include a WORKOUT block with the full updated workout so they can accept with one tap. Don't just tell them to use an Edit button.
 - If the user asks for a COMPLETELY DIFFERENT workout, generate one and include a WORKOUT block at the END of your response:
 \`\`\`WORKOUT
 {"name":"Custom Leg Day","exercises":[{"name":"Back Squat","sets":4,"reps":"8-10","rest":90,"muscles":"Quads, Glutes"},{"name":"Romanian Deadlift","sets":3,"reps":"10-12","rest":90,"muscles":"Hamstrings"}]}
@@ -1585,90 +1590,4 @@ async function runProactiveCoachChecks() {
 
   // Restore notification dot state
   setTimeout(() => _updateCoachNotifDot(), 500);
-}
-
-// ═══════════════════════════════════════════
-// "WHAT SHOULD I EAT RIGHT NOW?" — Smart Meal Suggestion
-// ═══════════════════════════════════════════
-function suggestMeal() {
-  // Calculate remaining macros
-  var freshTodayIdx = (new Date().getDay() === 0) ? 6 : new Date().getDay() - 1;
-  var totals = { cal: 0, pro: 0, carb: 0, fat: 0 };
-  try {
-    for (var ci = 0; ci < (MEAL_CATS || []).length; ci++) {
-      var entries = getMealCatEntries(freshTodayIdx, MEAL_CATS[ci].id);
-      for (var ei = 0; ei < entries.length; ei++) {
-        totals.cal += (entries[ei].cal || 0);
-        totals.pro += (entries[ei].pro || 0);
-        totals.carb += (entries[ei].carb || 0);
-        totals.fat += (entries[ei].fat || 0);
-      }
-    }
-  } catch(e) {}
-
-  var remainCal = Math.max(0, TARGETS.cal - totals.cal);
-  var remainPro = Math.max(0, TARGETS.pro - totals.pro);
-  var remainCarb = Math.max(0, TARGETS.carb - totals.carb);
-  var remainFat = Math.max(0, TARGETS.fat - totals.fat);
-
-  // Time of day context
-  var hour = new Date().getHours();
-  var mealTime = 'a meal';
-  if (hour < 10) mealTime = 'breakfast';
-  else if (hour < 12) mealTime = 'a mid-morning snack or early lunch';
-  else if (hour < 14) mealTime = 'lunch';
-  else if (hour < 17) mealTime = 'an afternoon snack';
-  else if (hour < 20) mealTime = 'dinner';
-  else mealTime = 'an evening snack';
-
-  // How many meals left logic
-  var mealsLeft = 1;
-  if (hour < 10) mealsLeft = 3;
-  else if (hour < 14) mealsLeft = 2;
-  else if (hour < 18) mealsLeft = 2;
-  else mealsLeft = 1;
-
-  var prompt = 'I need to eat ' + mealTime + ' right now. I have ' + remainCal + ' cal, ' +
-    remainPro + 'g protein, ' + remainCarb + 'g carbs, and ' + remainFat + 'g fat remaining today' +
-    (mealsLeft > 1 ? ' across about ' + mealsLeft + ' more meals' : ' for my last meal') + '.\n\n' +
-    'Give me 2-3 specific meal ideas that fit these remaining macros. For each meal:\n' +
-    '- Name the exact foods and portions (e.g. "6oz chicken breast, 1 cup rice, 1 cup broccoli")\n' +
-    '- Show the macro breakdown\n' +
-    '- Keep it practical — things I can make or grab quickly\n\n' +
-    'Then ask which one I want to log.';
-
-  // Navigate to coach and send
-  if (typeof dashNav === 'function') dashNav('coach');
-  if (typeof syncMobTab === 'function') syncMobTab('coach');
-
-  // Small delay so the view is visible before sending
-  setTimeout(function() {
-    var starters = document.getElementById('coach-starters');
-    if (starters) starters.style.display = 'none';
-    var clearBtn = document.getElementById('coach-clear-btn');
-    if (clearBtn) clearBtn.style.display = 'block';
-    _sendCoachMsg(prompt);
-  }, 150);
-}
-
-// Update the meal suggest button subtitle with current remaining macros
-function _updateMealSuggestSub() {
-  var sub = document.getElementById('meal-suggest-sub');
-  if (!sub) return;
-  try {
-    var freshTodayIdx = (new Date().getDay() === 0) ? 6 : new Date().getDay() - 1;
-    var totals = { cal: 0, pro: 0 };
-    for (var ci = 0; ci < (MEAL_CATS || []).length; ci++) {
-      var entries = getMealCatEntries(freshTodayIdx, MEAL_CATS[ci].id);
-      for (var ei = 0; ei < entries.length; ei++) {
-        totals.cal += (entries[ei].cal || 0);
-        totals.pro += (entries[ei].pro || 0);
-      }
-    }
-    var remainCal = Math.max(0, TARGETS.cal - totals.cal);
-    var remainPro = Math.max(0, TARGETS.pro - totals.pro);
-    sub.textContent = remainCal + ' cal · ' + remainPro + 'g protein remaining';
-  } catch(e) {
-    sub.textContent = 'AI meal ideas based on your remaining macros';
-  }
 }
