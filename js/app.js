@@ -1,1336 +1,2093 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Blueprint — AI-Powered Fitness</title>
-<meta name="application-name" content="Blueprint">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Blueprint">
-<meta name="theme-color" content="#0a0a0a">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="description" content="AI-powered fitness plans, workout tracking, and nutrition logging.">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Inline service worker for offline caching
-    const swCode = `
-self.addEventListener('install', e => self.skipWaiting());
-self.addEventListener('activate', e => e.waitUntil(clients.claim()));
-self.addEventListener('fetch', e => {
-  if (e.request.mode === 'navigate') {
-    e.respondWith(fetch(e.request).catch(() => caches.match('/')));
+// ═══════════════════════════════════════════
+// APP.JS — Main App Initialization, Exercise DB,
+//   State Management, Onboarding, Signup, Storage, API
+// ═══════════════════════════════════════════
+
+// ═══════════════════════════════════════════
+// EXERCISE DATABASE — wger images (start/mid/end), categories, customizable
+// Images from wger.de public API: /api/v2/exerciseimage/
+// ═══════════════════════════════════════════
+
+// wger exercise IDs map to their image URLs
+// Format: { sets, reps, rest, muscles, category, wgerId }
+// wger images: https://wger.de/en/exercise/{id}/view/name
+// image base: https://wger.de/
+
+const EXERCISE_DB = {
+  // ── CHEST ──
+  'Bench Press':           { sets:4, reps:'6-8',   rest:90, muscles:'Chest, Triceps, Shoulders', category:'Chest',     wgerId:192 },
+  'Incline DB Press':      { sets:3, reps:'8-10',  rest:120, muscles:'Upper Chest, Triceps',       category:'Chest',     wgerId:211 },
+  'Incline Barbell Press': { sets:4, reps:'6-8',   rest:90, muscles:'Upper Chest, Triceps',       category:'Chest',     wgerId:210 },
+  'Dumbbell Bench Press':  { sets:3, reps:'8-10',  rest:120, muscles:'Chest, Triceps',             category:'Chest',     wgerId:97  },
+  'Dumbbell Flyes':        { sets:3, reps:'10-12', rest:90,  muscles:'Chest',                      category:'Chest',     wgerId:28  },
+  'Incline Dumbbell Flyes':{ sets:3, reps:'10-12', rest:90,  muscles:'Upper Chest',                category:'Chest',     wgerId:28  },
+  'Cable Crossover':       { sets:3, reps:'12-15', rest:60,  muscles:'Chest, Anterior Delts',      category:'Chest',     wgerId:346 },
+  'Push-Ups':              { sets:3, reps:'10-20', rest:60,  muscles:'Chest, Triceps, Shoulders',  category:'Chest',     wgerId:18  },
+  'Diamond Push-Ups':      { sets:3, reps:'8-15',  rest:60,  muscles:'Triceps, Inner Chest',       category:'Chest',     wgerId:18  },
+  'Decline Bench Press':   { sets:3, reps:'8-10',  rest:120, muscles:'Lower Chest, Triceps',       category:'Chest',     wgerId:213 },
+  'Chest Dip':             { sets:3, reps:'8-12',  rest:90,  muscles:'Lower Chest, Triceps',       category:'Chest',     wgerId:37  },
+  'Machine Chest Press':   { sets:3, reps:'10-12', rest:90,  muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+  'Pec Deck Machine':      { sets:3, reps:'12-15', rest:60,  muscles:'Chest',                      category:'Chest',     wgerId:null },
+  'Landmine Press':        { sets:3, reps:'10-12', rest:90,  muscles:'Upper Chest, Shoulders',     category:'Chest',     wgerId:null },
+  'Floor Press':           { sets:3, reps:'8-10',  rest:120, muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+  'Svend Press':           { sets:3, reps:'12-15', rest:60,  muscles:'Inner Chest',                category:'Chest',     wgerId:null },
+  // ── BACK ──
+  'Pull-Ups':              { sets:4, reps:'6-8',   rest:90, muscles:'Lats, Biceps, Rear Delts',   category:'Back',      wgerId:3   },
+  'Chin-Ups':              { sets:3, reps:'6-10',  rest:120, muscles:'Lats, Biceps',               category:'Back',      wgerId:181 },
+  'Barbell Row':           { sets:4, reps:'6-8',   rest:90, muscles:'Back, Biceps',               category:'Back',      wgerId:63  },
+  'Pendlay Row':           { sets:4, reps:'5-8',   rest:90, muscles:'Back, Lats',                 category:'Back',      wgerId:63  },
+  'Dumbbell Row':          { sets:3, reps:'8-12',  rest:90,  muscles:'Lats, Rhomboids, Biceps',    category:'Back',      wgerId:362 },
+  'Lat Pulldown':          { sets:3, reps:'10-12', rest:90,  muscles:'Lats, Biceps',               category:'Back',      wgerId:122 },
+  'Close-Grip Lat Pulldown':{ sets:3, reps:'10-12', rest:90, muscles:'Lats, Lower Back',           category:'Back',      wgerId:122 },
+  'Cable Row':             { sets:3, reps:'10-12', rest:90,  muscles:'Mid Back, Biceps',           category:'Back',      wgerId:111 },
+  'Seated Cable Row':      { sets:3, reps:'10-12', rest:90,  muscles:'Mid Back, Rhomboids',        category:'Back',      wgerId:111 },
+  'Face Pulls':            { sets:3, reps:'15-20', rest:60,  muscles:'Rear Delts, Rotator Cuff',   category:'Back',      wgerId:313 },
+  'Deadlift':              { sets:4, reps:'4-6',   rest:120, muscles:'Full Posterior Chain',        category:'Back',      wgerId:29  },
+  'Conventional Deadlift': { sets:5, reps:'3-5',   rest:120, muscles:'Full Posterior Chain',        category:'Back',      wgerId:29  },
+  'Sumo Deadlift':         { sets:4, reps:'4-6',   rest:120, muscles:'Glutes, Quads, Back',        category:'Back',      wgerId:29  },
+  'Rack Pull':             { sets:3, reps:'5-8',   rest:90, muscles:'Upper Back, Traps, Glutes',  category:'Back',      wgerId:null },
+  'T-Bar Row':             { sets:3, reps:'8-10',  rest:120, muscles:'Mid Back, Lats',             category:'Back',      wgerId:227 },
+  'Hyperextensions':       { sets:3, reps:'12-15', rest:60,  muscles:'Lower Back, Glutes',         category:'Back',      wgerId:88  },
+  'Meadows Row':           { sets:3, reps:'8-12',  rest:90,  muscles:'Lats, Rear Delts',           category:'Back',      wgerId:null },
+  'Chest-Supported Row':   { sets:3, reps:'10-12', rest:90,  muscles:'Mid Back, Rear Delts',       category:'Back',      wgerId:null },
+  'Straight-Arm Pulldown': { sets:3, reps:'12-15', rest:60,  muscles:'Lats',                       category:'Back',      wgerId:null },
+  'Inverted Row':          { sets:3, reps:'8-15',  rest:60,  muscles:'Back, Biceps',               category:'Back',      wgerId:null },
+  'Pullover':              { sets:3, reps:'10-12', rest:90,  muscles:'Lats, Chest, Serratus',      category:'Back',      wgerId:99  },
+  'Shrugs':                { sets:3, reps:'12-15', rest:60,  muscles:'Traps',                      category:'Back',      wgerId:null },
+  'Barbell Shrugs':        { sets:4, reps:'10-12', rest:90,  muscles:'Traps, Upper Back',          category:'Back',      wgerId:150 },
+  // ── SHOULDERS ──
+  'Shoulder Press':        { sets:3, reps:'8-10',  rest:120, muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:73  },
+  'Overhead Press':        { sets:4, reps:'5-8',   rest:90, muscles:'Shoulders, Triceps, Core',   category:'Shoulders', wgerId:256 },
+  'Dumbbell Shoulder Press':{ sets:3, reps:'8-10', rest:120, muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:73  },
+  'Arnold Press':          { sets:3, reps:'10-12', rest:90,  muscles:'Shoulders (all heads)',       category:'Shoulders', wgerId:116 },
+  'Lateral Raises':        { sets:3, reps:'12-15', rest:60,  muscles:'Side Delts',                 category:'Shoulders', wgerId:72  },
+  'Cable Lateral Raise':   { sets:3, reps:'12-15', rest:60,  muscles:'Side Delts',                 category:'Shoulders', wgerId:72  },
+  'Front Raises':          { sets:3, reps:'12-15', rest:60,  muscles:'Front Delts',                category:'Shoulders', wgerId:74  },
+  'Upright Row':           { sets:3, reps:'10-12', rest:90,  muscles:'Shoulders, Traps',           category:'Shoulders', wgerId:75  },
+  'Rear Delt Fly':         { sets:3, reps:'15-20', rest:60,  muscles:'Rear Delts',                 category:'Shoulders', wgerId:314 },
+  'Reverse Pec Deck':      { sets:3, reps:'12-15', rest:60,  muscles:'Rear Delts',                 category:'Shoulders', wgerId:null },
+  'Machine Shoulder Press': { sets:3, reps:'10-12', rest:90, muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:null },
+  'Push Press':            { sets:3, reps:'5-8',   rest:90, muscles:'Shoulders, Triceps, Legs',   category:'Shoulders', wgerId:null },
+  'Lu Raises':             { sets:3, reps:'10-12', rest:60,  muscles:'Front/Side Delts',           category:'Shoulders', wgerId:null },
+  'Bradford Press':        { sets:3, reps:'8-10',  rest:90,  muscles:'Shoulders (all heads)',       category:'Shoulders', wgerId:null },
+  'Cable Face Pull':       { sets:3, reps:'15-20', rest:60,  muscles:'Rear Delts, Rotator Cuff',   category:'Shoulders', wgerId:313 },
+  // ── ARMS: BICEPS ──
+  'Barbell Curl':          { sets:3, reps:'10-12', rest:60,  muscles:'Biceps',                     category:'Biceps',      wgerId:48  },
+  'EZ Bar Curl':           { sets:3, reps:'10-12', rest:60,  muscles:'Biceps',                     category:'Biceps',      wgerId:48  },
+  'Dumbbell Curl':         { sets:3, reps:'10-12', rest:60,  muscles:'Biceps',                     category:'Biceps',      wgerId:81  },
+  'Hammer Curls':          { sets:3, reps:'10-12', rest:60,  muscles:'Biceps, Brachialis',         category:'Biceps',      wgerId:396 },
+  'Incline DB Curl':       { sets:3, reps:'10-12', rest:60,  muscles:'Biceps (long head)',         category:'Biceps',      wgerId:218 },
+  'Preacher Curl':         { sets:3, reps:'10-12', rest:60,  muscles:'Biceps (short head)',        category:'Biceps',      wgerId:175 },
+  'Concentration Curl':    { sets:3, reps:'10-12', rest:60,  muscles:'Biceps (peak)',              category:'Biceps',      wgerId:52  },
+  'Cable Curl':            { sets:3, reps:'12-15', rest:60,  muscles:'Biceps',                     category:'Biceps',      wgerId:null },
+  'Spider Curl':           { sets:3, reps:'10-12', rest:60,  muscles:'Biceps (short head)',        category:'Biceps',      wgerId:null },
+  'Reverse Curl':          { sets:3, reps:'12-15', rest:60,  muscles:'Forearms, Brachioradialis',  category:'Biceps',      wgerId:null },
+  'Wrist Curls':           { sets:3, reps:'15-20', rest:45,  muscles:'Forearms',                   category:'Biceps',      wgerId:null },
+  'Reverse Wrist Curls':   { sets:3, reps:'15-20', rest:45,  muscles:'Forearm Extensors',          category:'Biceps',      wgerId:null },
+  'Zottman Curl':          { sets:3, reps:'10-12', rest:60,  muscles:'Biceps, Forearms',           category:'Biceps',      wgerId:null },
+  // ── ARMS: TRICEPS ──
+  'Tricep Dips':           { sets:3, reps:'10-12', rest:90,  muscles:'Triceps, Chest',             category:'Triceps',      wgerId:37  },
+  'Tricep Pushdown':       { sets:3, reps:'12-15', rest:60,  muscles:'Triceps',                    category:'Triceps',      wgerId:26  },
+  'Rope Pushdown':         { sets:3, reps:'12-15', rest:60,  muscles:'Triceps (lateral head)',     category:'Triceps',      wgerId:26  },
+  'Skull Crushers':        { sets:3, reps:'10-12', rest:90,  muscles:'Triceps',                    category:'Triceps',      wgerId:25  },
+  'Close-Grip Bench Press': { sets:3, reps:'8-10',  rest:120, muscles:'Triceps, Chest',             category:'Triceps',      wgerId:358 },
+  'Overhead Tricep Extension': { sets:3, reps:'10-12', rest:60, muscles:'Triceps (long head)',     category:'Triceps',      wgerId:null },
+  'Kickbacks':             { sets:3, reps:'12-15', rest:60,  muscles:'Triceps',                    category:'Triceps',      wgerId:null },
+  'Diamond Push-Up':       { sets:3, reps:'10-15', rest:60,  muscles:'Triceps, Inner Chest',       category:'Triceps',      wgerId:null },
+  'JM Press':              { sets:3, reps:'8-10',  rest:90,  muscles:'Triceps',                    category:'Triceps',      wgerId:null },
+  // ── LEGS: QUADS ──
+  'Back Squat':            { sets:4, reps:'5-8',   rest:90, muscles:'Quads, Glutes, Core',        category:'Legs',      wgerId:6   },
+  'Front Squat':           { sets:4, reps:'6-8',   rest:90, muscles:'Quads, Core',                category:'Legs',      wgerId:null },
+  'Goblet Squat':          { sets:3, reps:'10-15', rest:90,  muscles:'Quads, Glutes, Core',        category:'Legs',      wgerId:197 },
+  'Hack Squat':            { sets:3, reps:'8-12',  rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Leg Press':             { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:45  },
+  'Leg Extension':         { sets:3, reps:'12-15', rest:60,  muscles:'Quads',                      category:'Legs',      wgerId:41  },
+  'Sissy Squat':           { sets:3, reps:'10-15', rest:60,  muscles:'Quads',                      category:'Legs',      wgerId:null },
+  'Wall Sit':              { sets:3, reps:'30-60s', rest:60, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Box Squat':             { sets:4, reps:'5-8',   rest:90, muscles:'Quads, Glutes, Hips',        category:'Legs',      wgerId:null },
+  'Smith Machine Squat':   { sets:3, reps:'8-12',  rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  // ── LEGS: HAMSTRINGS & GLUTES ──
+  'Romanian Deadlift':     { sets:3, reps:'8-10',  rest:120, muscles:'Hamstrings, Glutes',         category:'Legs',      wgerId:113 },
+  'Stiff-Leg Deadlift':    { sets:3, reps:'8-10',  rest:120, muscles:'Hamstrings, Lower Back',     category:'Legs',      wgerId:113 },
+  'Leg Curl':              { sets:3, reps:'12-15', rest:60,  muscles:'Hamstrings',                 category:'Legs',      wgerId:42  },
+  'Seated Leg Curl':       { sets:3, reps:'12-15', rest:60,  muscles:'Hamstrings',                 category:'Legs',      wgerId:42  },
+  'Nordic Curl':           { sets:3, reps:'5-8',   rest:120, muscles:'Hamstrings',                 category:'Legs',      wgerId:null },
+  'Good Mornings':         { sets:3, reps:'10-12', rest:90,  muscles:'Hamstrings, Lower Back',     category:'Legs',      wgerId:null },
+  'Hip Thrust':            { sets:3, reps:'10-12', rest:90,  muscles:'Glutes, Hamstrings',         category:'Legs',      wgerId:332 },
+  'Hip Thrusts':           { sets:3, reps:'10-12', rest:90,  muscles:'Glutes, Hamstrings',         category:'Legs',      wgerId:332 },
+  'Glute Bridge':          { sets:3, reps:'15-20', rest:60,  muscles:'Glutes, Core',               category:'Legs',      wgerId:104 },
+  'Cable Pull-Through':    { sets:3, reps:'12-15', rest:60,  muscles:'Glutes, Hamstrings',         category:'Legs',      wgerId:null },
+  'Glute Kickback':        { sets:3, reps:'12-15', rest:60,  muscles:'Glutes',                     category:'Legs',      wgerId:null },
+  'Reverse Lunge':         { sets:3, reps:'10/leg', rest:90, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  // ── LEGS: COMPOUND / FULL LEG ──
+  'Lunges':                { sets:3, reps:'10/leg', rest:90, muscles:'Quads, Glutes, Hamstrings',  category:'Legs',      wgerId:19  },
+  'Walking Lunges':        { sets:3, reps:'10 each', rest:60,muscles:'Quads, Glutes',              category:'Legs',      wgerId:19  },
+  'Bulgarian Split Squat': { sets:3, reps:'8-10/leg',rest:120,muscles:'Quads, Glutes',             category:'Legs',      wgerId:399 },
+  'Step-Ups':              { sets:3, reps:'10/leg', rest:60, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Pistol Squat':          { sets:3, reps:'5-8/leg',rest:120,muscles:'Quads, Glutes, Balance',     category:'Legs',      wgerId:null },
+  'Calf Raises':           { sets:4, reps:'15-20', rest:60,  muscles:'Calves',                     category:'Legs',      wgerId:33  },
+  'Seated Calf Raises':    { sets:4, reps:'15-20', rest:60,  muscles:'Soleus, Calves',             category:'Legs',      wgerId:null },
+  'Donkey Calf Raises':    { sets:3, reps:'15-20', rest:60,  muscles:'Calves',                     category:'Legs',      wgerId:null },
+  'Tibialis Raise':        { sets:3, reps:'15-20', rest:45,  muscles:'Tibialis Anterior',          category:'Legs',      wgerId:null },
+  'Adductor Machine':      { sets:3, reps:'12-15', rest:60,  muscles:'Inner Thighs',               category:'Legs',      wgerId:null },
+  'Abductor Machine':      { sets:3, reps:'12-15', rest:60,  muscles:'Outer Glutes',               category:'Legs',      wgerId:null },
+  // ── CORE ──
+  'Plank':                 { sets:3, reps:'30-60s', rest:60, muscles:'Core, Stability',            category:'Core',      wgerId:105 },
+  'Side Plank':            { sets:3, reps:'30s/side',rest:60,muscles:'Obliques, Core',             category:'Core',      wgerId:null },
+  'Dead Bug':              { sets:3, reps:'10/side', rest:60,muscles:'Core, Lower Back',           category:'Core',      wgerId:336 },
+  'Bird Dog':              { sets:3, reps:'10/side', rest:60,muscles:'Core, Glutes',               category:'Core',      wgerId:337 },
+  'Cable Crunch':          { sets:3, reps:'12-15', rest:60,  muscles:'Abs',                        category:'Core',      wgerId:168 },
+  'Hanging Leg Raise':     { sets:3, reps:'10-15', rest:60,  muscles:'Abs, Hip Flexors',           category:'Core',      wgerId:56  },
+  'Ab Wheel Rollout':      { sets:3, reps:'8-12',  rest:90,  muscles:'Core, Shoulders',            category:'Core',      wgerId:329 },
+  'Russian Twist':         { sets:3, reps:'20 total',rest:60,muscles:'Obliques, Abs',              category:'Core',      wgerId:154 },
+  'Bicycle Crunch':        { sets:3, reps:'20 total',rest:60,muscles:'Abs, Obliques',              category:'Core',      wgerId:null },
+  'V-Ups':                 { sets:3, reps:'12-15', rest:60,  muscles:'Abs, Hip Flexors',           category:'Core',      wgerId:null },
+  'Mountain Climbers':     { sets:3, reps:'30s',   rest:30,  muscles:'Core, Cardio',               category:'Core',      wgerId:null },
+  'Pallof Press':          { sets:3, reps:'10/side', rest:60,muscles:'Core, Anti-Rotation',        category:'Core',      wgerId:null },
+  'Dragon Flag':           { sets:3, reps:'5-8',   rest:90,  muscles:'Abs, Full Core',             category:'Core',      wgerId:null },
+  'L-Sit':                 { sets:3, reps:'15-30s', rest:60, muscles:'Abs, Hip Flexors',           category:'Core',      wgerId:null },
+  'Decline Sit-Up':        { sets:3, reps:'12-20', rest:60,  muscles:'Abs',                        category:'Core',      wgerId:null },
+  'Woodchoppers':          { sets:3, reps:'12/side',rest:60, muscles:'Obliques, Core',             category:'Core',      wgerId:null },
+  'Weighted Crunch':       { sets:3, reps:'12-15', rest:60,  muscles:'Abs',                        category:'Core',      wgerId:null },
+  'Farmer Walk':           { sets:3, reps:'40m',   rest:90,  muscles:'Core, Grip, Traps',          category:'Core',      wgerId:null },
+  'Suitcase Carry':        { sets:3, reps:'40m/side',rest:90,muscles:'Obliques, Core, Grip',       category:'Core',      wgerId:null },
+  // ── CARDIO / CONDITIONING ──
+  'Brisk Walk':            { sets:1, reps:'20-30 min',rest:0,muscles:'Cardio, Endurance',          category:'Cardio',    wgerId:null },
+  'Brisk Walk / Cardio':   { sets:1, reps:'20-30 min',rest:0,muscles:'Cardio, Endurance',          category:'Cardio',    wgerId:null },
+  'HIIT Intervals':        { sets:1, reps:'20 min',  rest:0, muscles:'Full Body, Cardio',          category:'Cardio',    wgerId:null },
+  'Jump Rope':             { sets:3, reps:'3 min',   rest:60,muscles:'Cardio, Calves, Shoulders',  category:'Cardio',    wgerId:null },
+  'Rowing Machine':        { sets:1, reps:'20 min',  rest:0, muscles:'Full Body, Cardio',          category:'Cardio',    wgerId:null },
+  'Stair Climber':         { sets:1, reps:'20 min',  rest:0, muscles:'Legs, Cardio',               category:'Cardio',    wgerId:null },
+  'Battle Ropes':          { sets:3, reps:'30s',   rest:60,  muscles:'Full Body, Cardio',          category:'Cardio',    wgerId:null },
+  'Box Jumps':             { sets:3, reps:'8-12',  rest:90,  muscles:'Legs, Explosiveness',        category:'Cardio',    wgerId:null },
+  'Burpees':               { sets:3, reps:'10-15', rest:60,  muscles:'Full Body, Cardio',          category:'Cardio',    wgerId:null },
+  'Sled Push':             { sets:3, reps:'40m',   rest:120, muscles:'Legs, Core, Cardio',         category:'Cardio',    wgerId:null },
+  'Kettlebell Swing':      { sets:3, reps:'15-20', rest:60,  muscles:'Glutes, Hips, Cardio',       category:'Cardio',    wgerId:null },
+  'Assault Bike':          { sets:1, reps:'20 min',  rest:0, muscles:'Full Body, Cardio',          category:'Cardio',    wgerId:null },
+  'Sprint Intervals':      { sets:6, reps:'30s on/60s off', rest:60, muscles:'Legs, Cardio',       category:'Cardio',    wgerId:null },
+
+  // ── CHEST (additional) ──
+  'Low Cable Fly':           { sets:3, reps:'12-15', rest:60,  muscles:'Upper Chest',                category:'Chest',     wgerId:null },
+  'High Cable Fly':          { sets:3, reps:'12-15', rest:60,  muscles:'Lower Chest',                category:'Chest',     wgerId:null },
+  'Guillotine Press':        { sets:3, reps:'8-10',  rest:120, muscles:'Upper Chest, Triceps',       category:'Chest',     wgerId:null },
+  'Reverse Grip Bench Press':{ sets:3, reps:'8-10',  rest:120, muscles:'Upper Chest, Triceps',       category:'Chest',     wgerId:null },
+  'Dumbbell Pullover':       { sets:3, reps:'10-12', rest:90,  muscles:'Chest, Lats',                category:'Chest',     wgerId:null },
+  'Squeeze Press':           { sets:3, reps:'10-12', rest:90,  muscles:'Inner Chest',                category:'Chest',     wgerId:null },
+  'Hex Press':               { sets:3, reps:'10-12', rest:90,  muscles:'Inner Chest, Triceps',       category:'Chest',     wgerId:null },
+  'Pin Press':               { sets:3, reps:'5-8',   rest:120, muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+  'Board Press':             { sets:3, reps:'5-8',   rest:120, muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+  'Smith Machine Bench':     { sets:3, reps:'8-10',  rest:90,  muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+
+  // ── BACK (additional) ──
+  'Kroc Row':                { sets:2, reps:'20-25', rest:120, muscles:'Lats, Traps, Grip',          category:'Back',      wgerId:null },
+  'Yates Row':               { sets:4, reps:'6-10',  rest:90,  muscles:'Mid Back, Biceps',           category:'Back',      wgerId:null },
+  'Seal Row':                { sets:3, reps:'8-12',  rest:90,  muscles:'Mid Back, Rhomboids',        category:'Back',      wgerId:null },
+  'Banded Pull-Apart':       { sets:3, reps:'15-20', rest:45,  muscles:'Rear Delts, Rhomboids',      category:'Back',      wgerId:null },
+  'Trap Bar Deadlift':       { sets:4, reps:'5-6',   rest:120, muscles:'Full Posterior Chain',       category:'Back',      wgerId:null },
+  'Deficit Deadlift':        { sets:3, reps:'4-6',   rest:120, muscles:'Full Posterior Chain',       category:'Back',      wgerId:null },
+  'Romanian Deadlift (DB)':  { sets:3, reps:'10-12', rest:90,  muscles:'Hamstrings, Glutes',         category:'Back',      wgerId:null },
+  'Underhand Barbell Row':   { sets:3, reps:'8-10',  rest:90,  muscles:'Lats, Lower Back, Biceps',   category:'Back',      wgerId:null },
+  'Wide-Grip Lat Pulldown':  { sets:3, reps:'10-12', rest:90,  muscles:'Lats, Teres Major',          category:'Back',      wgerId:null },
+  'Reverse-Grip Lat Pulldown':{ sets:3, reps:'10-12',rest:90,  muscles:'Lats, Biceps',               category:'Back',      wgerId:null },
+  'Low Row Machine':         { sets:3, reps:'10-12', rest:90,  muscles:'Mid Back, Lats',             category:'Back',      wgerId:null },
+  'High Row Machine':        { sets:3, reps:'10-12', rest:90,  muscles:'Upper Back, Rear Delts',     category:'Back',      wgerId:null },
+
+  // ── SHOULDERS (additional) ──
+  'Z Press':                 { sets:3, reps:'8-10',  rest:90,  muscles:'Shoulders, Core',            category:'Shoulders', wgerId:null },
+  'Prone Y-T-W Raises':      { sets:3, reps:'10-12', rest:60,  muscles:'Lower Traps, Rear Delts',    category:'Shoulders', wgerId:null },
+  'Band Pull-Apart':         { sets:3, reps:'20-25', rest:30,  muscles:'Rear Delts, Rhomboids',      category:'Shoulders', wgerId:null },
+  'Plate Raise':             { sets:3, reps:'12-15', rest:60,  muscles:'Front Delts, Traps',         category:'Shoulders', wgerId:null },
+  'Dumbbell Shrug':          { sets:3, reps:'12-15', rest:60,  muscles:'Traps',                      category:'Shoulders', wgerId:null },
+  'Snatch-Grip Press':       { sets:3, reps:'8-10',  rest:90,  muscles:'Shoulders, Upper Back',      category:'Shoulders', wgerId:null },
+  'Seated DB Press':         { sets:3, reps:'8-12',  rest:90,  muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:null },
+  'Single-Arm DB Press':     { sets:3, reps:'10-12', rest:90,  muscles:'Shoulders, Core',            category:'Shoulders', wgerId:null },
+  'Cuban Press':             { sets:3, reps:'10-12', rest:60,  muscles:'Rotator Cuff, Shoulders',    category:'Shoulders', wgerId:null },
+  'Crucifix Hold':           { sets:3, reps:'20-30s',rest:60,  muscles:'Side Delts, Traps',          category:'Shoulders', wgerId:null },
+
+  // ── ARMS (additional) ──
+  'Bayesian Curl':           { sets:3, reps:'10-12', rest:60,  muscles:'Biceps (long head)',         category:'Biceps',      wgerId:null },
+  'Cross-Body Hammer Curl':  { sets:3, reps:'10-12', rest:60,  muscles:'Brachialis, Brachioradialis',category:'Biceps',      wgerId:null },
+  'Wide-Grip Curl':          { sets:3, reps:'10-12', rest:60,  muscles:'Biceps (short head)',        category:'Biceps',      wgerId:null },
+  'Drag Curl':               { sets:3, reps:'10-12', rest:60,  muscles:'Biceps (long head)',         category:'Biceps',      wgerId:null },
+  '21s Curl':                { sets:3, reps:'21',    rest:90,  muscles:'Biceps (full)',              category:'Biceps',      wgerId:null },
+  'Cable Hammer Curl':       { sets:3, reps:'12-15', rest:60,  muscles:'Brachialis',                 category:'Biceps',      wgerId:null },
+  'Behind-the-Back Cable Curl':{ sets:3, reps:'12-15',rest:60, muscles:'Biceps (long head)',         category:'Biceps',      wgerId:null },
+  'Tate Press':              { sets:3, reps:'10-12', rest:60,  muscles:'Triceps (medial head)',      category:'Triceps',      wgerId:null },
+  'Lying Tricep Extension':  { sets:3, reps:'10-12', rest:90,  muscles:'Triceps',                    category:'Triceps',      wgerId:null },
+  'Single-Arm Cable Pushdown':{ sets:3, reps:'12-15',rest:60,  muscles:'Triceps (lateral head)',     category:'Triceps',      wgerId:null },
+  'Single-Arm Overhead Ext': { sets:3, reps:'10-12', rest:60,  muscles:'Triceps (long head)',        category:'Triceps',      wgerId:null },
+  'Tricep Dip Machine':      { sets:3, reps:'10-12', rest:90,  muscles:'Triceps',                    category:'Triceps',      wgerId:null },
+  'Reverse-Grip Pushdown':   { sets:3, reps:'12-15', rest:60,  muscles:'Triceps (medial head)',      category:'Triceps',      wgerId:null },
+  'Band Tricep Pushdown':    { sets:3, reps:'15-20', rest:45,  muscles:'Triceps',                    category:'Triceps',      wgerId:null },
+
+  // ── LEGS (additional) ──
+  'Pause Squat':             { sets:4, reps:'4-6',   rest:120, muscles:'Quads, Glutes, Core',        category:'Legs',      wgerId:null },
+  'Tempo Squat':             { sets:3, reps:'6-8',   rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Safety Bar Squat':        { sets:4, reps:'5-8',   rest:90,  muscles:'Quads, Glutes, Core',        category:'Legs',      wgerId:null },
+  'Zercher Squat':           { sets:3, reps:'6-8',   rest:120, muscles:'Quads, Glutes, Core',        category:'Legs',      wgerId:null },
+  'Leg Press (Close Foot)':  { sets:3, reps:'10-12', rest:90,  muscles:'Quads',                      category:'Legs',      wgerId:null },
+  'Leg Press (Wide Foot)':   { sets:3, reps:'10-12', rest:90,  muscles:'Glutes, Inner Thighs',       category:'Legs',      wgerId:null },
+  'Single-Leg Leg Press':    { sets:3, reps:'10-12/leg',rest:90,muscles:'Quads, Glutes',             category:'Legs',      wgerId:null },
+  'Pendulum Squat':          { sets:3, reps:'10-12', rest:90,  muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Lying Leg Curl':          { sets:3, reps:'12-15', rest:60,  muscles:'Hamstrings',                 category:'Legs',      wgerId:null },
+  'Single-Leg Leg Curl':     { sets:3, reps:'12-15/leg',rest:60,muscles:'Hamstrings',                category:'Legs',      wgerId:null },
+  'Glute-Ham Raise':         { sets:3, reps:'6-10',  rest:90,  muscles:'Hamstrings, Glutes',         category:'Legs',      wgerId:null },
+  'Frog Pump':               { sets:3, reps:'15-20', rest:45,  muscles:'Glutes',                     category:'Legs',      wgerId:null },
+  'Single-Leg Hip Thrust':   { sets:3, reps:'10-12/leg',rest:60,muscles:'Glutes, Hamstrings',        category:'Legs',      wgerId:null },
+  'Cable Kickback':          { sets:3, reps:'15/leg', rest:45, muscles:'Glutes',                     category:'Legs',      wgerId:null },
+  'Sumo Squat':              { sets:3, reps:'10-12', rest:90,  muscles:'Glutes, Inner Thighs, Quads',category:'Legs',      wgerId:null },
+  'Curtsy Lunge':            { sets:3, reps:'10/leg', rest:60, muscles:'Glutes, Quads',              category:'Legs',      wgerId:null },
+  'Lateral Lunge':           { sets:3, reps:'10/leg', rest:60, muscles:'Quads, Glutes, Adductors',   category:'Legs',      wgerId:null },
+  'Jump Squat':              { sets:3, reps:'10-12', rest:60,  muscles:'Quads, Glutes, Explosive',   category:'Legs',      wgerId:null },
+  'Broad Jump':              { sets:4, reps:'5',     rest:90,  muscles:'Glutes, Quads, Explosive',   category:'Legs',      wgerId:null },
+  'Standing Calf Raise Machine':{ sets:4, reps:'15-20',rest:60,muscles:'Calves (gastrocnemius)',      category:'Legs',      wgerId:null },
+
+  // ── CORE (additional) ──
+  'Hollow Hold':             { sets:3, reps:'20-40s', rest:60, muscles:'Abs, Hip Flexors',           category:'Core',      wgerId:null },
+  'Hollow Rock':             { sets:3, reps:'10-15', rest:60,  muscles:'Abs, Hip Flexors',           category:'Core',      wgerId:null },
+  'Superman Hold':           { sets:3, reps:'10-15', rest:60,  muscles:'Lower Back, Glutes',         category:'Core',      wgerId:null },
+  'Copenhagen Plank':        { sets:3, reps:'20-30s/side',rest:60,muscles:'Adductors, Core',         category:'Core',      wgerId:null },
+  'Stir the Pot':            { sets:3, reps:'10/direction',rest:60,muscles:'Core, Stability',        category:'Core',      wgerId:null },
+  'Cable Woodchop':          { sets:3, reps:'12/side', rest:60,muscles:'Obliques, Core',             category:'Core',      wgerId:null },
+  'Landmine Rotation':       { sets:3, reps:'10/side', rest:60,muscles:'Obliques, Core, Shoulders',  category:'Core',      wgerId:null },
+  'GHD Sit-Up':              { sets:3, reps:'10-15', rest:60,  muscles:'Abs, Hip Flexors',           category:'Core',      wgerId:null },
+  'Toes to Bar':             { sets:3, reps:'8-12',  rest:60,  muscles:'Abs, Lats',                  category:'Core',      wgerId:null },
+  'Knee Raise':              { sets:3, reps:'12-15', rest:60,  muscles:'Abs, Hip Flexors',           category:'Core',      wgerId:null },
+  'Cable Oblique Crunch':    { sets:3, reps:'12/side', rest:60,muscles:'Obliques',                   category:'Core',      wgerId:null },
+  'Windshield Wipers':       { sets:3, reps:'8-12',  rest:60,  muscles:'Obliques, Abs',              category:'Core',      wgerId:null },
+  'Reverse Crunch':          { sets:3, reps:'12-15', rest:60,  muscles:'Lower Abs',                  category:'Core',      wgerId:null },
+  'Toe Touch Crunch':        { sets:3, reps:'15-20', rest:45,  muscles:'Upper Abs',                  category:'Core',      wgerId:null },
+  'McGill Crunch':           { sets:3, reps:'10/side', rest:45,muscles:'Abs, Spine Stability',       category:'Core',      wgerId:null },
+
+  // ── CARDIO (additional) ──
+  'Elliptical':              { sets:1, reps:'20-30 min',rest:0, muscles:'Full Body, Cardio',         category:'Cardio',    wgerId:null },
+  'Cycling':                 { sets:1, reps:'20-45 min',rest:0, muscles:'Legs, Cardio',              category:'Cardio',    wgerId:null },
+  'Swimming Laps':           { sets:1, reps:'20-30 min',rest:0, muscles:'Full Body, Cardio',         category:'Cardio',    wgerId:null },
+  'Treadmill Run':           { sets:1, reps:'20-30 min',rest:0, muscles:'Cardio, Legs',              category:'Cardio',    wgerId:null },
+  'Incline Walk':            { sets:1, reps:'20-30 min',rest:0, muscles:'Glutes, Cardio',            category:'Cardio',    wgerId:null },
+  'Tabata':                  { sets:8, reps:'20s on/10s off',rest:10,muscles:'Full Body, Cardio',    category:'Cardio',    wgerId:null },
+  'Prowler Push':            { sets:4, reps:'30m',   rest:120, muscles:'Legs, Core, Cardio',         category:'Cardio',    wgerId:null },
+  'Medicine Ball Slam':      { sets:3, reps:'10-12', rest:60,  muscles:'Full Body, Power',           category:'Cardio',    wgerId:null },
+  'Tire Flip':               { sets:3, reps:'8-10',  rest:120, muscles:'Full Body, Power',           category:'Cardio',    wgerId:null },
+  'Clean and Press':         { sets:4, reps:'5-6',   rest:120, muscles:'Full Body, Power',           category:'Cardio',    wgerId:null },
+  'Dumbbell Thruster':       { sets:3, reps:'10-12', rest:90,  muscles:'Legs, Shoulders, Cardio',    category:'Cardio',    wgerId:null },
+  'Sandbag Carry':           { sets:3, reps:'40m',   rest:90,  muscles:'Full Body, Grip, Cardio',    category:'Cardio',    wgerId:null },
+
+  // ═══ MACHINES — CHEST ═══
+  'Machine Incline Press':      { sets:3, reps:'10-12', rest:90,  muscles:'Upper Chest, Triceps',       category:'Chest',     wgerId:null },
+  'Machine Decline Press':      { sets:3, reps:'10-12', rest:90,  muscles:'Lower Chest, Triceps',       category:'Chest',     wgerId:null },
+  'Smith Machine Incline Press':{ sets:3, reps:'8-10',  rest:90,  muscles:'Upper Chest, Triceps',       category:'Chest',     wgerId:null },
+  'Plate-Loaded Chest Press':   { sets:3, reps:'8-12',  rest:90,  muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+  'Iso-Lateral Chest Press':    { sets:3, reps:'10-12', rest:90,  muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+  'Seated Chest Fly Machine':   { sets:3, reps:'12-15', rest:60,  muscles:'Chest',                      category:'Chest',     wgerId:null },
+  'Hammer Strength Chest Press':{ sets:3, reps:'8-12',  rest:90,  muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+  'Hammer Strength Incline':    { sets:3, reps:'8-12',  rest:90,  muscles:'Upper Chest, Triceps',       category:'Chest',     wgerId:null },
+  'Cable Chest Press':          { sets:3, reps:'10-12', rest:90,  muscles:'Chest, Triceps',             category:'Chest',     wgerId:null },
+
+  // ═══ MACHINES — BACK ═══
+  'Machine Row':                { sets:3, reps:'10-12', rest:90,  muscles:'Mid Back, Lats',             category:'Back',      wgerId:null },
+  'Plate-Loaded Row':           { sets:3, reps:'8-12',  rest:90,  muscles:'Mid Back, Lats, Biceps',     category:'Back',      wgerId:null },
+  'Hammer Strength Row':        { sets:3, reps:'8-12',  rest:90,  muscles:'Mid Back, Lats',             category:'Back',      wgerId:null },
+  'Hammer Strength Pulldown':   { sets:3, reps:'8-12',  rest:90,  muscles:'Lats, Biceps',               category:'Back',      wgerId:null },
+  'Iso-Lateral Row':            { sets:3, reps:'10-12', rest:90,  muscles:'Lats, Rhomboids',            category:'Back',      wgerId:null },
+  'Iso-Lateral Pulldown':       { sets:3, reps:'10-12', rest:90,  muscles:'Lats, Biceps',               category:'Back',      wgerId:null },
+  'Machine Lat Pulldown':       { sets:3, reps:'10-12', rest:90,  muscles:'Lats, Biceps',               category:'Back',      wgerId:null },
+  'Plate-Loaded Lat Pulldown':  { sets:3, reps:'8-12',  rest:90,  muscles:'Lats, Biceps',               category:'Back',      wgerId:null },
+  'Machine Pullover':           { sets:3, reps:'10-12', rest:90,  muscles:'Lats, Serratus',             category:'Back',      wgerId:null },
+  'Cable Pullover':             { sets:3, reps:'12-15', rest:60,  muscles:'Lats, Chest',                category:'Back',      wgerId:null },
+  'Cable Row (Wide Grip)':      { sets:3, reps:'10-12', rest:90,  muscles:'Upper Back, Rear Delts',     category:'Back',      wgerId:null },
+  'Cable Row (Close Grip)':     { sets:3, reps:'10-12', rest:90,  muscles:'Lats, Mid Back',             category:'Back',      wgerId:null },
+  'Single-Arm Cable Row':       { sets:3, reps:'10-12', rest:60,  muscles:'Lats, Rhomboids',            category:'Back',      wgerId:null },
+  'Smith Machine Row':          { sets:3, reps:'8-10',  rest:90,  muscles:'Mid Back, Lats',             category:'Back',      wgerId:null },
+  'Assisted Pull-Up Machine':   { sets:3, reps:'8-12',  rest:90,  muscles:'Lats, Biceps',               category:'Back',      wgerId:null },
+  'Machine Back Extension':     { sets:3, reps:'12-15', rest:60,  muscles:'Lower Back, Glutes',         category:'Back',      wgerId:null },
+
+  // ═══ MACHINES — SHOULDERS ═══
+  'Seated Machine Shoulder Press':{ sets:3, reps:'10-12',rest:90,  muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:null },
+  'Smith Machine Shoulder Press':{ sets:3, reps:'8-10',  rest:90,  muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:null },
+  'Smith Machine Behind Neck':  { sets:3, reps:'8-10',  rest:90,  muscles:'Shoulders',                  category:'Shoulders', wgerId:null },
+  'Machine Lateral Raise':      { sets:3, reps:'12-15', rest:60,  muscles:'Side Delts',                 category:'Shoulders', wgerId:null },
+  'Cable Lateral Raise (Single)':{ sets:3, reps:'12-15',rest:60,  muscles:'Side Delts',                 category:'Shoulders', wgerId:null },
+  'Cable Front Raise':          { sets:3, reps:'12-15', rest:60,  muscles:'Front Delts',                category:'Shoulders', wgerId:null },
+  'Cable Rear Delt Fly':        { sets:3, reps:'15-20', rest:60,  muscles:'Rear Delts',                 category:'Shoulders', wgerId:null },
+  'Rear Delt Machine':          { sets:3, reps:'12-15', rest:60,  muscles:'Rear Delts',                 category:'Shoulders', wgerId:null },
+  'Plate-Loaded Shoulder Press':{ sets:3, reps:'8-12',  rest:90,  muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:null },
+  'Hammer Strength Shoulder':   { sets:3, reps:'8-12',  rest:90,  muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:null },
+  'Iso-Lateral Shoulder Press': { sets:3, reps:'10-12', rest:90,  muscles:'Shoulders, Triceps',         category:'Shoulders', wgerId:null },
+  'Cable Upright Row':          { sets:3, reps:'12-15', rest:60,  muscles:'Shoulders, Traps',           category:'Shoulders', wgerId:null },
+
+  // ═══ MACHINES — ARMS ═══
+  'Machine Bicep Curl':         { sets:3, reps:'10-12', rest:60,  muscles:'Biceps',                     category:'Biceps',    wgerId:null },
+  'Machine Preacher Curl':      { sets:3, reps:'10-12', rest:60,  muscles:'Biceps (short head)',        category:'Biceps',    wgerId:null },
+  'Cable Preacher Curl':        { sets:3, reps:'10-12', rest:60,  muscles:'Biceps',                     category:'Biceps',    wgerId:null },
+  'Cable Overhead Curl':        { sets:3, reps:'12-15', rest:60,  muscles:'Biceps (peak)',              category:'Biceps',    wgerId:null },
+  'Cable EZ Bar Curl':          { sets:3, reps:'10-12', rest:60,  muscles:'Biceps',                     category:'Biceps',    wgerId:null },
+  'Single-Arm Cable Curl':      { sets:3, reps:'10-12', rest:60,  muscles:'Biceps',                     category:'Biceps',    wgerId:null },
+  'Machine Tricep Extension':   { sets:3, reps:'10-12', rest:60,  muscles:'Triceps',                    category:'Triceps',   wgerId:null },
+  'Cable Overhead Tricep Ext':  { sets:3, reps:'10-12', rest:60,  muscles:'Triceps (long head)',        category:'Triceps',   wgerId:null },
+  'Cable Kickback':             { sets:3, reps:'12-15', rest:60,  muscles:'Triceps',                    category:'Triceps',   wgerId:null },
+  'V-Bar Pushdown':             { sets:3, reps:'12-15', rest:60,  muscles:'Triceps',                    category:'Triceps',   wgerId:null },
+  'Straight Bar Pushdown':      { sets:3, reps:'12-15', rest:60,  muscles:'Triceps',                    category:'Triceps',   wgerId:null },
+
+  // ═══ MACHINES — LEGS ═══
+  'Seated Leg Press':           { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Machine Leg Press':           { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes, Hamstrings', category:'Legs',      wgerId:null },
+  'Vertical Leg Press':         { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Single-Leg Press':           { sets:3, reps:'10/leg', rest:90, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Machine Squat':              { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'V-Squat Machine':            { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Pendulum Squat':             { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Belt Squat':                 { sets:3, reps:'10-12', rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Hack Squat Machine':         { sets:3, reps:'8-12',  rest:120, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Smith Machine Front Squat':  { sets:3, reps:'8-12',  rest:120, muscles:'Quads, Core',                category:'Legs',      wgerId:null },
+  'Smith Machine Lunge':        { sets:3, reps:'10/leg', rest:90, muscles:'Quads, Glutes',              category:'Legs',      wgerId:null },
+  'Machine Leg Extension':      { sets:3, reps:'12-15', rest:60,  muscles:'Quads',                      category:'Legs',      wgerId:null },
+  'Single-Leg Extension':       { sets:3, reps:'12/leg', rest:60, muscles:'Quads',                      category:'Legs',      wgerId:null },
+  'Lying Leg Curl':             { sets:3, reps:'10-12', rest:60,  muscles:'Hamstrings',                 category:'Legs',      wgerId:null },
+  'Standing Leg Curl':          { sets:3, reps:'10-12', rest:60,  muscles:'Hamstrings',                 category:'Legs',      wgerId:null },
+  'Machine Glute Kickback':     { sets:3, reps:'12-15', rest:60,  muscles:'Glutes',                     category:'Legs',      wgerId:null },
+  'Glute Drive Machine':        { sets:3, reps:'10-12', rest:90,  muscles:'Glutes, Hamstrings',         category:'Legs',      wgerId:null },
+  'Hip Abduction Machine':      { sets:3, reps:'12-15', rest:60,  muscles:'Outer Glutes',               category:'Legs',      wgerId:null },
+  'Hip Adduction Machine':      { sets:3, reps:'12-15', rest:60,  muscles:'Inner Thighs',               category:'Legs',      wgerId:null },
+  'Seated Calf Raise Machine':  { sets:4, reps:'15-20', rest:60,  muscles:'Soleus, Calves',             category:'Legs',      wgerId:null },
+  'Standing Calf Raise Machine':{ sets:4, reps:'12-15', rest:60,  muscles:'Gastrocnemius, Calves',      category:'Legs',      wgerId:null },
+  'Leg Press Calf Raise':       { sets:4, reps:'15-20', rest:60,  muscles:'Calves',                     category:'Legs',      wgerId:null },
+  'Cable Hip Flexion':          { sets:3, reps:'12/leg', rest:60, muscles:'Hip Flexors',                category:'Legs',      wgerId:null },
+  'Cable Glute Kickback':       { sets:3, reps:'12/leg', rest:60, muscles:'Glutes',                     category:'Legs',      wgerId:null },
+  'Smith Machine Hip Thrust':   { sets:3, reps:'10-12', rest:90,  muscles:'Glutes, Hamstrings',         category:'Legs',      wgerId:null },
+  'Smith Machine Calf Raise':   { sets:4, reps:'15-20', rest:60,  muscles:'Calves',                     category:'Legs',      wgerId:null },
+  'Reverse Hack Squat':         { sets:3, reps:'10-12', rest:120, muscles:'Glutes, Hamstrings',         category:'Legs',      wgerId:null },
+
+  // ═══ MACHINES — CORE ═══
+  'Machine Crunch':             { sets:3, reps:'12-15', rest:60,  muscles:'Abs',                        category:'Core',      wgerId:null },
+  'Machine Ab Crunch':          { sets:3, reps:'12-15', rest:60,  muscles:'Abs',                        category:'Core',      wgerId:null },
+  'Torso Rotation Machine':     { sets:3, reps:'12/side',rest:60, muscles:'Obliques',                   category:'Core',      wgerId:null },
+  'Cable Woodchop':             { sets:3, reps:'12/side',rest:60, muscles:'Obliques, Core',             category:'Core',      wgerId:null },
+  'Cable Pallof Press':         { sets:3, reps:'10/side',rest:60, muscles:'Core, Anti-Rotation',        category:'Core',      wgerId:null },
+  'Hanging Knee Raise':         { sets:3, reps:'12-15', rest:60,  muscles:'Lower Abs, Hip Flexors',     category:'Core',      wgerId:null },
+  'Captain\'s Chair Leg Raise': { sets:3, reps:'12-15', rest:60,  muscles:'Abs, Hip Flexors',           category:'Core',      wgerId:null },
+  'Decline Bench Crunch':       { sets:3, reps:'12-20', rest:60,  muscles:'Abs',                        category:'Core',      wgerId:null },
+  'Roman Chair Back Extension': { sets:3, reps:'12-15', rest:60,  muscles:'Lower Back, Glutes, Core',   category:'Core',      wgerId:null },
+  'Cable Reverse Crunch':       { sets:3, reps:'12-15', rest:60,  muscles:'Lower Abs',                  category:'Core',      wgerId:null },
+
+  // ═══ MACHINES — CARDIO ═══
+  'Stairmaster':                { sets:1, reps:'20-30 min',rest:0, muscles:'Legs, Glutes, Cardio',      category:'Cardio',    wgerId:null },
+  'Stationary Bike':            { sets:1, reps:'20-30 min',rest:0, muscles:'Legs, Cardio',              category:'Cardio',    wgerId:null },
+  'Recumbent Bike':             { sets:1, reps:'20-30 min',rest:0, muscles:'Legs, Cardio',              category:'Cardio',    wgerId:null },
+  'Ski Erg':                    { sets:1, reps:'15-20 min',rest:0, muscles:'Full Body, Cardio',         category:'Cardio',    wgerId:null },
+  'Fan Bike':                   { sets:1, reps:'15-20 min',rest:0, muscles:'Full Body, Cardio',         category:'Cardio',    wgerId:null },
+  'VersaClimber':               { sets:1, reps:'15-20 min',rest:0, muscles:'Full Body, Cardio',         category:'Cardio',    wgerId:null },
+  'Jacob\'s Ladder':            { sets:1, reps:'10-15 min',rest:0, muscles:'Full Body, Cardio',         category:'Cardio',    wgerId:null },
+};
+
+const EXERCISE_CATEGORIES = ['Chest','Back','Shoulders','Biceps','Triceps','Legs','Core','Cardio'];
+
+function getExerciseData(name) {
+  if (EXERCISE_DB[name]) return EXERCISE_DB[name];
+  const key = Object.keys(EXERCISE_DB).find(k =>
+    name.toLowerCase().includes(k.toLowerCase()) ||
+    k.toLowerCase().includes(name.toLowerCase().split(' ')[0])
+  );
+  return key ? EXERCISE_DB[key] : { sets:3, reps:'8-12', rest:90, muscles:'Multiple muscle groups', category:'Other', wgerId:null };
+}
+
+// wger image URL builder — returns array of image URLs for an exercise
+function getExerciseImages(wgerId) {
+  if (!wgerId) return null;
+  return {
+    start: `https://wger.de/en/exercise/${wgerId}/view/exercise`,
+    api: `https://wger.de/api/v2/exerciseimage/?exercise=${wgerId}&format=json`
+  };
+}
+
+// ═══════════════════════════════════════════
+// EXERCISE IMAGE CACHE — lazy-fetches wger thumbnails
+// Throttled to 2 concurrent requests. Uses exerciseinfo endpoint.
+// Failed fetches retry after 6 hours (not cached permanently).
+// ═══════════════════════════════════════════
+var _exImgCache = {};   // { wgerId: { url: string|null, ts: number } }
+var _exImgPending = {};
+var _exImgQueue = [];
+var _exImgActive = 0;
+var _EX_IMG_MAX_CONCURRENT = 2;
+var _EX_IMG_RETRY_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+(function _loadImgCache() {
+  try {
+    // Clear old v1 cache (was caching null permanently)
+    localStorage.removeItem('fs_ex_img_cache');
+    var stored = localStorage.getItem('fs_ex_img_cache_v2');
+    if (stored) _exImgCache = JSON.parse(stored);
+  } catch(e) { _exImgCache = {}; }
+})();
+
+function _saveImgCache() {
+  try { localStorage.setItem('fs_ex_img_cache_v2', JSON.stringify(_exImgCache)); } catch(e) {}
+}
+
+function getExerciseThumb(exerciseName) {
+  var db = getExerciseData(exerciseName);
+  var wid = db && db.wgerId;
+  if (!wid) return null;
+  var cached = _exImgCache[wid];
+  if (cached && cached.url) return cached.url; // got an image
+  if (cached && cached.url === null && cached.ts && (Date.now() - cached.ts < _EX_IMG_RETRY_MS)) return null; // failed recently, don't retry yet
+  // Queue a fetch
+  if (!_exImgPending[wid]) {
+    _exImgPending[wid] = true;
+    _exImgQueue.push(wid);
+    _drainImgQueue();
+  }
+  return null;
+}
+
+function _drainImgQueue() {
+  while (_exImgActive < _EX_IMG_MAX_CONCURRENT && _exImgQueue.length > 0) {
+    var wid = _exImgQueue.shift();
+    _exImgActive++;
+    _fetchExImage(wid).finally(function() {
+      _exImgActive--;
+      _drainImgQueue();
+    });
+  }
+}
+
+async function _fetchExImage(wgerId) {
+  // Strategy: try exerciseinfo endpoint (returns images embedded), then fall back to exerciseimage search
+  var endpoints = [
+    'https://wger.de/api/v2/exerciseinfo/' + wgerId + '/?format=json',
+    'https://wger.de/api/v2/exerciseimage/?exercise_base=' + wgerId + '&format=json',
+    'https://wger.de/api/v2/exerciseimage/?exercise=' + wgerId + '&format=json'
+  ];
+  for (var i = 0; i < endpoints.length; i++) {
+    try {
+      var controller = new AbortController();
+      var timer = setTimeout(function() { controller.abort(); }, 10000);
+      var resp = await fetch(endpoints[i], { signal: controller.signal });
+      clearTimeout(timer);
+      if (!resp.ok) continue;
+      var data = await resp.json();
+      var imgUrl = null;
+      // exerciseinfo endpoint returns { images: [{ image: url, ... }] }
+      if (data.images && data.images.length > 0) {
+        // Prefer main image
+        var main = data.images.find(function(img) { return img.is_main; });
+        imgUrl = (main || data.images[0]).image;
+      }
+      // exerciseimage endpoint returns { results: [{ image: url }] }
+      if (!imgUrl && data.results && data.results.length > 0) {
+        imgUrl = data.results[0].image;
+      }
+      if (imgUrl) {
+        // Ensure full URL
+        if (imgUrl.startsWith('/')) imgUrl = 'https://wger.de' + imgUrl;
+        _exImgCache[wgerId] = { url: imgUrl, ts: Date.now() };
+        _saveImgCache();
+        // Re-render visible lists
+        if (typeof renderTodayWorkout === 'function') renderTodayWorkout();
+        if (typeof renderEcList === 'function' && typeof woWorkout !== 'undefined' && woWorkout) renderEcList();
+        return;
+      }
+    } catch(e) {
+      // timeout or network error — try next endpoint
+      console.log('[ExImg] Endpoint ' + i + ' failed for ' + wgerId + ':', e.message);
+    }
+  }
+  // All endpoints failed — cache as null with timestamp (will retry after _EX_IMG_RETRY_MS)
+  _exImgCache[wgerId] = { url: null, ts: Date.now() };
+  _saveImgCache();
+  console.log('[ExImg] All endpoints failed for wgerId=' + wgerId);
+}
+
+function buildExThumbHtml(name, size) {
+  var sz = size || 'normal';
+  var cls = sz === 'small' ? 'wo-ex-sidebar-thumb' : 'ex-thumb';
+  var url = getExerciseThumb(name);
+  if (url) {
+    return '<div class="' + cls + '"><img src="' + url + '" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=ex-thumb-placeholder>' + _getMuscleBadge(name) + '</div>\'"></div>';
+  }
+  return '<div class="' + cls + '"><div class="ex-thumb-placeholder">' + _getMuscleBadge(name) + '</div></div>';
+}
+
+function _getMuscleBadge(name) {
+  var db = getExerciseData(name);
+  var m = (db && db.muscles) ? db.muscles.split(',')[0].trim() : '';
+  var map = { 'Chest':'CHEST', 'Lats':'BACK', 'Back':'BACK', 'Quads':'LEGS', 'Hamstrings':'HAMS', 'Glutes':'GLTS', 'Shoulders':'SHLD', 'Biceps':'ARMS', 'Triceps':'ARMS', 'Core':'CORE', 'Calves':'CALV', 'Forearms':'ARMS', 'Traps':'TRAP', 'Abs':'CORE' };
+  for (var key in map) { if (m.toLowerCase().includes(key.toLowerCase())) return map[key]; }
+  return m.substring(0, 4).toUpperCase() || 'EX';
+}
+
+// ═══════════════════════════════════════════
+// THEME TOGGLE — Light/Dark mode
+// ═══════════════════════════════════════════
+function initTheme() {
+  var saved = localStorage.getItem('fs_theme');
+  if (saved === 'light') document.body.classList.add('light-theme');
+}
+function toggleTheme() {
+  var isLight = document.body.classList.toggle('light-theme');
+  localStorage.setItem('fs_theme', isLight ? 'light' : 'dark');
+  var cb = document.getElementById('theme-toggle-cb');
+  if (cb) cb.checked = isLight;
+}
+initTheme();
+
+// ═══════════════════════════════════════════
+// ONBOARDING STATE
+// ═══════════════════════════════════════════
+let currentTier = 'beginner';
+let selectedSplit = 'ppl';
+let selectedWeeks = 16;
+let generatedPlan = null;
+let USER = window.StorageAPI ? StorageAPI.getUser() : {};
+
+window.addEventListener('fs:user-changed', function (event) {
+  USER = event && event.detail && event.detail.user ? event.detail.user : (window.StorageAPI ? StorageAPI.getUser() : {});
+});
+
+const DAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAYS_FULL  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const TODAY_IDX  = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+
+const tierConfig = {
+  beginner: {
+    color:'var(--gold)', badge:'● Beginner', badgeClass:'',
+    sidebarLabel:'What You Get — Beginner',
+    features:['Low-impact cardio & bodyweight exercises','No equipment required — home-friendly','Habit-building focus, short sessions','Macro guidance & calorie targets','Recovery and mobility basics']
+  },
+  intermediate: {
+    color:'var(--gold)', badge:'◆ Intermediate', badgeClass:'intermediate',
+    sidebarLabel:'What You Get — Intermediate',
+    features:['Strength + cardio hybrid training','Progressive overload built in','Gym or home with dumbbells/bands','Macro tracking & nutrition strategy','Weekly intensity variation & deload']
+  },
+  advanced: {
+    color:'var(--gold)', badge:'▲ Advanced', badgeClass:'advanced',
+    sidebarLabel:'What You Get — Advanced',
+    features:['Heavy compound lifting with structured weekly progression','Track your max lifts and push for new personal records each week','Advanced techniques: drop sets, pause reps, and supersets built in','Built-in lighter recovery weeks every 4th week so you don\'t burn out','Conditioning work tailored to your sport or athletic goals']
+  }
+};
+
+function setTier(tier, btn) {
+  currentTier = tier;
+  document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.body.className = tier === 'beginner' ? '' : tier;
+  const cfg = tierConfig[tier];
+  const logoDot = document.getElementById('ob-logo-dot');
+  if (logoDot) logoDot.style.color = cfg.color;
+  // Headline change
+  const accent = document.getElementById('ob-accent');
+  const line3  = document.getElementById('ob-headline-line3');
+  if (tier === 'beginner') {
+    accent.textContent = 'SMARTER,';
+    line3.textContent = 'NOT HARDER';
+  } else {
+    accent.textContent = 'SMARTER';
+    line3.textContent = 'AND HARDER';
+  }
+  accent.style.background = 'linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B)';
+  accent.style.webkitBackgroundClip = 'text';
+  accent.style.webkitTextFillColor = 'transparent';
+  accent.style.backgroundClip = 'text';
+  const badge = document.getElementById('tierBadge');
+  badge.textContent = cfg.badge; badge.className = 'tier-badge ' + cfg.badgeClass;
+  document.getElementById('sidebar-label').textContent = cfg.sidebarLabel;
+  document.getElementById('tier-features').innerHTML = cfg.features.map(f =>
+    `<div class="feature-item"><div class="feature-dot"></div><div class="feature-text">${f}</div></div>`
+  ).join('');
+}
+
+function selectSplit(btn) {
+  document.querySelectorAll('.split-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedSplit = btn.dataset.split;
+}
+
+function selectTimeline(btn) {
+  document.querySelectorAll('.tl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const customRow = document.getElementById('custom-weeks-row');
+  if (btn.dataset.weeks === 'custom') {
+    if (customRow) customRow.style.display = 'block';
+    selectedWeeks = parseInt(document.getElementById('custom-weeks-input').value) || 8;
+  } else if (btn.dataset.weeks === '0') {
+    // Maintain mode — set weeks to 0 which triggers maintain in calcNutrition
+    if (customRow) customRow.style.display = 'none';
+    selectedWeeks = 0;
+  } else {
+    if (customRow) customRow.style.display = 'none';
+    selectedWeeks = parseInt(btn.dataset.weeks);
+  }
+}
+
+function initDayPicker() {
+  document.querySelectorAll('#ob-day-picker .day-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      p.classList.toggle('active');
+      const count = document.querySelectorAll('#ob-day-picker .day-pill.active').length;
+      const lbl = document.getElementById('day-count-label');
+      if (lbl) lbl.textContent = count > 0 ? `— ${count} day${count!==1?'s':''} selected` : '';
+    });
+  });
+  document.querySelectorAll('#ob-equipment-picker .day-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const isExclusive = pill.dataset.equip === 'Full Gym' || pill.dataset.equip === 'Bodyweight Only';
+      if (isExclusive) {
+        document.querySelectorAll('#ob-equipment-picker .day-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+      } else {
+        document.querySelectorAll('#ob-equipment-picker .day-pill').forEach(p => {
+          if (p.dataset.equip === 'Full Gym' || p.dataset.equip === 'Bodyweight Only') p.classList.remove('active');
+        });
+        pill.classList.toggle('active');
+      }
+    });
+  });
+}
+
+function getSelectedDays() { return [...document.querySelectorAll('#ob-day-picker .day-pill.active')].map(p => p.dataset.day).filter(d => d); }
+
+// ── NUTRITION CALCULATOR ──
+function calcNutrition(weightLbs, goalLbs, weeks, gender, age, heightCm, activityLevel) {
+  // Mifflin-St Jeor BMR — requires real height
+  const wKg = weightLbs * 0.453592;
+  const hCm = heightCm || 175; // fallback if not provided
+  const a = parseInt(age) || 30;
+  let bmr;
+  if (gender === 'Female') {
+    bmr = 10 * wKg + 6.25 * hCm - 5 * a - 161;
+  } else {
+    bmr = 10 * wKg + 6.25 * hCm - 5 * a + 5;
+  }
+
+  // Activity multipliers (Harris-Benedict scale)
+  // These represent TOTAL daily activity including gym training
+  const activityMultipliers = {
+    sedentary: 1.375,  // desk job + gym training
+    light:     1.55,   // lightly active + gym
+    moderate:  1.725,  // moderately active + gym
+    very:      1.9     // very active + gym
+  };
+  const multiplier = activityMultipliers[activityLevel] || 1.55;
+  const tdee = Math.round(bmr * multiplier);
+
+  const diff = weightLbs - goalLbs; // positive = lose, negative = gain
+  const mode = weeks === 0 ? 'maintain' : (diff > 2 ? 'lose' : diff < -2 ? 'gain' : 'maintain');
+
+  let calories, surplus, deficit, weeklyChange;
+
+  if (mode === 'lose') {
+    const totalDeficit = diff * 3500;
+    const dailyDeficit = Math.round(totalDeficit / (weeks * 7));
+    // Cap: max 1% body weight per week loss to preserve muscle
+    const maxDailyDeficit = Math.round((weightLbs * 0.01 * 3500) / 7);
+    deficit = Math.max(250, Math.min(750, dailyDeficit, maxDailyDeficit));
+    calories = Math.max(1200, tdee - deficit);
+    weeklyChange = (deficit * 7 / 3500).toFixed(1);
+    surplus = 0;
+  } else if (mode === 'gain') {
+    const totalSurplus = Math.abs(diff) * 3500;
+    const dailySurplus = Math.round(totalSurplus / (weeks * 7));
+    surplus = Math.max(200, Math.min(500, dailySurplus)); // lean bulk: 200-500 cal surplus
+    calories = tdee + surplus;
+    weeklyChange = (surplus * 7 / 3500).toFixed(1);
+    deficit = 0;
+  } else {
+    calories = tdee;
+    surplus = 0; deficit = 0;
+    weeklyChange = '0';
+  }
+
+  // Evidence-based protein targets
+  // For fat loss: use GOAL weight, not current weight — standard recommendation
+  // for overweight individuals (Helms et al., 2014). Using current weight at 300+ lbs
+  // produces absurd targets that discourage beginners.
+  // Cutting: 1.0g/lb of goal weight (preserves muscle in deficit)
+  // Bulking: 0.9g/lb of current weight (sufficient for hypertrophy)
+  // Maintenance: 0.85g/lb of current weight
+  // Fallback formula — only used if AI fails twice
+  let proteinRefWeight, proteinPerLb;
+  if (mode === 'lose') {
+    proteinRefWeight = goalLbs; // use goal weight, not current
+    proteinPerLb = 1.0;
+  } else if (mode === 'gain') {
+    proteinRefWeight = weightLbs; // use current weight for bulking
+    proteinPerLb = 1.1; // bulking needs more protein to support muscle growth
+  } else {
+    proteinRefWeight = weightLbs;
+    proteinPerLb = 1.0;
+  }
+  const protein = Math.round(proteinRefWeight * proteinPerLb);
+
+  // Fat: minimum 20% of calories for hormonal health, target 25-30%
+  const fat = Math.round(calories * 0.27 / 9);
+
+  // Carbs: fill remaining calories — primary fuel for training performance
+  const carbs = Math.max(50, Math.round((calories - protein * 4 - fat * 9) / 4));
+
+  return { calories, protein, fat, carbs, weeklyChange, tdee, deficit, surplus, mode, bmr: Math.round(bmr), multiplier };
+}
+
+// ── PLAN GENERATION ──
+function getSelectedEquipment() {
+  return Array.from(document.querySelectorAll('#ob-equipment-picker .day-pill.active')).map(el => el.dataset.equip);
+}
+
+async function generatePlan() {
+  const name     = document.getElementById('ob-name').value.trim();
+  const age      = document.getElementById('ob-age').value;
+  const gender   = document.getElementById('ob-gender').value;
+  const weight   = parseFloat(document.getElementById('ob-weight').value);
+  const goal     = parseFloat(document.getElementById('ob-goal').value);
+  const heightFt = parseInt(document.getElementById('ob-height-ft').value) || 0;
+  const heightIn = parseInt(document.getElementById('ob-height-in').value) || 0;
+  const activity = document.getElementById('ob-activity').value;
+  const injuries = document.getElementById('ob-injuries').value.trim();
+  const bodyGoals = (document.getElementById('ob-body-goals') || {}).value ? document.getElementById('ob-body-goals').value.trim() : '';
+  const personalRules = (document.getElementById('ob-rules') || {}).value ? document.getElementById('ob-rules').value.trim() : '';
+  const selDays  = getSelectedDays();
+  const duration = document.getElementById('ob-duration').value;
+  const equipment = getSelectedEquipment();
+
+  // Validate each field individually for clear feedback
+  const missing = [];
+  if (!age) missing.push('Age');
+  if (!gender) missing.push('Gender');
+  if (!weight) missing.push('Current Weight');
+  if (!goal) missing.push('Goal Weight');
+  if (!heightFt) missing.push('Height (feet)');
+  if (!activity) missing.push('Activity Level');
+  if (selDays.length === 0) missing.push('Gym Days');
+  if (!duration) missing.push('Session Length');
+  if (equipment.length === 0) missing.push('Available Equipment');
+  if (missing.length > 0) {
+    showToast('Please fill in: ' + missing.join(', '), 'warning', 4000);
+    return;
+  }
+
+  const heightCm = Math.round((heightFt * 12 + heightIn) * 2.54);
+  
+  // AI determines macros — not a formula. The AI sees the full picture.
+  const heightStr = heightFt + "'" + heightIn + '"';
+  const modeHint = weight > goal ? 'fat loss' : weight < goal ? 'muscle gain' : 'maintenance';
+  const nutritionPrompt = `You are an elite sports nutritionist creating a personalized nutrition plan. This is NOT a bodybuilding calculator. You must consider the WHOLE PERSON.
+
+CLIENT PROFILE:
+- ${age}yo ${gender}, ${heightStr} (${heightCm}cm)
+- Current weight: ${weight}lbs, Goal weight: ${goal}lbs
+- Activity level: ${activity}, Experience: ${currentTier}
+- Training: ${selDays.length} days/week, ${duration} sessions
+- Timeline: ${selectedWeeks === 0 ? 'Ongoing' : selectedWeeks + ' weeks'}
+${bodyGoals ? '- Their goals in their own words: "' + bodyGoals + '"' : ''}
+${injuries ? '- Injuries/limitations: ' + injuries : ''}
+
+YOUR JOB: Set calories, protein, carbs, and fat that are RIGHT FOR THIS SPECIFIC PERSON.
+
+CRITICAL RULES:
+- Calculate TDEE using Mifflin-St Jeor with their actual stats.
+- For ${modeHint}: set an appropriate caloric ${weight > goal ? 'deficit. Safe rate: 0.5-1% bodyweight loss per week. Never below 1500cal for men or 1200cal for women.' : weight < goal ? 'surplus. Lean bulk: 200-500cal over TDEE.' : 'intake at TDEE.'}
+- PROTEIN: Set based on the person's goal and body composition context.
+  * For MUSCLE GAIN / BULKING: 1.0-1.2g per pound of CURRENT body weight. A ${weight}lb person bulking needs ${Math.round(weight * 1.1)}g+ protein, not less. More muscle requires more protein.
+  * For FAT LOSS: Use GOAL WEIGHT as the reference, not current weight. 0.8-1.0g per pound of goal weight. A 300lb person targeting 250lbs needs ~200-250g, not 300g+.
+  * For MAINTENANCE: 0.85-1.0g per pound of current body weight.
+  * Never set protein below 130g for any adult male or 100g for any adult female regardless of goal.
+- Consider their STARTING POINT. A ${currentTier} at ${weight}lbs probably eats far less protein than an advanced lifter. Set a target that stretches them but is achievable. The program phases can progressively increase targets later.
+- Fat: 25-30% of calories for hormonal health. Never below 20%.
+- Carbs: remainder after protein and fat are set. Primary fuel for training.
+
+Respond with ONLY this JSON, no explanation:
+{"calories":NUMBER,"protein":NUMBER,"fat":NUMBER,"carbs":NUMBER,"mode":"lose|gain|maintain","weeklyChange":"NUMBER","tdee":NUMBER,"reasoning":"1 sentence explaining why these specific numbers for this person"}`;
+
+  let nutrition;
+  // Try AI twice before falling back
+  for (let _attempt = 0; _attempt < 2; _attempt++) {
+    try {
+      const nutritionRaw = await callClaude(
+        [{ role: 'user', content: nutritionPrompt }],
+        { system: 'You are a sports nutritionist. Respond ONLY with valid JSON. No markdown, no explanation.', max_tokens: 500, timeout: 30000 }
+      );
+      let clean = nutritionRaw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
+      const jsonStart = clean.search(/\{/);
+      if (jsonStart > 0) clean = clean.substring(jsonStart);
+      const aiNutrition = JSON.parse(clean);
+      if (aiNutrition.calories && aiNutrition.protein && aiNutrition.fat && aiNutrition.carbs) {
+        nutrition = {
+          calories: Math.round(aiNutrition.calories),
+          protein: Math.round(aiNutrition.protein),
+          fat: Math.round(aiNutrition.fat),
+          carbs: Math.round(aiNutrition.carbs),
+          mode: aiNutrition.mode || modeHint.replace('fat loss','lose').replace('muscle gain','gain'),
+          weeklyChange: String(aiNutrition.weeklyChange || '0'),
+          tdee: Math.round(aiNutrition.tdee || aiNutrition.calories),
+          reasoning: aiNutrition.reasoning || '',
+          source: 'ai'
+        };
+        console.log('[Nutrition] AI-determined (attempt ' + (_attempt+1) + '):', nutrition.calories + 'cal', nutrition.protein + 'g pro', '—', nutrition.reasoning);
+        break;
+      } else {
+        throw new Error('Missing fields');
+      }
+    } catch (e) {
+      console.warn('[Nutrition] AI attempt ' + (_attempt+1) + ' failed:', e.message);
+      if (_attempt === 1) {
+        // Final fallback — simple formula, but use goal weight for protein
+        console.warn('[Nutrition] Using formula fallback');
+        nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
+        nutrition.source = 'formula';
+      }
+    }
+  }
+
+  USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, bodyGoals, personalRules, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
+
+  // Auto-calculate water goal: half bodyweight in oz, capped at 128oz (1 gallon)
+  if (!lsGet('fs_water_goal_custom')) {
+    const autoWaterOz = Math.min(Math.round(weight / 2), 128);
+    lsSet('fs_water_goal', autoWaterOz);
+  }
+
+  document.getElementById('generateBtn').disabled = true;
+  document.querySelector('.main-layout').style.display = 'none';
+  document.getElementById('hero-section').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('results-section').style.display = 'none';
+
+  const msgs = [
+    'Analyzing your body metrics...',
+    'Calculating precise calorie & macro targets...',
+    'Designing your periodized program...',
+    'Selecting exercises for your equipment...',
+    'Optimizing your training split...',
+    'Finalizing your plan...'
+  ];
+  let mi = 0;
+  const miv = setInterval(() => { mi=(mi+1)%msgs.length; document.getElementById('loading-detail').textContent = msgs[mi]; }, 1200);
+
+  try {
+    generatedPlan = await buildPlan(selDays);
+    clearInterval(miv);
+    lsSet('fs_plan', generatedPlan);
+    lsSet('fs_user', USER);
+    renderResults(generatedPlan);
+  } catch(e) {
+    clearInterval(miv);
+    document.getElementById('generateBtn').disabled = false;
+    document.querySelector('.main-layout').style.display = '';
+    document.getElementById('hero-section').style.display = '';
+    document.getElementById('loading').style.display = 'none';
+    showToast(e.message || 'Plan generation failed. Try again.', 'error', 6000);
+  }
+}
+
+// Parse personal rules for banned exercises (e.g. "I don't do lunges" → ["lunge"])
+function _parseBannedExercises(rulesStr) {
+  if (!rulesStr) return [];
+  var banned = [];
+  // Match patterns like: "no lunges", "don't do lunges", "I hate lunges", "avoid lunges", "never lunges", "not lunges", "skip lunges"
+  var patterns = rulesStr.toLowerCase().match(/(?:no|don'?t\s+do|never\s+do|hate|avoid|skip|can'?t\s+do|not?\s+do|never|don'?t\s+want|won'?t\s+do|refuse)\s+([a-z\s\-]+?)(?:\.|,|;|$|and\s|or\s|\n)/gi);
+  if (patterns) {
+    for (var i = 0; i < patterns.length; i++) {
+      var match = patterns[i].replace(/^(?:no|don'?t\s+do|never\s+do|hate|avoid|skip|can'?t\s+do|not?\s+do|never|don'?t\s+want|won'?t\s+do|refuse)\s+/i, '').replace(/[\.\,\;\n]+$/, '').trim();
+      if (match && match.length >= 3 && match.length < 40) {
+        // Singularize trailing 's' for matching (lunges → lunge)
+        var base = match.replace(/s$/, '');
+        banned.push(base);
+      }
+    }
+  }
+  return banned;
+}
+
+async function buildPlan(selDays) {
+  const u = USER;
+  const n = u.nutrition;
+  const heightStr = u.heightFt + "'" + u.heightIn + '"';
+  const equipStr = u.equipment.join(', ') || 'Full Gym';
+  const injuryStr = u.injuries || 'None';
+  const splitLabel = { ppl:'Push/Pull/Legs', ul:'Upper/Lower', fb:'Full Body', ai:'AI Optimized (choose best for me)' }[u.split] || 'Push/Pull/Legs';
+  const gymDaysStr = selDays.join(', ');
+  const modeStr = n.mode === 'lose' ? 'fat loss' : n.mode === 'gain' ? 'muscle gain (lean bulk)' : 'maintenance (body recomposition)';
+
+  const systemPrompt = `You are an elite strength coach. Respond ONLY with a single valid JSON object. No markdown, no code blocks, no explanation. Raw JSON only. Keep ALL strings as short as possible.`;
+
+  const exPerSession = u.tier === 'beginner' ? '3-4' : u.tier === 'intermediate' ? '4-5' : '5-6';
+  const rulesStr = u.personalRules ? u.personalRules.slice(0, 300) : '';
+  const userPrompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
+Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}, ${u.weeks === 0 ? 'ongoing/maintenance' : u.weeks + 'wk'}.
+${u.bodyGoals ? 'Body goals: ' + u.bodyGoals.slice(0, 150) : ''}
+
+Return ONLY this JSON structure:
+{"planName":"short name","tagline":"short","philosophy":"1 sentence","schedule":[{"day":"Monday","type":"workout","badge":"Push","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
+
+CRITICAL RULES:
+- All 7 days Mon-Sun must be included
+- Gym days: ${gymDaysStr}. All other days are rest.
+- ${exPerSession} exercises per workout
+- Exercise names: 2-3 words max (e.g. "Bench Press" not "Barbell Flat Bench Press")
+- muscles: single word (e.g. "Chest" not "Chest, Front Delts")
+- philosophy: 1 short sentence only
+- Equipment: ${equipStr}. Avoid: ${injuryStr}
+${rulesStr ? '- USER PERSONAL RULES (MUST OBEY — these override everything else): ' + rulesStr : ''}`;
+
+  // Try up to 3 attempts with progressively simpler prompts
+  let parsed;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let prompt = userPrompt;
+    if (attempt === 1) {
+      prompt = userPrompt + '\n\nIMPORTANT: Keep exercise names SHORT (2-3 words max). Keep philosophy under 50 words. Minimize all string lengths to fit within token limits.';
+    } else if (attempt === 2) {
+      // Stripped-down prompt — shorter but KEEP personal rules
+      prompt = `${u.age}yo ${u.gender}, ${heightStr}, ${u.weight}→${u.goal}lbs, ${u.activity}, ${u.tier}, goal: ${modeStr}.
+Equip: ${equipStr}. Injuries: ${injuryStr}. Days: ${gymDaysStr} (${selDays.length}x/wk), ${u.duration}, ${splitLabel}.
+Return ONLY this JSON structure:
+{"planName":"short name","tagline":"short","philosophy":"1 sentence","schedule":[{"day":"Monday","type":"workout","badge":"Push","exercises":[{"name":"Bench Press","sets":4,"reps":"6-8","rest":120,"muscles":"Chest"}]},{"day":"Tuesday","type":"rest","badge":"Rest","exercises":[]}]}
+RULES: All 7 days Mon-Sun. Gym: ${gymDaysStr}. ${exPerSession} exercises per workout. Short names. Equipment: ${equipStr}.${rulesStr ? ' MUST OBEY: ' + rulesStr : ''}`;
+    }
+
+    const raw = await callClaude(
+      [{ role: 'user', content: prompt }],
+      { system: systemPrompt, max_tokens: 8000, timeout: 90000 }
+    );
+
+    try {
+      let clean = raw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
+      // Attempt direct parse first
+      try { parsed = JSON.parse(clean); break; } catch(_) {}
+      // Aggressive JSON repair for truncated responses
+      let repaired = clean;
+      // Fix: strip any non-JSON prefix (AI sometimes adds text before the JSON)
+      const jsonStart = repaired.search(/[\[{]/);
+      if (jsonStart > 0) repaired = repaired.substring(jsonStart);
+      // Remove any trailing incomplete string (unclosed quote)
+      if ((repaired.match(/"/g) || []).length % 2 !== 0) {
+        repaired = repaired.replace(/"[^"]*$/, '"');
+      }
+      // Remove trailing incomplete key-value patterns
+      repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
+      repaired = repaired.replace(/,\s*"[^"]*":\s*\d*$/, '');
+      repaired = repaired.replace(/,\s*"[^"]*":\s*$/, '');
+      repaired = repaired.replace(/,\s*"[^"]*$/, '');
+      repaired = repaired.replace(/,\s*$/, '');
+      // Remove trailing incomplete object/array entries (handle nested structures)
+      // Repeatedly strip the last incomplete object/array until stable
+      let prevLen = -1;
+      while (repaired.length !== prevLen) {
+        prevLen = repaired.length;
+        repaired = repaired.replace(/,\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*$/, '');
+        repaired = repaired.replace(/,\s*\[[^\]]*$/, '');
+        repaired = repaired.replace(/,\s*$/, '');
+      }
+      // Count and close unclosed brackets/braces (outside of strings)
+      let inStr = false, braceCount = 0, bracketCount = 0;
+      for (let ci = 0; ci < repaired.length; ci++) {
+        const ch = repaired[ci];
+        if (ch === '"' && (ci === 0 || repaired[ci-1] !== '\\')) { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (ch === '{') braceCount++;
+        else if (ch === '}') braceCount--;
+        else if (ch === '[') bracketCount++;
+        else if (ch === ']') bracketCount--;
+      }
+      for (let i = 0; i < bracketCount; i++) repaired += ']';
+      for (let i = 0; i < braceCount; i++) repaired += '}';
+      parsed = JSON.parse(repaired);
+      if (attempt > 0) console.log('[PlanGen] Succeeded on attempt ' + (attempt + 1) + ' with JSON repair');
+      break;
+    } catch(e) {
+      console.warn('[PlanGen] Attempt ' + (attempt + 1) + ' failed:', e.message);
+      if (attempt === 2) throw new Error('Plan generation failed after 3 attempts. Please try again — if this keeps happening, try simplifying your goals or rules.');
+    }
+  }
+
+  // Validate the parsed plan has required fields — accept multiple possible key names
+  const sched = parsed.schedule || parsed.weekly_schedule || parsed.weeklySchedule || parsed.days || parsed.plan;
+  if (!parsed || !sched || !Array.isArray(sched) || sched.length < 7) {
+    // If we got partial data (e.g. 5 of 7 days), pad with rest days rather than failing
+    if (parsed && sched && Array.isArray(sched) && sched.length >= 3) {
+      console.warn('[PlanGen] Partial schedule (' + sched.length + '/7 days) — padding with rest days');
+      const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      while (sched.length < 7) {
+        sched.push({ day: allDays[sched.length], type: 'rest', badge: 'Rest', exercises: [] });
+      }
+    } else {
+      throw new Error('AI returned an incomplete plan. Please try again.');
+    }
+  }
+
+  // Enrich exercises with DB data (sets/reps/rest overridden by AI, but pull muscle images etc.)
+  // Also filter out exercises that violate personal rules
+  const bannedExercises = _parseBannedExercises(rulesStr);
+  const schedule = sched.map(day => {
+    try {
+      if (day.type === 'rest' || !day.exercises || day.exercises.length === 0) {
+        return { day: day.day, type: 'rest', badge: day.badge || 'Rest', workout: 'Rest day. Recover, hydrate, and let your muscles rebuild.', exercises: [] };
+      }
+      const exercises = (day.exercises || []).filter(ex => {
+        // Check against banned exercises from personal rules
+        const exLower = ex.name.toLowerCase();
+        for (var bi = 0; bi < bannedExercises.length; bi++) {
+          if (exLower.includes(bannedExercises[bi])) {
+            console.log('[PlanGen] Filtered out "' + ex.name + '" — matches personal rule ban on "' + bannedExercises[bi] + '"');
+            return false;
+          }
+        }
+        return true;
+      }).map(ex => {
+        const db = getExerciseData(ex.name);
+        // Cap rest at 120s — compound lifts get max 120s, accessories less
+        const rawRest = ex.rest || db.rest;
+        const cappedRest = Math.min(rawRest, 120);
+        return {
+          name: ex.name,
+          sets: ex.sets || db.sets,
+          reps: ex.reps || db.reps,
+          rest: cappedRest,
+          muscles: ex.muscles || db.muscles,
+          ytId: db.yt || null
+        };
+      });
+      return {
+        day: day.day,
+        type: 'workout',
+        badge: day.badge,
+        workout: exercises.map(e => e.name + ' ' + e.sets + '×' + e.reps).join(', '),
+        exercises
+      };
+    } catch(mapErr) {
+      // If any single day fails to parse, make it a rest day rather than crashing
+      return { day: day.day || 'Day', type: 'rest', badge: 'Rest', workout: 'Rest day.', exercises: [] };
+    }
+  });
+
+  const nu = USER.nutrition;
+  return {
+    name: parsed.planName,
+    tagline: parsed.tagline,
+    philosophy: parsed.philosophy,
+    calorie_target: nu.calories.toLocaleString() + ' cal/day',
+    protein_target: nu.protein + 'g/day',
+    weekly_loss: '~' + nu.weeklyChange + ' lbs/week',
+    mode: nu.mode,
+    timeline: u.weeks === 0 ? 'Ongoing (Maintain)' : u.weeks + ' weeks',
+    workout_philosophy: parsed.philosophy,
+    weekly_schedule: schedule
+  };
+}
+
+function renderResults(plan) {
+  document.getElementById('loading').style.display = 'none';
+  const tier = currentTier;
+  document.getElementById('plan-name').textContent = plan.name;
+  document.getElementById('plan-tagline').textContent = plan.tagline;
+  const rtb = document.getElementById('results-tier-badge');
+  rtb.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+  rtb.className = 'results-tier-badge ' + (tier==='beginner'?'':tier);
+
+  const n = USER.nutrition;
+  // Populate myplan tab too
+  const myplanGrid = document.getElementById('myplan-results-grid');
+  const myplanBanner = document.getElementById('myplan-banner');
+  if (myplanBanner) myplanBanner.innerHTML = `<div class="results-banner" style="border-radius:14px;margin-bottom:0"><div><h2>${plan.name}</h2><p>${plan.tagline}</p></div><div class="results-tier-badge">${USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1)}</div></div>`;
+  document.getElementById('results-grid').innerHTML = [
+    { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', title:'YOUR GOAL', html:`<ul style="margin-top:4px;margin-left:14px"><li>Current weight: <strong>${USER.weight} lbs</strong></li><li>Goal weight: <strong>${USER.goal} lbs</strong></li><li>Timeline: <strong>${plan.timeline}</strong></li>${n.mode==='maintain'?'<li>Maintaining current weight</li>':`<li>${n.mode==='gain'?'Gaining':'Losing'} <strong>${Math.abs(parseFloat(n.weeklyChange))} lbs/week</strong></li>`}</ul>` },
+    { icon:'🥩', title:'NUTRITION TARGETS', html:`<p><strong>${plan.calorie_target}</strong> daily calories</p><p><strong>${plan.protein_target}</strong> protein</p><p style="margin-top:6px;color:var(--dim);font-size:0.83rem">Carbs: ${USER.nutrition.carbs}g · Fat: ${USER.nutrition.fat}g${USER.nutrition.tdee ? ' · TDEE: ' + USER.nutrition.tdee + ' cal' : ''}</p>${USER.nutrition.reasoning ? '<p style="margin-top:8px;color:var(--off);font-size:0.82rem;font-style:italic">' + USER.nutrition.reasoning + '</p>' : ''}` },
+    { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', title:'TRAINING APPROACH', html:`<ul style="margin-top:4px;margin-left:14px">${(plan.workout_philosophy||plan.philosophy||'Personalized program built for your goals.').split('. ').filter(s=>s.trim()).map(s=>`<li style="margin-bottom:6px">${s.trim().replace(/\.$/,'')}</li>`).join('')}</ul>` },
+  ].map(c=>`<div class="r-card"><div class="r-card-icon">${c.icon}</div><h3>${c.title}</h3>${c.html}</div>`).join('');
+
+  document.getElementById('week-card').innerHTML = '<h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> WEEK 1 SCHEDULE</h3>' +
+    plan.weekly_schedule.map(d=>{
+      const tagCls = d.type==='rest' ? 'rest' : 'workout '+(tier!=='beginner'?tier:'');
+      return `<div class="day-row"><div class="day-name">${d.day}</div><div class="day-workout"><strong style="color:var(--off)">${d.badge}</strong> — ${d.workout.length>80?d.workout.slice(0,80)+'...':d.workout}</div><div class="day-tag ${tagCls}">${d.type==='rest'?'Rest':'Train'}</div></div>`;
+    }).join('');
+
+  const rs = document.getElementById('results-section');
+  rs.style.display = 'block';
+  rs.scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('generateBtn').disabled = false;
+  renderMyPlan(generatedPlan);
+  
+  // Generate AI explanation of the plan
+  _generatePlanExplanation(plan);
+}
+
+async function _generatePlanExplanation(plan) {
+  const el = document.getElementById('plan-explain-text');
+  if (!el) return;
+  const n = USER.nutrition;
+  const ph = TRAINING_PHASES;
+  const phaseOverview = ph.map(p => 'Weeks ' + p.weeks.join('-') + ': ' + p.name + ' (' + p.repRange + ' reps)').join(', ');
+  const prompt = `You are a fitness coach explaining a new program to a client. Write a personalized explanation as exactly 3 paragraphs separated by blank lines.
+
+CLIENT: ${USER.name}, ${USER.age}yo ${USER.gender}, ${USER.weight}lbs → ${USER.goal}lbs goal
+${USER.bodyGoals ? 'Personal goals: ' + USER.bodyGoals : ''}
+${USER.injuries ? 'Injuries/limitations: ' + USER.injuries : ''}
+Level: ${USER.tier}, ${USER.selDays.length} days/week, ${USER.duration} sessions
+
+PROGRAM: "${plan.name}" — ${selectedWeeks} weeks
+Phases: ${phaseOverview}
+Macros: ${n.calories}cal, ${n.protein}g protein, ${n.carbs}g carbs, ${n.fat}g fat (${n.mode} mode, ${n.weeklyChange}lbs/week)
+${n.reasoning ? 'Nutrition rationale: ' + n.reasoning : ''}
+
+Paragraph 1 (3-4 sentences): What this program is and why it fits their goals${USER.injuries ? ' (mention how you adapted for their injuries)' : ''}
+Paragraph 2 (3-4 sentences): Why these specific macro targets — calories, protein amount, the reasoning
+Paragraph 3 (3-4 sentences): What the ${selectedWeeks} weeks will look like phase by phase
+
+Be concise. Use their name. No headers, no bullet points, no markdown.`;
+
+  // Render key stats immediately while AI generates
+  var statsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">'
+    + '<div style="background:var(--dark);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;color:var(--bone);line-height:1">' + n.calories.toLocaleString() + '</div>'
+    + '<div style="font-size:0.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-top:4px">DAILY CAL</div></div>'
+    + '<div style="background:var(--dark);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;color:var(--bone);line-height:1">' + n.protein + 'g</div>'
+    + '<div style="font-size:0.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-top:4px">PROTEIN</div></div>'
+    + '<div style="background:var(--dark);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.8rem;color:var(--bone);line-height:1">' + selectedWeeks + '</div>'
+    + '<div style="font-size:0.6rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-top:4px">WEEKS</div></div></div>';
+
+  el.innerHTML = statsHtml + '<div style="color:var(--dim);font-size:0.84rem">Generating your personalized breakdown...</div>';
+
+  try {
+    var reply = await callClaude([{role:'user',content:prompt}], {max_tokens:500, system:'You are a concise fitness coach. No markdown formatting. No headers. Just 3 paragraphs separated by blank lines.'});
+    // Split into paragraphs
+    var paragraphs = (reply || '').split(/\n\s*\n/).filter(function(p) { return p.trim().length > 20; });
+    if (paragraphs.length < 3) {
+      // If AI didn't split cleanly, try splitting on double newline or just show as-is
+      paragraphs = (reply || '').split(/\n\n/).filter(function(p) { return p.trim().length > 10; });
+    }
+    var labels = ['YOUR PROGRAM', 'YOUR MACROS', 'YOUR PHASES'];
+    var icons = [
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3m0 0v7"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+    ];
+    var cardsHtml = statsHtml;
+    for (var i = 0; i < Math.min(paragraphs.length, 3); i++) {
+      cardsHtml += '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:12px">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--dim)">' + icons[i]
+        + '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:0.85rem;letter-spacing:2px;color:var(--bone)">' + labels[i] + '</span></div>'
+        + '<div style="font-size:0.88rem;color:var(--off);line-height:1.65">' + paragraphs[i].trim() + '</div></div>';
+    }
+    el.innerHTML = cardsHtml;
+    // Persist the explanation so it's available in My Plan tab
+    lsSet('fs_plan_explanation', cardsHtml);
+  } catch(e) {
+    var fallbackHtml = statsHtml + '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px">'
+      + '<div style="font-size:0.88rem;color:var(--off);line-height:1.65">' + plan.name + ' — A ' + selectedWeeks + '-week periodized program with ' + n.calories + ' daily calories and ' + n.protein + 'g protein. Your training phases progress from hypertrophy to strength to power, with deload weeks built in for recovery.</div></div>';
+    el.innerHTML = fallbackHtml;
+    lsSet('fs_plan_explanation', fallbackHtml);
+  }
+}
+
+// ── SIGNUP ──
+function enterApp() {
+  // Hide the CTA section permanently
+  const cta = document.querySelector('.cta-into-app');
+  if (cta) cta.style.display = 'none';
+  lsSet('fs_entered', true);
+  goToDash();
+}
+
+function goBackToResults() {
+  document.getElementById('screen-signup').classList.remove('active');
+  document.getElementById('screen-onboard').style.display = 'block';
+  document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function checkPwStrength(val) {
+  const bars = ['pw1','pw2','pw3','pw4'].map(id=>document.getElementById(id));
+  bars.forEach(b=>b.className='pw-bar');
+  if (!val) return;
+  const score = (val.length>=8?1:0)+(/[A-Z]/.test(val)?1:0)+(/[0-9]/.test(val)?1:0)+(/[^A-Za-z0-9]/.test(val)?1:0);
+  const cls = score<=1?'weak':score<=2?'ok':'strong';
+  for(let i=0;i<score;i++) bars[i].className='pw-bar '+cls;
+}
+
+function submitSignup() {
+  const first = document.getElementById('su-firstname').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const pw    = document.getElementById('su-password').value;
+  if (!first) { document.getElementById('su-firstname').style.borderColor='var(--red)'; setTimeout(()=>document.getElementById('su-firstname').style.borderColor='',1500); return; }
+  if (!email||!email.includes('@')) { document.getElementById('su-email').style.borderColor='var(--red)'; setTimeout(()=>document.getElementById('su-email').style.borderColor='',1500); return; }
+  if (pw.length<8) { document.getElementById('su-password').style.borderColor='var(--red)'; setTimeout(()=>document.getElementById('su-password').style.borderColor='',1500); return; }
+  const last = document.getElementById('su-lastname').value.trim();
+  USER.name = first+(last?' '+last:'');
+  USER.email = email;
+  const btn = document.getElementById('su-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> CREATING YOUR ACCOUNT...';
+  setTimeout(()=>{
+    btn.innerHTML = '✓ REDIRECTING TO CHECKOUT...';
+    setTimeout(()=>{ window.location.href = 'https://link.fastpaydirect.com/payment-link/699794d31a8400387302a088'; }, 600);
+  }, 1400);
+}
+
+function goToDash() {
+  // Restore plan from localStorage if not in memory (e.g. after page reload)
+  if (!generatedPlan) {
+    const saved = lsGet('fs_plan');
+    const savedUser = lsGet('fs_user');
+    if (saved && savedUser) {
+      generatedPlan = saved;
+      USER = savedUser;
+    }
+  }
+  const cta = document.querySelector('.cta-into-app');
+  if (cta && lsGet('fs_entered')) cta.style.display = 'none';
+  // Hide all screens with inline style to override any CSS specificity
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  initDashboard();
+  const dash = document.getElementById('screen-dash');
+  // Must use inline flex — CSS #screen-dash{display:none} beats .screen.active{display:block}
+  dash.style.display = 'flex';
+  dash.style.flexDirection = 'column';
+  dash.style.height = '100vh';
+  try { dash.style.height = '100dvh'; } catch(e) {} // dvh preferred on iOS, silently ignored if unsupported
+  dash.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+let TARGETS = { cal:2000, pro:150, carb:200, fat:55 };
+let GYM_DAYS = [];
+let DAY_WORKOUTS = {};
+let TOTAL_WEEKS = 16;
+let CURRENT_WEEK = 1;
+// PERIODIZATION: training phases — hypertrophy (wks 1-4), strength (5-8), power (9-12), peak (13-16)
+// Every 4th week is a deload (60% volume)
+const TRAINING_PHASES = [
+  { name:'HYPERTROPHY', weeks:[1,2,3,4], repRange:'8-12', setMultiplier:1.0,  intensityLabel:'Moderate weight, high reps. Focus on the squeeze and muscle connection.' },
+  { name:'STRENGTH',    weeks:[5,6,7,8], repRange:'5-8',  setMultiplier:1.1,  intensityLabel:'Heavier weight, lower reps. Control the eccentric. Rest fully between sets.' },
+  { name:'POWER',       weeks:[9,10,11,12], repRange:'3-6', setMultiplier:1.2, intensityLabel:'Near maximal loads. Explosive concentric. Take 2-3 min rest between sets.' },
+  { name:'PEAK',        weeks:[13,14,15,16], repRange:'4-6', setMultiplier:1.15, intensityLabel:'Maintain intensity. Reduce volume. Nail technique at heavy loads.' },
+];
+function getTrainingPhase(week) {
+  return TRAINING_PHASES.find(p => p.weeks.includes(week)) || TRAINING_PHASES[0];
+}
+function isDeloadWeek(week) { return week % 4 === 0; }
+function getPhaseExerciseModifier(week) {
+  if (isDeloadWeek(week)) return { setMult: 0.6, repRange: null, label: 'DELOAD' };
+  const ph = getTrainingPhase(week);
+  return { setMult: ph.setMultiplier, repRange: ph.repRange, label: ph.name };
+}
+let mealLogs = Object.fromEntries(Array.from({length:7},(_,i)=>[i,[]]));
+let wktDone = new Set();
+let nutDay = TODAY_IDX;
+
+// localStorage keys
+const LS = {
+  mealLogs: 'fs_mealLogs',
+  wktDone:  'fs_wktDone',
+  setLogs:  'fs_setLogs',  // { 'dayIdx_exIdx_setIdx': { weight, reps, date } }
+  targets:  'fs_targets',
+  woDraft:  'fs_wo_draft', // { [dayIdx]: { sets: woSets, extraSets: woExtraSets } } — every keystroke persisted
+};
+
+function lsGet(key) {
+  try {
+    if (key === 'fs_user' && window.StorageAPI) return StorageAPI.getUser();
+    return JSON.parse(localStorage.getItem(key));
+  } catch(e) {
+    return null;
+  }
+}
+function lsSet(key, val) {
+  try {
+    if (key === 'fs_user' && window.StorageAPI) {
+      StorageAPI.setUser(val);
+      return;
+    }
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch(e) {}
+}
+function lsRemove(key) {
+  try {
+    if (key === 'fs_user' && window.StorageAPI) {
+      StorageAPI.clearUser();
+      return;
+    }
+    localStorage.removeItem(key);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+// TOAST NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════
+function showToast(message, type, durationMs) {
+  type = type || 'info';     // 'info' | 'error' | 'success' | 'warning'
+  durationMs = durationMs || (type === 'error' ? 5000 : 3000);
+  var container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:90%;max-width:400px';
+    document.body.appendChild(container);
+  }
+  var toast = document.createElement('div');
+  var colors = {
+    error:   'background:rgba(244,63,94,0.95);color:#fff',
+    warning: 'background:rgba(251,146,60,0.95);color:#111',
+    success: 'background:rgba(34,197,94,0.92);color:#fff',
+    info:    'background:rgba(30,30,30,0.95);color:#fff;border:1px solid rgba(255,255,255,0.1)'
+  };
+  toast.style.cssText = (colors[type] || colors.info) + ';padding:12px 18px;border-radius:12px;font-size:0.82rem;font-weight:500;line-height:1.4;pointer-events:auto;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 24px rgba(0,0,0,0.3);opacity:0;transform:translateY(-10px);transition:opacity 0.25s,transform 0.25s';
+  toast.textContent = message;
+  container.appendChild(toast);
+  // Animate in
+  requestAnimationFrame(function() {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+  // Animate out and remove
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, durationMs);
+}
+
+// ── ANTHROPIC API (via Cloudflare Worker proxy) ──
+const AI_PROXY = 'https://fitstart-api.noah-0c3.workers.dev';
+
+async function callClaude(messages, opts = {}) {
+  // Quick offline check
+  if (!navigator.onLine) {
+    showToast('You\'re offline. Connect to the internet and try again.', 'error');
+    throw new Error('No internet connection.');
+  }
+  const body = {
+    model: opts.model || 'claude-sonnet-4-20250514',
+    max_tokens: opts.max_tokens || 2048,
+    messages: messages
+  };
+  if (opts.system) body.system = opts.system;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), opts.timeout || 60000);
+  try {
+    const response = await fetch(AI_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      if (response.status === 429) {
+        showToast('Too many requests — wait a moment and try again.', 'warning');
+        throw new Error('Slow down — too many requests. Try again in a minute.');
+      }
+      if (response.status === 503 || response.status === 502) {
+        showToast('AI service is temporarily down. Try again in a few minutes.', 'error');
+        throw new Error('AI service is temporarily unavailable.');
+      }
+      if (response.status >= 500) {
+        showToast('Server error. Try again shortly.', 'error');
+        throw new Error('Server error (' + response.status + '). Try again.');
+      }
+      throw new Error(err.error?.message || 'AI is temporarily unavailable. Try again shortly.');
+    }
+    const data = await response.json();
+    return (data.content?.[0]?.text || '').trim();
+  } catch(e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') {
+      showToast('Request timed out. Check your connection and try again.', 'warning');
+      throw new Error('Request timed out. Try again.');
+    }
+    if (e.message && e.message.includes('Failed to fetch')) {
+      showToast('Can\'t reach the server. Check your internet connection.', 'error');
+      throw new Error('Network error — can\'t reach server.');
+    }
+    throw e;
+  }
+}
+
+function loadFromStorage() {
+  const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
+  const wd = lsGet(LS.wktDone);  if (wd) wktDone = new Set(wd);
+  const tg = lsGet(LS.targets);  if (tg) TARGETS = tg;
+  // Reload plan from localStorage (critical for coach-modified plans)
+  const savedPlan = lsGet('fs_plan');
+  if (savedPlan && savedPlan.weekly_schedule) {
+    generatedPlan = savedPlan;
+    // Rebuild DAY_WORKOUTS from updated plan
+    GYM_DAYS = [];
+    DAY_WORKOUTS = {};
+    var _banList = (USER && USER.personalRules) ? _parseBannedExercises(USER.personalRules) : [];
+    generatedPlan.weekly_schedule.forEach(function(d, i) {
+      if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
+        // Filter banned exercises at load time
+        var filtered = d.exercises.filter(function(ex) {
+          var exLower = ex.name.toLowerCase();
+          for (var bi = 0; bi < _banList.length; bi++) {
+            if (exLower.includes(_banList[bi])) {
+              console.log('[LoadFilter] Removed "' + ex.name + '" - matches ban on "' + _banList[bi] + '"');
+              return false;
+            }
+          }
+          return true;
+        });
+        GYM_DAYS.push(i);
+        DAY_WORKOUTS[i] = { name: d.badge, focus: (d.workout || '').slice(0, 80), exercises: filtered };
+      }
+    });
+  }
+  // Reload user data
+  const savedUser = lsGet('fs_user');
+  if (savedUser && savedUser.name) USER = savedUser;
+  // Calculate current training week from program start date
+  const startDate = lsGet('fs_program_start');
+  if (startDate) {
+    const msElapsed = Date.now() - new Date(startDate).getTime();
+    const weeksElapsed = Math.floor(msElapsed / (7 * 24 * 60 * 60 * 1000)) + 1;
+    CURRENT_WEEK = Math.min(weeksElapsed, TOTAL_WEEKS);
+  } else {
+    lsSet('fs_program_start', new Date().toISOString());
+    CURRENT_WEEK = 1;
+  }
+}
+
+function saveToStorage() {
+  lsSet(LS.mealLogs, mealLogs);
+  lsSet(LS.wktDone, [...wktDone]);
+  lsSet(LS.targets, TARGETS);
+  // Refresh charts if on progress tab
+  if (document.getElementById('view-progress') &&
+      document.getElementById('view-progress').style.display !== 'none') {
+    renderNutritionChart();
+  }
+}
+
+// Set log: store previous week's weights/reps
+// ── EXERCISE LOG — keyed by exercise name, not day slot ──
+function getExLogs() { return lsGet('fs_exlogs') || {}; }
+
+function saveSet(dayIdx, exIdx, setIdx, weight, reps) {
+  // Allow partial saves for draft; full write to exlogs only when both present
+  const exName = (woWorkout && woWorkout.exercises[exIdx]) ? woWorkout.exercises[exIdx].name : null;
+  if (!exName) return;
+  const hasWeight = weight != null && String(weight).trim() !== '';
+  const hasReps = reps != null && String(reps).trim() !== '';
+  if (hasWeight && hasReps) {
+    // Persist to set logs and exlogs for completed set
+    const logs = lsGet(LS.setLogs) || {};
+    logs[`${dayIdx}_${exIdx}_${setIdx}`] = { weight, reps, date: new Date().toLocaleDateString() };
+    lsSet(LS.setLogs, logs);
+    const exlogs = getExLogs();
+    if (!exlogs[exName]) exlogs[exName] = [];
+    const today = todayDateStr();
+    let session = exlogs[exName].find(s => s.date === today);
+    if (!session) {
+      session = { date: today, sets: [] };
+      exlogs[exName].unshift(session);
+      exlogs[exName] = exlogs[exName].slice(0, 30);
+    }
+    session.sets[setIdx] = { weight: parseFloat(weight), reps: parseInt(reps) };
+    lsSet('fs_exlogs', exlogs);
+  }
+}
+
+function getPrevSet(dayIdx, exIdx, setIdx) {
+  const exName = (woWorkout && woWorkout.exercises[exIdx]) ? woWorkout.exercises[exIdx].name : null;
+  if (exName) {
+    const exlogs = getExLogs();
+    const sessions = exlogs[exName] || [];
+    const today = todayDateStr();
+    const prev = sessions.find(s => s.date !== today);
+    if (prev && prev.sets && prev.sets[setIdx]) {
+      return { weight: prev.sets[setIdx].weight, reps: prev.sets[setIdx].reps, date: prev.date };
+    }
+  }
+  const logs = lsGet(LS.setLogs) || {};
+  return logs[`${dayIdx}_${exIdx}_${setIdx}`] || null;
+}
+
+function getWorkoutDraft(dayIdx) {
+  const all = lsGet(LS.woDraft) || {};
+  return all[String(dayIdx)] || null;
+}
+
+function persistWorkoutDraft() {
+  if (woWorkout == null) return;
+  const all = lsGet(LS.woDraft) || {};
+  all[String(woDay)] = { sets: JSON.parse(JSON.stringify(woSets)), extraSets: JSON.parse(JSON.stringify(woExtraSets)) };
+  lsSet(LS.woDraft, all);
+}
+
+function getLastSessionSummary(exName) {
+  if (!exName) return null;
+  const exlogs = getExLogs();
+  const sessions = exlogs[exName] || [];
+  const today = todayDateStr();
+  const prev = sessions.find(s => s.date !== today);
+  if (!prev || !prev.sets || !prev.sets.length) return null;
+  const setStr = prev.sets.filter(Boolean).map(s => `${s.weight}×${s.reps}`).join(', ');
+  return `${setStr} · ${prev.date}`;
+}
+
+function _getOverloadSuggestion(exName) {
+  const exlogs = getExLogs();
+  const sessions = exlogs[exName] || [];
+  const today = todayDateStr();
+  const prev = sessions.find(s => s.date !== today);
+  if (!prev || !prev.sets || !prev.sets.length) return null;
+  // Find the best set from last time (highest weight)
+  let bestW = 0, bestR = 0;
+  prev.sets.filter(Boolean).forEach(s => {
+    const w = parseFloat(s.weight) || 0;
+    const r = parseInt(s.reps) || 0;
+    if (w > bestW || (w === bestW && r > bestR)) { bestW = w; bestR = r; }
+  });
+  if (!bestW) return null;
+  // Suggest: if reps < 10, try +1 rep same weight; if reps >= 10, try +5lbs same reps
+  if (bestR >= 10) {
+    return `Try ${bestW + 5}lbs × ${bestR} today (last: ${bestW}×${bestR})`;
+  } else {
+    return `Try ${bestW}lbs × ${bestR + 1} today (last: ${bestW}×${bestR})`;
+  }
+}
+
+// Helper: get fresh exercise list for a workout name + tier (used by plan auto-update)
+function _getFreshExercises(workoutName, tier) {
+  const workoutExercises = {
+    'Push Day': {
+      beginner:     ['Bench Press','Shoulder Press','Incline DB Press','Lateral Raises','Tricep Pushdown'],
+      intermediate: ['Bench Press','Incline DB Press','Shoulder Press','Lateral Raises','Cable Crossover','Tricep Pushdown'],
+      advanced:     ['Bench Press','Incline DB Press','Shoulder Press','Lateral Raises','Cable Crossover','Skull Crushers']
+    },
+    'Pull Day': {
+      beginner:     ['Barbell Row','Lat Pulldown','Cable Row','Face Pulls','Barbell Curl'],
+      intermediate: ['Barbell Row','Lat Pulldown','Cable Row','Face Pulls','Barbell Curl','Hammer Curls'],
+      advanced:     ['Deadlift','Barbell Row','Lat Pulldown','Face Pulls','Barbell Curl','Hammer Curls']
+    },
+    'Legs': {
+      beginner:     ['Goblet Squat','Romanian Deadlift','Leg Press','Leg Curl','Calf Raises'],
+      intermediate: ['Back Squat','Romanian Deadlift','Leg Press','Leg Curl','Calf Raises'],
+      advanced:     ['Back Squat','Romanian Deadlift','Leg Press','Walking Lunges','Leg Curl','Calf Raises']
+    },
+    'Upper Body': {
+      beginner:     ['Bench Press','Barbell Row','Shoulder Press','Lat Pulldown','Barbell Curl'],
+      intermediate: ['Bench Press','Barbell Row','Shoulder Press','Lat Pulldown','Hammer Curls'],
+      advanced:     ['Bench Press','Barbell Row','Shoulder Press','Lat Pulldown','Lateral Raises','Hammer Curls']
+    },
+    'Lower Body': {
+      beginner:     ['Goblet Squat','Romanian Deadlift','Leg Press','Calf Raises'],
+      intermediate: ['Back Squat','Romanian Deadlift','Leg Press','Calf Raises'],
+      advanced:     ['Back Squat','Romanian Deadlift','Leg Press','Leg Curl','Calf Raises']
+    },
+    'Full Body': {
+      beginner:     ['Goblet Squat','Bench Press','Barbell Row','Shoulder Press','Plank'],
+      intermediate: ['Back Squat','Bench Press','Barbell Row','Shoulder Press','Plank'],
+      advanced:     ['Back Squat','Bench Press','Barbell Row','Shoulder Press','Romanian Deadlift','Dead Bug']
+    }
+  };
+  const exNames = workoutExercises[workoutName] && workoutExercises[workoutName][tier];
+  if (!exNames) return null;
+  return exNames.map(name => {
+    const db = getExerciseData(name);
+    return { name, sets: db.sets, reps: db.reps, rest: db.rest, muscles: db.muscles, ytId: db.yt };
+  });
+}
+
+function initDashboard() {
+  if (!generatedPlan || !generatedPlan.weekly_schedule || !Array.isArray(generatedPlan.weekly_schedule)) {
+    // Plan data is missing or corrupt — clear and show onboarding
+    localStorage.removeItem('fs_plan');
+    lsRemove('fs_user');
+    localStorage.removeItem('fs_entered');
+    const dash = document.getElementById('screen-dash');
+    if (dash) {
+      const errDiv = document.createElement('div');
+      errDiv.style.cssText = 'padding:40px;color:#fff;font-size:1rem;text-align:center';
+      errDiv.innerHTML = '<h2 style="margin-bottom:16px">⚠️ Plan needs to be regenerated</h2><p style="color:#aaa;margin-bottom:20px">Your saved plan is outdated. Please create a new plan.</p><button onclick="localStorage.clear();location.reload()" style="padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-weight:700;cursor:pointer">Start Fresh</button>';
+      dash.appendChild(errDiv);
+    }
+    return;
+  }
+
+  // Auto-update workout exercises if plan was generated with old templates (v2 = compound-first)
+  const PLAN_VERSION = 5;
+  if (generatedPlan._v !== PLAN_VERSION && generatedPlan.weekly_schedule && USER) {
+    const t = USER.tier || 'beginner';
+    generatedPlan.weekly_schedule.forEach(d => {
+      if (d.type !== 'workout' || !d.badge) return;
+      const freshExList = _getFreshExercises(d.badge, t);
+      if (freshExList) {
+        d.exercises = freshExList;
+        d.workout = freshExList.map(e => `${e.name} ${e.sets}×${e.reps}`).join(', ');
+      }
+    });
+    generatedPlan._v = PLAN_VERSION;
+    lsSet('fs_plan', generatedPlan);
+  }
+
+  loadFromStorage();
+
+  // Auto-calculate water goal from bodyweight: half bodyweight in oz, max 128 (1 gallon)
+  if (USER && USER.weight && !lsGet('fs_water_goal_custom')) {
+    const autoWaterOz = Math.min(Math.round(USER.weight / 2), 128);
+    lsSet('fs_water_goal', autoWaterOz);
+  }
+  // Always set dashboard water goal text immediately
+  const _wg = lsGet('fs_water_goal') || (USER && USER.weight ? Math.min(Math.round(USER.weight / 2), 128) : 64);
+  const _wgEl = document.getElementById('dash-water-goal');
+  if (_wgEl) _wgEl.textContent = 'Goal: ' + _wg + ' oz / day';
+
+  TARGETS = {
+    cal:  USER.nutrition.calories,
+    pro:  USER.nutrition.protein,
+    carb: USER.nutrition.carbs,
+    fat:  USER.nutrition.fat
+  };
+  TOTAL_WEEKS = USER.weeks || 16;
+
+  // Build DAY_WORKOUTS from plan
+  GYM_DAYS = [];
+  DAY_WORKOUTS = {};
+  // Apply personal rules ban filter on every load (not just generation)
+  var _loadBanned = _parseBannedExercises(USER.personalRules || '');
+  generatedPlan.weekly_schedule.forEach((d, i) => {
+    if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
+      GYM_DAYS.push(i);
+      var filteredExes = d.exercises.filter(function(ex) {
+        var exLower = ex.name.toLowerCase();
+        for (var bi = 0; bi < _loadBanned.length; bi++) {
+          if (exLower.includes(_loadBanned[bi])) {
+            console.log('[LoadFilter] Removed "' + ex.name + '" — matches ban on "' + _loadBanned[bi] + '"');
+            return false;
+          }
+        }
+        return true;
+      });
+      DAY_WORKOUTS[i] = {
+        name: d.badge,
+        focus: d.workout.slice(0,80),
+        exercises: filteredExes
+      };
+    }
+  });
+
+  // Nav/header
+  const initials = USER.name ? USER.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+  document.getElementById('dash-avatar').textContent = initials;
+  document.getElementById('dash-username').textContent = USER.name || 'You';
+  document.getElementById('dash-day-title').textContent = DAYS_FULL[TODAY_IDX].toUpperCase();
+  const _phMod = getPhaseExerciseModifier(CURRENT_WEEK);
+  const _phaseLabel = isDeloadWeek(CURRENT_WEEK) ? '⚡ DELOAD WEEK' : _phMod.label + ' PHASE';
+  document.getElementById('dash-day-sub').textContent = `Week ${CURRENT_WEEK} of ${TOTAL_WEEKS} · ${_phaseLabel} · ${generatedPlan.name}`;
+  const pvs=document.getElementById('prog-view-sub'); if(pvs) pvs.textContent = `Week ${CURRENT_WEEK} · ${generatedPlan.name}`;
+  const wps=document.getElementById('wk-pro-sub'); if(wps) wps.textContent = `goal: ${TARGETS.pro}g/day`;
+
+  // Settings defaults
+  document.getElementById('s-name').value   = USER.name || '';
+  document.getElementById('s-weight').value = USER.weight ? USER.weight + ' lbs' : '';
+  document.getElementById('s-goal').value   = USER.goal ? USER.goal + ' lbs' : '';
+  document.getElementById('s-tier').value   = USER.tier ? USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1) : '';
+  const sBodyGoals = document.getElementById('s-body-goals'); if (sBodyGoals) sBodyGoals.value = USER.bodyGoals || '';
+  const sInjuries = document.getElementById('s-injuries'); if (sInjuries) sInjuries.value = USER.injuries || '';
+  const sRules = document.getElementById('s-rules'); if (sRules) sRules.value = USER.personalRules || '';
+  document.getElementById('s-cal').value    = TARGETS.cal;
+  document.getElementById('s-pro').value    = TARGETS.pro;
+  document.getElementById('s-carb').value   = TARGETS.carb;
+  document.getElementById('s-fat').value    = TARGETS.fat;
+
+  var _themeCb = document.getElementById('theme-toggle-cb');
+  if (_themeCb) _themeCb.checked = document.body.classList.contains('light-theme');
+
+  // Progress (null-safe - elements may not exist in all views)
+  const pwCur = document.getElementById('pw-current');
+  if (pwCur) pwCur.innerHTML = USER.weight + ' <span style="font-size:1.2rem;color:var(--dim)">lbs</span>';
+  const pwDet = document.getElementById('pw-detail');
+  if (pwDet) pwDet.textContent = 'Goal: ' + USER.goal + ' lbs';
+  const pwRng = document.getElementById('pw-range');
+  if (pwRng) pwRng.innerHTML = '<span>'+USER.weight+' lbs</span><span>Today</span><span>'+USER.goal+' lbs</span>';
+
+  // Program stats
+  const ptv=document.getElementById('prog-tier-val'); if(ptv) ptv.textContent = USER.tier ? USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1) : '—';
+  const ppn=document.getElementById('prog-plan-name'); if(ppn) ppn.textContent = generatedPlan.name;
+  const pgd=document.getElementById('prog-gym-days'); if(pgd) pgd.textContent = GYM_DAYS.map(i=>DAYS_SHORT[i]).join(' · ');
+  const pdc=document.getElementById('prog-days-count'); if(pdc) pdc.textContent = GYM_DAYS.length + ' days/week';
+  const pf=document.getElementById('prog-fraction'); if(pf) pf.textContent = `${CURRENT_WEEK} / ${TOTAL_WEEKS}`;
+  const ppb=document.getElementById('prog-pct-bar'); if(ppb) ppb.style.width = (CURRENT_WEEK/TOTAL_WEEKS*100) + '%';
+
+  nutDay = TODAY_IDX;
+
+  // ── AI Adaptive Intelligence ──
+  // Runs weekly: checks weight trend, strength progress, and adjusts macros/workouts
+  _runAdaptiveCheck();
+
+  // ── Proactive Coach ──
+  // Checks for morning primer, missed workout nudge, low protein, streak milestones
+  if (typeof runProactiveCoachChecks === 'function') runProactiveCoachChecks();
+
+  try {
+    renderTodayWorkout(); renderTodayMiniLog();
+    refreshDashMacros();
+    renderWeek();
+    renderStreak();
+    renderWeightHistory();
+    renderNutritionChart();
+    renderFreqChart();
+    renderNutritionChart();
+    if (typeof renderTimeline === 'function') renderTimeline();
+    renderProgram();
+    renderSettingsGymDays();
+    renderMyPlan(generatedPlan);
+    saveToStorage();
+  } catch(e) {
+    console.error('Dashboard render error:', e);
+    const main = document.querySelector('#screen-dash .main-content');
+    if (main) main.innerHTML = '<div style="padding:40px;color:#fff"><h2 style="color:#F43F5E;margin-bottom:12px">Error Loading Dashboard</h2><pre style="background:#111;padding:16px;border-radius:8px;font-size:0.8rem;color:#aaa;white-space:pre-wrap">' + e.stack + '</pre><button onclick="localStorage.clear();location.reload()" style="margin-top:16px;padding:12px 24px;background:#D4A520;border:none;border-radius:8px;font-weight:700;cursor:pointer">Clear Data & Restart</button></div>';
+  }
+}
+
+// ═══════════════════════════════════════════
+// AI ADAPTIVE INTELLIGENCE
+// Checks weight trend & workout performance weekly, adjusts macros & workout intensity
+// ═══════════════════════════════════════════
+function _runAdaptiveCheck() {
+  try {
+    const lastCheck = lsGet('fs_adaptive_last');
+    const now = Date.now();
+    // Run at most once per 3 days
+    if (lastCheck && (now - lastCheck) < 3 * 24 * 60 * 60 * 1000) return;
+
+    const weightLog = lsGet('fs_weightLog') || [];
+    if (weightLog.length < 2) return; // Need at least 2 weigh-ins
+
+    // Calculate weight trend (last 2 weeks vs previous 2 weeks)
+    const sorted = [...weightLog].sort((a,b) => new Date(b.date) - new Date(a.date));
+    const recent = sorted.slice(0, Math.min(5, sorted.length));
+    const older = sorted.slice(Math.min(5, sorted.length), Math.min(10, sorted.length));
+    if (older.length === 0) return;
+
+    const avgRecent = recent.reduce((s,w) => s + w.weight, 0) / recent.length;
+    const avgOlder = older.reduce((s,w) => s + w.weight, 0) / older.length;
+    const weeklyChange = avgRecent - avgOlder;
+
+    // Calculate workout volume trend
+    const exLogs = getExLogs();
+    let recentVolume = 0, olderVolume = 0;
+    const twoWeeksAgo = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const fourWeeksAgo = new Date(now - 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    Object.values(exLogs).forEach(sessions => {
+      sessions.forEach(s => {
+        const vol = (s.sets || []).reduce((sum, set) => sum + ((set?.weight || 0) * (set?.reps || 0)), 0);
+        if (s.date >= twoWeeksAgo) recentVolume += vol;
+        else if (s.date >= fourWeeksAgo) olderVolume += vol;
+      });
+    });
+
+    const mode = USER?.nutrition?.mode || 'lose';
+    const currentCal = TARGETS.cal;
+    let newCal = currentCal;
+    let adaptMsg = '';
+
+    if (mode === 'lose') {
+      if (weeklyChange > 0.5) {
+        // Gaining weight while trying to lose — reduce calories
+        newCal = Math.max(1200, currentCal - 150);
+        adaptMsg = `You've gained ~${weeklyChange.toFixed(1)} lbs recently. Reducing daily target to ${newCal} cal to get back on track.`;
+      } else if (weeklyChange < -2) {
+        // Losing too fast — increase slightly to preserve muscle
+        newCal = currentCal + 100;
+        adaptMsg = `You're losing ${Math.abs(weeklyChange).toFixed(1)} lbs/week — great progress! Bumping calories slightly to ${newCal} to preserve muscle.`;
+      } else if (weeklyChange >= -1 && weeklyChange <= -0.3) {
+        adaptMsg = `On track — losing ${Math.abs(weeklyChange).toFixed(1)} lbs/week. Keep it up.`;
+      }
+    } else if (mode === 'gain') {
+      if (weeklyChange < 0) {
+        // Losing weight while trying to gain — increase calories
+        newCal = currentCal + 200;
+        adaptMsg = `You've lost weight while bulking. Increasing target to ${newCal} cal to fuel muscle growth.`;
+      } else if (weeklyChange > 1.5) {
+        // Gaining too fast — reduce surplus to limit fat gain
+        newCal = currentCal - 100;
+        adaptMsg = `Gaining ${weeklyChange.toFixed(1)} lbs/week is too fast. Reducing to ${newCal} cal to minimize fat gain.`;
+      }
+    }
+
+    // Strength progress insight
+    let strengthMsg = '';
+    if (olderVolume > 0 && recentVolume > 0) {
+      const volumeChange = ((recentVolume - olderVolume) / olderVolume * 100);
+      if (volumeChange > 10) {
+        strengthMsg = `Strength is up ${volumeChange.toFixed(0)}% — your progressive overload is working.`;
+      } else if (volumeChange < -10) {
+        strengthMsg = `Volume dropped ${Math.abs(volumeChange).toFixed(0)}%. Consider a deload week, then push harder.`;
+      }
+    }
+
+    // Apply calorie adjustment
+    if (newCal !== currentCal) {
+      TARGETS.cal = newCal;
+      // Scale macros proportionally
+      const ratio = newCal / currentCal;
+      TARGETS.carb = Math.round(TARGETS.carb * ratio);
+      TARGETS.fat = Math.round(TARGETS.fat * ratio);
+      // Protein stays the same or increases
+      lsSet('fs_targets', TARGETS);
+      if (USER && USER.nutrition) {
+        USER.nutrition.calories = newCal;
+        USER.nutrition.carbs = TARGETS.carb;
+        USER.nutrition.fat = TARGETS.fat;
+        lsSet('fs_user', USER);
+      }
+    }
+
+    // Periodization insight
+    let periodMsg = '';
+    if (isDeloadWeek(CURRENT_WEEK)) {
+      periodMsg = `Week ${CURRENT_WEEK} is your DELOAD week — volume is automatically reduced to 60%. Your body is recovering and will come back stronger.`;
+    } else {
+      const ph = getTrainingPhase(CURRENT_WEEK);
+      periodMsg = `${ph.name} PHASE (Week ${CURRENT_WEEK}): ${ph.intensityLabel}`;
+    }
+
+    // Show insight card on dashboard
+    const fullMsg = [periodMsg, adaptMsg, strengthMsg].filter(Boolean).join(' ');
+    if (fullMsg) {
+      lsSet('fs_adaptive_insight', fullMsg);
+      lsSet('fs_adaptive_last', now);
+    }
+    _showAdaptiveInsight();
+
+    // Weekly AI progress report (runs once per week)
+    const lastReport = lsGet('fs_weekly_report_ts');
+    if (!lastReport || (now - lastReport) > 6 * 24 * 60 * 60 * 1000) {
+      _generateWeeklyProgressReport(weeklyChange, recentVolume, olderVolume);
+    }
+  } catch(e) {
+    console.log('Adaptive check error:', e);
+  }
+}
+
+// ── WEEKLY AI PROGRESS REPORT ──
+async function _generateWeeklyProgressReport(weightChange, recentVol, olderVol) {
+  if (!USER) return;
+  try {
+    const workoutDates = new Set(lsGet('fs_workout_dates') || []);
+    const ph = getTrainingPhase(CURRENT_WEEK);
+    const deload = isDeloadWeek(CURRENT_WEEK);
+    const volChange = olderVol > 0 ? ((recentVol - olderVol) / olderVol * 100).toFixed(0) : 'N/A';
+    const prompt = `Generate a concise weekly fitness progress report for ${USER.name || 'this user'}.
+
+Data:
+- Program: Week ${CURRENT_WEEK} of ${TOTAL_WEEKS}, ${deload ? 'DELOAD WEEK' : ph.name + ' PHASE'}
+- Goal: ${USER.nutrition?.mode === 'lose' ? 'Weight loss' : 'Muscle gain'} (current: ${USER.weight}lbs, target: ${USER.goal}lbs)
+- Weekly weight change: ${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} lbs
+- Training volume change (recent vs 2wks prior): ${volChange !== 'N/A' ? volChange + '%' : 'insufficient data'}
+- Workouts completed: ${workoutDates.size} total
+- Daily calorie target: ${TARGETS.cal} cal / ${TARGETS.pro}g protein
+
+Write 3-4 sentences covering: 1) progress assessment, 2) what to focus on this week, 3) one specific, actionable tip. Be direct and motivating. Reference their actual numbers. No fluff.`;
+
+    const report = await callClaude([{ role: 'user', content: prompt }], { max_tokens: 300 });
+    if (report) {
+      lsSet('fs_weekly_report', report);
+      lsSet('fs_weekly_report_ts', Date.now());
+      // Update insight card with report
+      lsSet('fs_adaptive_insight', report);
+      _showAdaptiveInsight();
+    }
+  } catch(e) {
+    console.log('Weekly report error:', e);
+  }
+}
+
+function _showAdaptiveInsight() {
+  const msg = lsGet('fs_adaptive_insight');
+  if (!msg) return;
+  let card = document.getElementById('ai-insight-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'ai-insight-card';
+    card.style.cssText = 'background:linear-gradient(135deg,rgba(212,165,32,0.08),rgba(212,165,32,0.02));border:1px solid rgba(212,165,32,0.2);border-radius:14px;padding:16px;margin-bottom:16px;position:relative';
+    const todayView = document.getElementById('view-today');
+    if (todayView) todayView.insertBefore(card, todayView.firstChild);
+  }
+  const phMod2 = getPhaseExerciseModifier(CURRENT_WEEK);
+  const phLabel2 = isDeloadWeek(CURRENT_WEEK) ? '⚡ DELOAD' : phMod2.label;
+  card.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:1.1rem">🧠</span><span style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1.5px;color:#F2F0EB">AI INSIGHT</span><span style="font-size:0.62rem;font-weight:700;letter-spacing:1.5px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:4px;padding:2px 7px;color:#F2F0EB">${phLabel2} · WK ${CURRENT_WEEK}</span><button onclick="this.parentElement.parentElement.remove();lsSet('fs_adaptive_insight',null)" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.8rem">✕</button></div><p style="font-size:0.82rem;color:var(--off);line-height:1.5;margin:0">${msg}</p><div style="margin-top:10px;display:flex;gap:8px"><button onclick="_generateWeeklyProgressReport(0,0,0)" style="padding:5px 12px;background:rgba(212,165,32,0.1);border:1px solid rgba(212,165,32,0.2);border-radius:6px;color:#F2F0EB;font-size:0.72rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">↻ REFRESH REPORT</button><button onclick="dashNav('coach');document.getElementById('coach-input').value='Give me my weekly progress report and what I should focus on this week';sendCoachMsg()" style="padding:5px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:6px;color:var(--blue);font-size:0.72rem;font-weight:700;cursor:pointer">ASK COACH →</button></div>`;
+}
+
+// ── INIT (called from index.html after all modules load) ──
+function _bootApp() {
+  try {
+    setTier('beginner', document.querySelector('.tier-btn[data-tier="beginner"]'));
+    initDayPicker();
+
+    // Attach workout nav listeners reliably (more robust than onclick on iOS)
+    const prev = document.getElementById('wo-prev-btn');
+    const next = document.getElementById('wo-next-btn');
+    if (prev) prev.addEventListener('click', function(e) { e.stopPropagation(); prevExercise(); });
+    if (next) next.addEventListener('click', function(e) { e.stopPropagation(); nextExercise(); });
+
+    // Auto-skip to dashboard if user already has a saved plan
+    const savedPlan = lsGet('fs_plan');
+    const savedUser = lsGet('fs_user');
+    const hasNewFields = savedUser && savedUser.heightCm && savedUser.activity && savedUser.equipment;
+    if (savedPlan && savedPlan.weekly_schedule && savedUser && hasNewFields) {
+      generatedPlan = savedPlan;
+      USER = savedUser;
+      goToDash();
+    } else {
+      // Clear any stale/incomplete data and show onboarding
+      localStorage.removeItem('fs_plan');
+      lsRemove('fs_user');
+      localStorage.removeItem('fs_entered');
+    }
+  } catch(e) {
+    console.error('Boot error, clearing data:', e);
+    localStorage.removeItem('fs_plan');
+    lsRemove('fs_user');
+    localStorage.removeItem('fs_entered');
+    location.reload();
+  }
+}
+
+
+// ── MOBILE BOTTOM NAV ──
+function syncMobTab(view) {
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+  const tab = document.getElementById('mob-tab-' + view);
+  if (tab) tab.classList.add('active');
+  closeMobMore();
+}
+
+function toggleMobMore() {
+  const drawer = document.getElementById('mob-more-drawer');
+  drawer.classList.toggle('open');
+}
+
+function closeMobMore() {
+  const drawer = document.getElementById('mob-more-drawer');
+  if (drawer) drawer.classList.remove('open');
+}
+
+function mobNavTo(view) {
+  // Find the matching sidebar button and use it
+  const sidebarBtns = document.querySelectorAll('.sb-btn');
+  let matchBtn = null;
+  sidebarBtns.forEach(btn => {
+    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + view + "'")) {
+      matchBtn = btn;
+    }
+  });
+  if (matchBtn) {
+    dashNav(view, matchBtn);
+  } else {
+    // Fallback: just switch views directly
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const viewEl = document.getElementById('view-' + view);
+    if (viewEl) viewEl.classList.add('active');
+    if (view === 'program') renderProgram();
+    if (view === 'settings') renderSettingsGymDays();
+  }
+  closeMobMore();
+}
+
+// Close more drawer when tapping outside
+document.addEventListener('click', function(e) {
+  const drawer = document.getElementById('mob-more-drawer');
+  const moreBtn = document.getElementById('mob-tab-more');
+  if (drawer && drawer.classList.contains('open') && !drawer.contains(e.target) && e.target !== moreBtn && !moreBtn.contains(e.target)) {
+    closeMobMore();
   }
 });
-`;
-    const blob = new Blob([swCode], {type: 'application/javascript'});
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl, {scope: '/'}).catch(() => {});
-  });
+
+// Session restore happens only when user explicitly clicks "Enter App"
+// Auto-redirect removed to allow users to regenerate their plan
+
+function renderMyPlan(plan) {
+  const body = document.getElementById('myplan-body');
+  if (!body || !plan) return;
+  const n = USER.nutrition || {};
+  const days = plan.weekly_schedule || [];
+  const gymCount = days.filter(d => d.type === 'workout').length;
+  const weekHtml = days.map((d, i) => {
+    const isRest = d.type !== 'workout';
+    const dayLabel = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i];
+    const exNames = (!isRest && d.exercises) ? d.exercises.slice(0,3).map(e=>e.name).join(', ') + (d.exercises.length>3?' +more':'') : '';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="width:32px;font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:600;color:var(--dim);flex-shrink:0">${dayLabel}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.9rem;font-weight:600;color:${isRest?'var(--dim)':'var(--white)'}">${isRest ? 'Rest Day' : (d.badge || d.workout || 'Training')}</div>
+        ${exNames ? `<div style="font-size:0.73rem;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${exNames}</div>` : ''}
+      </div>
+      <div style="font-size:0.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:6px;white-space:nowrap;background:${isRest?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.06)'};color:${isRest?'var(--dim)':'var(--bone)'};border:1px solid ${isRest?'transparent':'rgba(255,255,255,0.1)'};">${isRest ? 'Rest' : 'Train'}</div>
+    </div>`;
+  }).join('');
+
+  // Update banner
+  const banner = document.getElementById('myplan-banner');
+  if (banner) banner.innerHTML = `<div style="background:linear-gradient(135deg,var(--card),var(--dark));border:1px solid var(--border2);border-radius:16px;padding:20px 22px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--white);margin-bottom:4px">${plan.name}</div>
+    <div style="font-size:0.85rem;color:var(--off);margin-bottom:12px">${plan.tagline}</div>
+    <span style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;background:var(--tier-dim);color:var(--tier-color);padding:5px 12px;border-radius:6px">${USER.tier?USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1):''}</span>
+  </div>`;
+
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Training Days</div>
+        <div style="font-size:2rem;font-weight:700;color:#F2F0EB">${gymCount}<span style="font-size:0.85rem;font-weight:400;color:var(--dim);margin-left:2px">/ week</span></div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Program Length</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--white)">${USER.weeks||16}<span style="font-size:0.85rem;font-weight:400;color:var(--dim);margin-left:2px">wks</span></div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Daily Calories</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--white)">${(n.calories||0).toLocaleString()}<span style="font-size:0.85rem;font-weight:400;color:var(--dim);margin-left:2px">cal</span></div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Protein Target</div>
+        <div style="font-size:2rem;font-weight:700;color:#60a5fa">${n.protein||0}<span style="font-size:0.85rem;font-weight:400;color:var(--dim);margin-left:2px">g/day</span></div>
+      </div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 18px 4px;margin-bottom:14px">
+      <div style="font-size:0.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Weekly Schedule</div>
+      ${weekHtml}
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px">
+      <div style="font-size:0.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:14px">Daily Macros</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="text-align:center;padding:14px 8px;background:var(--dark);border-radius:12px">
+          <div style="font-size:1.5rem;font-weight:700;color:var(--orange)">${n.carbs||0}g</div>
+          <div style="font-size:0.65rem;color:var(--dim);margin-top:4px;font-weight:600;letter-spacing:1px">CARBS</div>
+        </div>
+        <div style="text-align:center;padding:14px 8px;background:var(--dark);border-radius:12px">
+          <div style="font-size:1.5rem;font-weight:700;color:#60a5fa">${n.protein||0}g</div>
+          <div style="font-size:0.65rem;color:var(--dim);margin-top:4px;font-weight:600;letter-spacing:1px">PROTEIN</div>
+        </div>
+        <div style="text-align:center;padding:14px 8px;background:var(--dark);border-radius:12px">
+          <div style="font-size:1.5rem;font-weight:700;color:#f472b6">${n.fat||0}g</div>
+          <div style="font-size:0.65rem;color:var(--dim);margin-top:4px;font-weight:600;letter-spacing:1px">FAT</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px">
+      <div style="font-size:0.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:12px">Your Profile</div>
+      ${[
+        ['Name', USER.name],
+        ['Goal', USER.goal],
+        ['Current Weight', USER.weight ? USER.weight+' lbs' : null],
+        ['Goal Weight', USER.goalWeight ? USER.goalWeight+' lbs' : null],
+        ['Training Split', USER.split],
+      ].filter(r=>r[1]).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--dim);font-size:0.82rem">${k}</span><span style="color:var(--white);font-size:0.82rem;font-weight:600">${v}</span></div>`).join('')}
+    </div>
+  `;
+  // Append saved program summary if available
+  var savedExplanation = lsGet('fs_plan_explanation');
+  if (savedExplanation) {
+    body.innerHTML += '<div style="margin-top:4px">' + savedExplanation + '</div>';
+  }
 }
-</script>
-<script>
-// Use Blueprint B logo as PWA icon
-(function() {
-  try {
-    const iconUrl = 'data:image/jpeg;base64,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';
-    ['180', '152', '167', '120'].forEach(size => {
-      const link = document.createElement('link');
-      link.rel = 'apple-touch-icon';
-      link.setAttribute('sizes', size + 'x' + size);
-      link.href = iconUrl;
-      document.head.appendChild(link);
-    });
-    const manifest = {
-      name: 'Blueprint',
-      short_name: 'Blueprint',
-      description: 'AI-powered fitness plans and workout tracking',
-      start_url: './',
-      display: 'standalone',
-      background_color: '#000000',
-      theme_color: '#000000',
-      orientation: 'portrait-primary',
-      icons: [
-        { src: iconUrl, sizes: '192x192', type: 'image/jpeg', purpose: 'any maskable' },
-        { src: iconUrl, sizes: '512x512', type: 'image/jpeg', purpose: 'any maskable' }
-      ]
-    };
-    const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-    const mLink = document.createElement('link');
-    mLink.rel = 'manifest';
-    mLink.href = URL.createObjectURL(blob);
-    document.head.appendChild(mLink);
-
-  } catch(e) { console.log('Icon gen error:', e); }
-})();
-</script>
-</head>
-<body>
-
-<!-- ══════════ ONBOARDING ══════════ -->
-<div id="screen-onboard" class="screen active">
-<nav>
-  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,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" alt="Blueprint"></div>
-  <div class="nav-right">
-    <div class="nav-pill">AI-Powered</div>
-    <button class="nav-cta" onclick="document.getElementById('form-section').scrollIntoView({behavior:'smooth'})">Build My Plan</button>
-  </div>
-</nav>
-
-<section id="hero-section" class="hero">
-  <div class="hero-eyebrow"><span class="eyebrow-line"></span>Personalized fitness at every level</div>
-  <div id="ob-headline">
-    TRAIN<br>
-    <span class="line-accent" id="ob-accent">SMARTER,</span>
-    <span id="ob-headline-line3">NOT HARDER</span>
-  </div>
-  <p class="hero-sub">Tell us where you are and we'll build a plan that gets you where you want to go — whether you're just starting out or chasing a new personal best.</p>
-  <div class="tier-selector">
-    <button class="tier-btn active" data-tier="beginner" onclick="setTier('beginner',this)">
-      <div class="tier-label">Beginner</div><div class="tier-desc">Just starting out, building the habit</div>
-      <div class="tier-dots"><div class="tier-dot"></div><div class="tier-dot"></div><div class="tier-dot"></div></div>
-    </button>
-    <button class="tier-btn" data-tier="intermediate" onclick="setTier('intermediate',this)">
-      <div class="tier-label">Intermediate</div><div class="tier-desc">6+ months in, ready to level up</div>
-      <div class="tier-dots"><div class="tier-dot"></div><div class="tier-dot"></div><div class="tier-dot"></div></div>
-    </button>
-    <button class="tier-btn" data-tier="advanced" onclick="setTier('advanced',this)">
-      <div class="tier-label">Advanced</div><div class="tier-desc">2+ years, chasing peak performance</div>
-      <div class="tier-dots"><div class="tier-dot"></div><div class="tier-dot"></div><div class="tier-dot"></div></div>
-    </button>
-  </div>
-</section>
-
-<div class="main-layout" id="form-section">
-  <div class="form-card">
-    <div class="form-header">
-      <div class="form-title">Build My Plan</div>
-      <div class="tier-badge" id="tierBadge">● Beginner</div>
-    </div>
-
-    <div class="form-section-label">About You</div>
-    <div class="form-row">
-      <div class="form-group"><label>First Name</label><input type="text" id="ob-name" placeholder="e.g. Jake"></div>
-      <div class="form-group"><label>Age</label><input type="number" id="ob-age" placeholder="e.g. 28" min="16" max="80"></div>
-      <div class="form-group"><label>Gender</label>
-        <select id="ob-gender">
-          <option value="">Select...</option>
-          <option>Male</option><option>Female</option><option>Prefer not to say</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Height</label>
-        <div style="display:flex;gap:6px">
-          <select id="ob-height-ft" style="flex:1">
-            <option value="">ft</option>
-            <option>4</option><option>5</option><option>6</option><option>7</option>
-          </select>
-          <select id="ob-height-in" style="flex:1">
-            <option value="">in</option>
-            <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option>
-            <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option>
-            <option>10</option><option>11</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group"><label>Current Weight (lbs)</label><input type="number" id="ob-weight" placeholder="e.g. 235"></div>
-      <div class="form-group"><label>Goal Weight (lbs)</label><input type="number" id="ob-goal" placeholder="e.g. 215"></div>
-      <div class="form-group" style="grid-column:1/-1"><label>Body Goals</label><textarea id="ob-body-goals" placeholder="Describe what you want to achieve, e.g. 'I want to lean out and build visible abs for summer' or 'I want to bulk up and add 20lbs of muscle'" style="width:100%;min-height:60px;padding:10px 12px;background:var(--dark);border:1px solid var(--border2);border-radius:10px;font-family:inherit;font-size:0.85rem;color:var(--white);resize:vertical;outline:none"></textarea></div>
-      <div class="form-group" style="grid-column:1/-1"><label>Activity Level (outside gym)</label>
-        <select id="ob-activity">
-          <option value="">Select...</option>
-          <option value="sedentary">Sedentary — desk job, little movement</option>
-          <option value="light">Lightly Active — on feet some of the day</option>
-          <option value="moderate">Moderately Active — physical job or daily walks</option>
-          <option value="very">Very Active — labor job, sports, highly active</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="form-section-label">Training Details</div>
-    <div class="form-row">
-      <div class="form-group" style="grid-column:1/-1"><label>Available Equipment</label>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="ob-equipment-picker">
-          <div class="day-pill" data-equip="Full Gym">Full Gym</div>
-          <div class="day-pill" data-equip="Barbells">Barbells</div>
-          <div class="day-pill" data-equip="Dumbbells">Dumbbells</div>
-          <div class="day-pill" data-equip="Cables">Cables</div>
-          <div class="day-pill" data-equip="Machines">Machines</div>
-          <div class="day-pill" data-equip="Kettlebells">Kettlebells</div>
-          <div class="day-pill" data-equip="Resistance Bands">Bands</div>
-          <div class="day-pill" data-equip="Bodyweight Only">Bodyweight Only</div>
-        </div>
-      </div>
-      <div class="form-group" style="grid-column:1/-1"><label>Injuries or Limitations <span style="color:var(--orange);font-weight:600;text-transform:none;letter-spacing:0">⚠ Important</span></label>
-        <textarea id="ob-injuries" placeholder="List any injuries, pain, or physical limitations. Your program will be adapted to avoid aggravating these areas.&#10;&#10;Example: bad right knee — can't do deep squats, lower back pain from a herniated disc" style="width:100%;min-height:50px;padding:10px 12px;background:var(--dark);border:1px solid rgba(251,146,60,0.3);border-radius:10px;font-family:inherit;font-size:0.85rem;color:var(--white);resize:vertical;outline:none"></textarea>
-      </div>
-      <div class="form-group" style="grid-column:1/-1"><label>Personal Rules <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-        <textarea id="ob-rules" placeholder="Any preferences or restrictions the AI should know about.&#10;Examples: I don't do lunges, I workout at 5am, I'm lactose intolerant, I don't eat pork, I prefer machine exercises" style="width:100%;min-height:50px;padding:10px 12px;background:var(--dark);border:1px solid var(--border2);border-radius:10px;font-family:inherit;font-size:0.85rem;color:var(--white);resize:vertical;outline:none"></textarea>
-      </div>
-    </div>
-
-    <div class="form-section-label">Goal Timeline</div>
-    <div class="timeline-selector" id="timeline-selector">
-      <div class="tl-btn" data-weeks="0" onclick="selectTimeline(this)">Maintain<br><small style="font-size:0.62rem;opacity:0.6">Stay where you are</small></div>
-      <div class="tl-btn" data-weeks="12" onclick="selectTimeline(this)">12 Weeks<br><small style="font-size:0.62rem;opacity:0.6">Aggressive</small></div>
-      <div class="tl-btn active" data-weeks="16" onclick="selectTimeline(this)">16 Weeks<br><small style="font-size:0.62rem;opacity:0.6">Balanced</small></div>
-      <div class="tl-btn" data-weeks="24" onclick="selectTimeline(this)">24 Weeks<br><small style="font-size:0.62rem;opacity:0.6">Sustainable</small></div>
-      <div class="tl-btn" data-weeks="36" onclick="selectTimeline(this)">36 Weeks<br><small style="font-size:0.62rem;opacity:0.6">Gradual</small></div>
-      <div class="tl-btn" data-weeks="custom" onclick="selectTimeline(this)">Custom<br><small style="font-size:0.62rem;opacity:0.6">Set your own</small></div>
-    </div>
-    <div id="custom-weeks-row" style="display:none;margin-top:10px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px">
-      <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Number of Weeks</label>
-      <input type="number" id="custom-weeks-input" min="1" max="104" value="8" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:1rem;font-family:'DM Mono',monospace" oninput="selectedWeeks=parseInt(this.value)||8">
-    </div>
-
-    <div class="form-section-label">Training Split</div>
-    <div class="split-selector" id="split-selector">
-      <div class="split-btn active" data-split="ppl" onclick="selectSplit(this)">
-        <div class="split-btn-title">Push / Pull / Legs</div>
-        <div class="split-btn-desc">Classic 3-way split, best for 4–6 days</div>
-      </div>
-      <div class="split-btn" data-split="ul" onclick="selectSplit(this)">
-        <div class="split-btn-title">Upper / Lower</div>
-        <div class="split-btn-desc">Balanced split, great for 3–4 days</div>
-      </div>
-      <div class="split-btn" data-split="fb" onclick="selectSplit(this)">
-        <div class="split-btn-title">Full Body</div>
-        <div class="split-btn-desc">Hit everything each session, 2–3 days</div>
-      </div>
-      <div class="split-btn" data-split="ai" onclick="selectSplit(this)">
-        <div class="split-btn-title">AI Generated</div>
-        <div class="split-btn-desc">Let us build the optimal split for you</div>
-      </div>
-    </div>
-
-    <div class="form-section-label">Your Schedule</div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Gym Days <span id="day-count-label" style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0"></span></label>
-      <div class="day-picker" id="ob-day-picker">
-        <div class="day-pill" data-day="Monday">Mon</div>
-        <div class="day-pill" data-day="Tuesday">Tue</div>
-        <div class="day-pill" data-day="Wednesday">Wed</div>
-        <div class="day-pill" data-day="Thursday">Thu</div>
-        <div class="day-pill" data-day="Friday">Fri</div>
-        <div class="day-pill" data-day="Saturday">Sat</div>
-        <div class="day-pill" data-day="Sunday">Sun</div>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group" style="grid-column:1/-1"><label>Session Length</label>
-        <select id="ob-duration">
-          <option value="">Select...</option>
-          <option>20–30 min</option><option>30–45 min</option><option>45–60 min</option><option>60–90 min</option>
-        </select>
-      </div>
-    </div>
-
-    <button class="btn-generate" id="generateBtn" onclick="generatePlan()">GENERATE MY PLAN</button>
-    <p class="price-note">7-day free trial · Then $29.99/month · Cancel anytime</p>
-  </div>
-
-  <div class="sidebar-info">
-    <div class="info-card">
-      <div class="info-card-label" id="sidebar-label">What You Get — Beginner</div>
-      <div id="tier-features"></div>
-    </div>
-  </div>
-</div>
-
-<div class="loading-wrap" id="loading">
-  <div class="loader"><div class="loader-bar"></div><div class="loader-bar"></div><div class="loader-bar"></div><div class="loader-bar"></div><div class="loader-bar"></div></div>
-  <p>Building your personalized plan...</p>
-  <small id="loading-detail">Analyzing your profile</small>
-</div>
-
-<section id="results-section">
-  <div style="max-width:640px;margin:0 auto;padding:24px 20px">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">YOUR PLAN IS READY</div>
-    </div>
-    <!-- AI-generated explanation -->
-    <div id="plan-explanation" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:20px;font-size:0.88rem;line-height:1.6;color:var(--off)">
-      <div id="plan-explain-text" style="display:flex;flex-direction:column">Loading your personalized breakdown...</div>
-    </div>
-    <!-- Quick start instructions -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:20px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1.5px;color:var(--gold);margin-bottom:10px">GETTING STARTED</div>
-      <div style="display:flex;flex-direction:column;gap:10px;font-size:0.82rem;color:var(--off);line-height:1.5">
-        <div style="display:flex;gap:10px"><span style="color:var(--gold);font-weight:700;flex-shrink:0">1.</span><span><strong>Log food through the AI Coach.</strong> Tap Coach, type what you ate or snap a photo of your plate or nutrition label. The AI reads labels and estimates portions automatically.</span></div>
-        <div style="display:flex;gap:10px"><span style="color:var(--gold);font-weight:700;flex-shrink:0">2.</span><span><strong>Follow your daily workout.</strong> Tap Today to see your exercises. The app tracks sets, reps, weight, and rest times — just fill in as you go.</span></div>
-        <div style="display:flex;gap:10px"><span style="color:var(--gold);font-weight:700;flex-shrink:0">3.</span><span><strong>Upload progress photos.</strong> Send photos to the AI Coach to track visible changes over time. The Coach gives feedback on posture and development.</span></div>
-        <div style="display:flex;gap:10px"><span style="color:var(--gold);font-weight:700;flex-shrink:0">4.</span><span><strong>Adjust anytime.</strong> Body goals change? Go to Settings to update your targets, swap exercises, or ask the Coach for modifications.</span></div>
-      </div>
-    </div>
-    <button class="btn-enter-app" onclick="goToDash()" style="width:100%;padding:16px;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;border-radius:12px;border:none;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);color:var(--black);cursor:pointer">ENTER THE APP →</button>
-    <p class="cta-fine" style="text-align:center;margin-top:10px">7-day free trial · Then $29.99/month · Cancel anytime</p>
-  </div>
-  <div id="results-grid" style="display:none"></div>
-  <div id="week-card" style="display:none"></div>
-  <div id="results-banner" style="display:none"><h2 id="plan-name"></h2><p id="plan-tagline"></p><div id="results-tier-badge"></div></div>
-</section>
-</div><!-- /screen-onboard -->
-
-
-<!-- ══════════ SIGNUP ══════════ -->
-<div id="screen-signup" class="screen">
-<nav>
-  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABZAIADASIAAhEBAxEB/8QAHQAAAgIDAQEBAAAAAAAAAAAAAwQGBwECBQgACf/EADgQAAECBQMDAwIDBwMFAAAAAAECAwAEBQYRBxIhEzFBIlFhFHEIMsEVFkJSgdHwkaGxF1Nzs8L/xAAaAQACAwEBAAAAAAAAAAAAAAAAAQIDBAUG/8QAMBEAAQMCBQEFCAMBAAAAAAAAAQACEQMhBBIxQVFhE3GBkdEUIlKhscHh8AVygpL/2gAMAwEAAhEDEQA/APy+R3gyDC6DB0frAoplA5gyBiAI8wwgcd4SkjN+8MtnGcfaFm+Mwdo54hBCaRgQVvvgx3KPpzdNakGZ2n0CenJR9O5t5lAKVDJGRz8GOqxo3fTv5LSqiz7JZH94ynGYZph1RoI6j1VopVCJDT5KKo+/MGb478xME6HahJG42bVwPlgf3jU6P3w0CV2rU0477mQP1iPt2F3qt/6Hqn2NX4T5FRdHGRBm+c/Mb1SlTtBn3JKoSzknONY6jDowpORkZ/oQYE2e/Ma2uDhLTIKpgixTLZ5IzjPaDIMLIgyTEtEJhB9oKg4hdKu47fpBUHn5hoVPN+0MJ4hZBg6PMCimEHiGW/GYUbMMNcj4gTCYQc+YYb7jmFkHOYO1zEOiasu8Z6bkdPtOfpJ2ZlA5T3ysS762woh7gnaRmIcmv1Rv1Cs1JHz9e6P/AKiyqrZVVvO09JaXRJVU5PTdNmTs7JbSHxlaz/CkeT/ycCOlLV+RsSrylo6b0in3hcbrgZnK1OSQmuu/5al0E4DacHKs44JOcEx5rD4imymabWBz8zzsIGd13HYcbnYWMdN9NznZiYbDfOBYDdVpSKlcFdqUvT6dVavPT8ysNsyzE+8pbij2AG//ADzFq1Ktq0UlF0Vuqv1nUGZ2Inpp6ZXMS1JQSD0kBRIU6fJxx9sAzLU7Wmc0zoSbXl3aNOaiFJFRq9HkG2WKSFDllsgZW8BkFWcDOSM4EVZpFpgm7Hpq57lnVUeyKQ6H6nWJnJLywoK6LZPK3VkgHuRu9yAanPbiqXb4lgbSGgFy87bAwdmxLu6xk2aTslMy/njnx67d6N+IWW+j1iuNnaEbSxkD/wACIgCDxzHc1JvVWod+124ywZVufmS40wr8zbQAS2k/O1Iz8kxwER3sBSfRwlKk+zmtaD3gAFYK7g+q9w0JP1TKFZBgqFcYzCqFfMFCs+eI3KlNIPzBErx9oVQvEEQv5/1gQqmQcQdswsniDNGGoplBg7ZzCyefMGbOfMJMJtCoM2rByIWQYM2cnGe8Ipq56VqxcFy2LbWm9n0d9msLZNPmJuWWFTE4grUoNNEYLaSDlZJ8dwMmO/WaxTPw2UiZtq2ZpmoalTTXQrNel8KapCD3lZY/9z+ZXj74A+ZrrWguh9q1O2WCm878k5h564XcdSnSqHemWJcfwqVwSvv58JxwdCdDWr/l6ld13VJVsaZUJW+sV1zPUeXnP00sDkuPrJxxnG7ySBHlqdKgQ+pGWjmNtS92YgzvGawbv3QD1HPeMrZl8D/IjbrGp+6zoxosL6k6pdt0VBVvadURW+rVx7JW8snP00vnJcfWTjjON3OSQDJl/ixn6bcjEtRbdkGtMZVv6JuypthDjcxK59RdWQT11cndkgE4O7kmJa465uarTNNo9FpqbW08oILNBttg+lhPILzxB9b6+SpRzjJAJypSqySraCScAcn4+Y6XsQxZ7TGNnhuzev8Abrto3cnKKxpe7SPeefx033Vu/iD01pNg3RSalbL6pizLppzdcoanDlbTKyQphWf4m1gp55wRnnOaxSrv/wARdmvraqDo5oJbk6CKxKUCcqD7S+FsszMzvZQoeOATiKPSrPmNGBe5+HBcZiRPIBIB8QJVdYBrzH7N0wlXnP8AWCJXzz3hdK43ChG9UpkK74jcKwYVSvHb/eCIchoVYiN0HmNAMRlPENRTTZ7wVBwYWbV7/aDIOQYEJptXfmDtqwrn3hRpXeDIOYEwvXdu2fp/q5pzorL3FqdbtsSFv0+ZlqzT5ifS1PnfMFYQ2FcIJCQCpXYKyAY72tNl0/VV+m0ak61aU2vp9Qh0qFbjNaXsYTyC87hHreVySo5xkgdyVeK0/bJ94InHfj+0cBv8Y6nUztqmAXECBAzEk+N4nWLczuOJDmwW8TrsI+y9FL/CrRWGt51/0mX7pRWnCf8A1wamWlo3o5MIq9x3xKasVqWIdlLbtVpf0Ljg5T9TMrGNmeSkd/ZXY+c0nA7CDoVx+ntGx2Fq1BlfWMbwAPnEjwg9VS2o1tw0SpbqFqHWdUr0ql0191C6jPLBUhkbW2UJGENNjwhKQAB9yeSY4CV/OPmFgrzG6VHmNzGNpMDGCALBUklxJOqaSrPGcRulXGIVQvGfEbpc/wBImkmgvHnP3jZKsQslf9I3C/8ABBKFX3+ZifaNWvTbordZaqko1OtSdJfnGmpibMq0XEKQE73QRtT6jkk4iAR3rPvGcsuenJmUl5SaE1Krk32J1ouNuNKIKgQCP5R5jPiWVH0XNpGHbbKdIta8F+in992PR5LT0VySpstIz7VRblVopNYFSl+ktCjl05PSVuSAnn1c8cRGrtt+RpFq2NOyjS0zNUpr0zNqUsqC3EzLiAQD+X0pAwIUrOpVQqtAeo0vTqTRac+6h6YapUmGTMKRnZvUSSQnJIGQOYdkNV5tmh0mlTdAoFXl6W0piVXUZJTjiUKWVkEhYz6lHxGKlTxNNrSbw4mJ2g8zv1P2V7nUnExa3G8+ies+1afV9MNQq3MtLVP0YU36NaXCkI60wpDmUjhWUgDntDklaNMc0GnrpU04Ky1dDFLQ51Ds6CpRx1SdvbO5IOe/iODaOpdTs6q1aakZWmuydWbUxO0iblerIvtFe8NlsnICVYKSCFJxwYbu/VWpXhRafRE06k2/QJF5U01SqJKlhhT6khKnllSlKWvaAnKlHA4GIuLK/aH4SQddAAJEdSO66gDTy9Yj56q8KZpba0pp3p9Uxatv1WdrVGE9Ov1y9/2Qsu/UOt+hpTifRtQn1AYzkeIi34dNP6LqdqPd8nN2yauxJUKp1SnUJiqOMpW+0pHRa+pCgop9RG4nngkxGJTXmeFu2/RqnaFn3CxQ5P6CSmKtTHHXks9Rbm1SkvJB9S1Ht5jhW7qVU7Wqd0TlLladJi4abOUmZlUS56DMtMkdRLKd2UY2gJJJwPeKKdDEZKjXG5mDJ5Mb8cQpufTlpAt+9FbusOmFBtbTBqsztqp04u81ZuUlaCi4xVf2jJqbWp2YKCpS2empKBuKtq9+AMjMTOR0Ip71D08cpelCrolaxbklVKpWVXWuRWytzd11hsr2oQhKQrcUlI85xHkhlLbWShCEZ/lSBE4VrDc/7yWhcEvNMSNWtWnS1LpsxKs7cMMb9ocBJC9wWpKweFA4IiVXDVywNY+993cWFjPzKTKjASXD6eimNlWHalb13rttSk65cNqSzdXXITyHS2ZlDEs84w7uTjI3ISeOFY9jAtFLTs65bPvipXm/NyDNPYp6JapSZKvonZh9TfWW2OHGwQncnvtzt5iHUPUqp23e87dNJkqZTp2ZRNt/SMSxEo0iYaW04ltvd6RtcVtGfSceBiEKNd1Qods16gSvREhWkyqJvqI3OYYcLjexWfT6jzwcj2hvo13NLQ8iQy83s73jxceemiGvYDJHP0srArmlLlm2Jd7talga3TarTWZScl3yuWflZht9XVaI9LiFhCClfjkcHIjaxv3Wq9pXNMzlntOTtApTc51xV5lP1iy+20dyQcIzvKsJ9oiH/U64XtPEWM9OIft1qaRNsMvN7nGFJ3HYheeG8rUdnIBJxjJzzqPc07RKfW5GV6PQq8qmTmuojcemHUuDYc+k7kDnnjMR7Cu+m4VHe9mBEEi1p00kA2vE67p56bXDKLRuAb3/AAsVOdl5uffflJFNNl1qyiVQ8t4NjHber1HnJ594XDkAC+f7RkK55/3jqBsCAsxuZULH3jI8xjzG3vE1BfR8OI+jB7GBJFQrjEFSrv7wu32MGgQjIXiDJVjzmFkfmMGR+YwKQRknHmCoXnzAE/lMEHaBNHSqN0q/wwFPmCRGEgihXzGQojMD8GNk9hCCaKF8H9I2S57kwGMp7wIX/9k=" alt="Blueprint"></div>
-  <div class="nav-right">
-    <div class="nav-pill" id="su-tier-pill">Beginner Plan</div>
-    <button class="nav-cta" style="background:transparent;border:1px solid var(--border);color:var(--off)" onclick="goBackToResults()">← Back to Plan</button>
-  </div>
-</nav>
-<div class="signup-wrap">
-  <div class="signup-left">
-    <div class="signup-eyebrow"><span class="signup-eyebrow-line"></span>Your plan is ready</div>
-    <h2>CLAIM YOUR<br><span id="su-accent">FREE</span><br>7-DAY TRIAL</h2>
-    <p class="signup-tagline">You built a personalized plan. Don't lose it — start your free trial and get full access to your program, AI coach, macro tracker, and progress dashboard.</p>
-    <div class="plan-summary">
-      <div class="ps-header"><div class="ps-label">Your Generated Plan</div><div class="ps-tier-badge" id="su-tier-badge">Beginner</div></div>
-      <div class="ps-plan-name" id="su-plan-name">—</div>
-      <div class="ps-tagline" id="su-plan-tagline">—</div>
-      <div class="ps-stats">
-        <div class="ps-stat"><div class="ps-stat-val" id="su-cal">—</div><div class="ps-stat-label">Daily Calories</div></div>
-        <div class="ps-stat"><div class="ps-stat-val" id="su-pro">—</div><div class="ps-stat-label">Daily Protein</div></div>
-        <div class="ps-stat"><div class="ps-stat-val" id="su-days">—</div><div class="ps-stat-label">Gym Days/Week</div></div>
-        <div class="ps-stat"><div class="ps-stat-val" id="su-timeline">—</div><div class="ps-stat-label">Your Timeline</div></div>
-      </div>
-    </div>
-    <div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:12px">What's included</div>
-    <div class="included-list">
-      <div class="included-item"><div class="included-check">✓</div>Your personalized program saved to your dashboard</div>
-      <div class="included-item"><div class="included-check">✓</div>Exercise-by-exercise workout tracking with exercise guides</div>
-      <div class="included-item"><div class="included-check">✓</div>Macro tracker with calorie countdown</div>
-      <div class="included-item"><div class="included-check">✓</div>Progress tracking with previous week comparison</div>
-      <div class="included-item"><div class="included-check">✓</div>Cancel anytime — no questions asked</div>
-    </div>
-  </div>
-  <div class="signup-card">
-    <div class="trial-badge">★ 7 DAYS FREE — NO CHARGE TODAY</div>
-    <div class="signup-form-title">CREATE YOUR ACCOUNT</div>
-    <div class="signup-form-sub">$29.99/month after trial</div>
-    <div class="sf-row">
-      <div class="sf-group"><div class="sf-label">First Name</div><input class="sf-input" id="su-firstname" type="text" placeholder="Jake"></div>
-      <div class="sf-group"><div class="sf-label">Last Name</div><input class="sf-input" id="su-lastname" type="text" placeholder="Davis"></div>
-    </div>
-    <div class="sf-group"><div class="sf-label">Email</div><input class="sf-input" id="su-email" type="email" placeholder="you@email.com"></div>
-    <div class="sf-group">
-      <div class="sf-label">Password</div>
-      <input class="sf-input" id="su-password" type="password" placeholder="Min. 8 characters" oninput="checkPwStrength(this.value)">
-      <div class="pw-strength"><div class="pw-bar" id="pw1"></div><div class="pw-bar" id="pw2"></div><div class="pw-bar" id="pw3"></div><div class="pw-bar" id="pw4"></div></div>
-    </div>
-    <div class="trial-breakdown">
-      <div class="tb-row"><div class="tb-label">Today</div><div class="tb-val free">$0.00 FREE</div></div>
-      <div class="tb-row"><div class="tb-label">Days 1–7</div><div class="tb-val">Full access, no charge</div></div>
-      <div class="tb-row"><div class="tb-label">Day 8 onward</div><div class="tb-val after">$29.99/month — cancel anytime</div></div>
-    </div>
-    <button class="btn-start-trial" id="su-submit-btn" onclick="submitSignup()">START FREE TRIAL →</button>
-    <div class="signup-fine">No credit card required · Cancel before day 7 to pay nothing · $29.99/month after</div>
-    <div class="signup-login">Already have an account? <a onclick="goToDash()">Sign in</a></div>
-  </div>
-</div>
-</div><!-- /screen-signup -->
-
-
-<!-- ══════════ DASHBOARD ══════════ -->
-<div id="screen-dash" class="screen">
-<nav>
-  <div class="logo"><img class="logo-icon" src="data:image/jpeg;base64,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" alt="Blueprint"></div>
-  <div class="nav-right">
-    <div class="streak-pill"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" style="flex-shrink:0"><path d="M12 2c0 0-4 4.5-4 9a4 4 0 0 0 8 0c0-4.5-4-9-4-9zm0 11a2 2 0 0 1-2-2c0-2 2-5 2-5s2 3 2 5a2 2 0 0 1-2 2z"/></svg> <span id="dash-streak">1</span>-day streak</div>
-    <div class="user-pill"><div class="avatar" id="dash-avatar">?</div><span id="dash-username">You</span></div>
-  </div>
-</nav>
-<div class="shell">
-  <div class="sidebar-nav">
-    <div class="sb-label">Dashboard</div>
-    <button class="sb-btn active" onclick="dashNav('today',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>Today</button>
-    <button class="sb-btn" onclick="dashNav('coach',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>AI Coach</button>
-    <button class="sb-btn" onclick="dashNav('plan',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Plan<span class="sb-badge" id="week-badge">Wk 1</span></button>
-    <button class="sb-btn" onclick="dashNav('nutrition',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></span>Nutrition</button>
-    <button class="sb-btn" onclick="dashNav('progress',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>Progress</button>
-    <div class="sb-label" style="margin-top:12px">Plan</div>
-    <button class="sb-btn" onclick="dashNav('program',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg></span>My Program</button>
-    <button class="sb-btn" onclick="dashNav('myplan',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>My Plan</button>
-    <button class="sb-btn" onclick="dashNav('settings',this)"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33H15a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15H4.5a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68V4.5a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51v.18a1.65 1.65 0 0 0 1.82.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.18a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Settings</button>
-  </div>
-  <div class="main-content">
-
-    <!-- TODAY -->
-    <div class="view active" id="view-today">
-      <div class="page-header">
-        <div class="page-title" id="dash-day-title">TODAY</div>
-        <div class="page-sub" id="dash-day-sub">Week 1 of your program</div>
-      </div>
-      <div class="today-grid" style="grid-template-columns:repeat(2,1fr);gap:12px">
-        <!-- Calories — hero ring -->
-        <div class="stat-card glass-card" style="display:flex;flex-direction:column;align-items:center;padding:20px 14px 16px">
-          <div style="position:relative;width:88px;height:88px">
-            <svg viewBox="0 0 100 100" width="88" height="88">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5"/>
-              <circle id="d-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="5" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.5px;color:var(--bone)" id="d-cal">0</div>
-          </div>
-          <div class="card-label" style="margin-top:10px;margin-bottom:0">CALORIES</div>
-          <div class="sc-sub" id="d-cal-sub" style="font-size:0.65rem">of —</div>
-        </div>
-        <!-- Protein — hero ring -->
-        <div class="stat-card glass-card" style="display:flex;flex-direction:column;align-items:center;padding:20px 14px 16px">
-          <div style="position:relative;width:88px;height:88px">
-            <svg viewBox="0 0 100 100" width="88" height="88">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5"/>
-              <circle id="d-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="5" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.5px;color:var(--bone)" id="d-pro">0g</div>
-          </div>
-          <div class="card-label" style="margin-top:10px;margin-bottom:0">PROTEIN</div>
-          <div class="sc-sub" id="d-pro-sub" style="font-size:0.65rem">of —g</div>
-        </div>
-        <!-- Carbs -->
-        <div class="stat-card glass-card" style="display:flex;flex-direction:column;align-items:center;padding:16px 14px 14px">
-          <div style="position:relative;width:60px;height:60px">
-            <svg viewBox="0 0 100 100" width="60" height="60">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
-              <circle id="d-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="6" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--white)" id="d-carb">0g</div>
-          </div>
-          <div class="card-label" style="margin-top:8px;margin-bottom:0">CARBS</div>
-          <div class="sc-sub" id="d-carb-sub" style="font-size:0.62rem">of —g</div>
-        </div>
-        <!-- Fat -->
-        <div class="stat-card glass-card" style="display:flex;flex-direction:column;align-items:center;padding:16px 14px 14px">
-          <div style="position:relative;width:60px;height:60px">
-            <svg viewBox="0 0 100 100" width="60" height="60">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
-              <circle id="d-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="6" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1),stroke 0.4s"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--white)" id="d-fat">0g</div>
-          </div>
-          <div class="card-label" style="margin-top:8px;margin-bottom:0">FAT</div>
-          <div class="sc-sub" id="d-fat-sub" style="font-size:0.62rem">of —g</div>
-        </div>
-        <div style="display:none" id="d-wkt-name" aria-hidden="true"></div><div style="display:none" id="d-wkt-sub" aria-hidden="true"></div><div style="display:none" id="d-wkt-bar" aria-hidden="true"></div>
-      </div>
-      <div class="log-toggle-card">
-        <div style="display:flex;align-items:center;gap:10px;padding:14px 18px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px">WATER INTAKE</div>
-          <div id="dash-water-pct" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:0.8rem;font-weight:700"></div>
-        </div>
-        <div style="padding:0 18px 14px;display:flex;align-items:center;gap:18px">
-          <div style="position:relative;width:80px;height:80px;flex-shrink:0">
-            <svg width="80" height="80" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
-              <circle id="dash-water-ring" cx="50" cy="50" r="42" fill="none" stroke="#ef4444" stroke-width="8"
-                stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.5s,stroke 0.5s"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-              <div id="dash-water-oz" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--white);line-height:1">0</div>
-              <div style="font-size:0.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px">oz</div>
-            </div>
-          </div>
-          <div style="flex:1">
-            <div id="dash-water-goal" style="font-size:0.82rem;color:var(--off);font-weight:600;margin-bottom:10px"></div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-              <button class="water-add-btn" onclick="addWater(8)">+8 oz</button>
-              <button class="water-add-btn" onclick="addWater(16)">+16 oz</button>
-              <button class="water-add-btn" onclick="addWater(32)">+32 oz</button>
-              <button class="water-add-btn" onclick="toggleDashCustomWater()" id="dash-water-custom-toggle" style="white-space:nowrap">+ Add</button>
-              <button class="water-add-btn" onclick="subtractWater(8)" style="border-color:rgba(239,68,68,0.3);color:#ef4444">−8 oz</button>
-            </div>
-            <div id="dash-water-custom-row" style="display:none;margin-top:8px;align-items:center;gap:8px">
-              <input type="number" id="dash-water-custom-input" placeholder="oz" min="1" max="200"
-                style="width:72px;padding:7px 10px;background:var(--dark);border:1px solid rgba(212,165,32,0.3);border-radius:8px;font-family:'Inter',sans-serif;font-size:0.88rem;color:var(--white);outline:none"
-                onkeydown="if(event.key==='Enter')addDashCustomWater()">
-              <button class="water-add-btn" onclick="addDashCustomWater()" style="white-space:nowrap">LOG</button>
-              <button onclick="toggleDashCustomWater()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.85rem;padding:4px 6px">✕</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="workout-card" style="margin-top:16px">
-        <div class="wc-header">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <div class="wc-badge" id="wc-badge">● Today</div>
-              <button id="today-customize-btn" onclick="openCustomWorkoutBuilder()" style="padding:4px 10px;background:none;border:1px solid var(--border2);border-radius:6px;color:var(--dim);font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:1.2px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all 0.15s" onmouseover="this.style.color='var(--white)';this.style.borderColor='var(--border)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='var(--border2)'">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                CUSTOM
-              </button>
-            </div>
-            <div class="wc-name" id="wc-name">YOUR WORKOUT</div>
-          </div>
-          <button class="btn-primary" id="today-start-btn" onclick="openWorkoutEnv(TODAY_IDX)">START WORKOUT</button>
-        </div>
-        <div class="ex-list" id="today-ex-list"></div>
-      </div>
-    </div>
-
-    <!-- THIS WEEK -->
-    <div class="view" id="view-plan">
-      <div class="page-header"><div class="page-title">THIS WEEK</div><div class="page-sub" id="week-view-sub">Week 1 · Tap any day to log</div></div>
-      <div class="week-day-grid" id="week-grid"></div>
-      <div class="week-stat-grid">
-        <div class="stat-card"><div class="card-label">Workouts Done</div><div class="sc-val" id="wk-done">0</div><div class="sc-sub" id="wk-done-sub">of 0 scheduled</div><div class="prog-bar"><div class="prog-fill" id="wk-done-bar" style="width:0%"></div></div></div>
-        <div class="stat-card"><div class="card-label">Avg Calories</div><div class="sc-val">—</div><div class="sc-sub">this week so far</div></div>
-        <div class="stat-card"><div class="card-label">Avg Protein</div><div class="sc-val">—</div><div class="sc-sub" id="wk-pro-sub">goal: —g/day</div></div>
-      </div>
-    </div>
-
-    <!-- NUTRITION -->
-    <div class="view" id="view-nutrition">
-      <div class="page-header"><div class="page-title">NUTRITION</div><div class="page-sub">Track food, water & macros</div></div>
-      <div class="day-picker-nav" id="day-picker-nav"></div>
-
-      <!-- MACRO RINGS -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
-        <div class="macro-ring-card" id="macro-ring-cal">
-          <div class="macro-ring-wrap">
-            <svg viewBox="0 0 100 100" width="72" height="72">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="mr-cal-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
-            </svg>
-            <div class="macro-ring-val" id="n-cal">0</div>
-          </div>
-          <div class="macro-ring-label">CALORIES</div>
-          <div class="macro-ring-tgt" id="n-cal-tgt">of —</div>
-        </div>
-        <div class="macro-ring-card" id="macro-ring-pro">
-          <div class="macro-ring-wrap">
-            <svg viewBox="0 0 100 100" width="72" height="72">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="mr-pro-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
-            </svg>
-            <div class="macro-ring-val" id="n-pro">0g</div>
-          </div>
-          <div class="macro-ring-label">PROTEIN</div>
-          <div class="macro-ring-tgt" id="n-pro-tgt">of —g</div>
-        </div>
-        <div class="macro-ring-card" id="macro-ring-carb">
-          <div class="macro-ring-wrap">
-            <svg viewBox="0 0 100 100" width="72" height="72">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="mr-carb-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
-            </svg>
-            <div class="macro-ring-val" id="n-carb">0g</div>
-          </div>
-          <div class="macro-ring-label">CARBS</div>
-          <div class="macro-ring-tgt" id="n-carb-tgt">of —g</div>
-        </div>
-        <div class="macro-ring-card" id="macro-ring-fat">
-          <div class="macro-ring-wrap">
-            <svg viewBox="0 0 100 100" width="72" height="72">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
-              <circle id="mr-fat-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s,stroke 0.4s"/>
-            </svg>
-            <div class="macro-ring-val" id="n-fat">0g</div>
-          </div>
-          <div class="macro-ring-label">FAT</div>
-          <div class="macro-ring-tgt" id="n-fat-tgt">of —g</div>
-        </div>
-      </div>
-
-      <!-- COMPACT WATER TRACKER -->
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:14px">
-        <div style="position:relative;width:50px;height:50px;flex-shrink:0">
-          <svg width="50" height="50" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
-            <circle id="water-ring-fill" cx="50" cy="50" r="42" fill="none" stroke="#38bdf8" stroke-width="8" stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.4s"/>
-          </svg>
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-            <div id="water-oz-display" style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--white);line-height:1">0</div>
-            <div style="font-size:0.45rem;color:var(--dim);text-transform:uppercase">oz</div>
-          </div>
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:1px;color:var(--off)">WATER</span>
-            <span style="font-size:0.7rem;color:var(--dim)" id="water-status">Goal:
-              <input type="number" id="water-goal-input" value="64" min="16" max="300" style="width:40px;padding:2px 4px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--off);font-size:0.7rem;font-family:inherit;outline:none;text-align:center" onchange="updateWaterGoal(this.value)"> oz</span>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="water-add-btn" onclick="addWater(8)" style="padding:4px 10px;font-size:0.68rem">+8</button>
-            <button class="water-add-btn" onclick="addWater(16)" style="padding:4px 10px;font-size:0.68rem">+16</button>
-            <button class="water-add-btn" onclick="addWater(32)" style="padding:4px 10px;font-size:0.68rem">+32</button>
-            <button class="water-add-btn" onclick="toggleCustomWater()" id="water-custom-toggle" style="padding:4px 10px;font-size:0.68rem">+</button>
-            <button class="water-add-btn" onclick="undoWater()" style="padding:4px 10px;font-size:0.68rem;border-color:rgba(239,68,68,0.3);color:#ef4444">−8</button>
-          </div>
-          <div id="water-custom-row" style="display:none;margin-top:6px;align-items:center;gap:6px">
-            <input type="number" id="water-custom-input" placeholder="oz" min="1" max="200" style="width:56px;padding:5px 8px;background:var(--dark);border:1px solid rgba(56,189,248,0.3);border-radius:6px;font-size:0.8rem;color:var(--white);outline:none" onkeydown="if(event.key==='Enter')addCustomWater()">
-            <button class="water-add-btn" onclick="addCustomWater()" style="padding:4px 10px;font-size:0.68rem">LOG</button>
-            <button onclick="toggleCustomWater()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:0.75rem">✕</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- RECIPE BUTTON + MEAL CATEGORIES -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <button onclick="openRecipeBook()" style="padding:7px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--off);font-size:0.72rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;letter-spacing:0.5px">
-          📋 RECIPES
-        </button>
-      </div>
-      <div id="meal-categories"></div>
-        </button>
-      </div>
-    </div>
-
-    <!-- RECIPE BOOK MODAL -->
-    <div id="recipe-book-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px">
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;max-width:520px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
-        <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;flex:1">📋 MY RECIPES</div>
-          <button onclick="closeRecipeBook()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:1.2rem">✕</button>
-        </div>
-        <div id="recipe-list" style="flex:1;overflow-y:auto"></div>
-        <div style="padding:14px 20px;border-top:1px solid var(--border)">
-          <button onclick="openCreateRecipe()" style="width:100%;padding:12px;background:rgba(212,165,32,0.15);border:1px solid rgba(212,165,32,0.3);border-radius:10px;color:#D4A520;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:0.5px">+ CREATE NEW RECIPE</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- CREATE RECIPE MODAL -->
-    <div id="create-recipe-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.9);align-items:center;justify-content:center;padding:16px">
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;max-width:520px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
-        <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;flex:1">CREATE RECIPE</div>
-          <button onclick="closeCreateRecipe()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:1.2rem">✕</button>
-        </div>
-        <div style="flex:1;overflow-y:auto;padding:16px 20px">
-          <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Recipe Name</label>
-          <input type="text" id="cr-name" placeholder="e.g. High Protein McGriddle Muffins" style="width:100%;margin:6px 0 16px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;font-family:inherit;outline:none">
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-            <div>
-              <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Servings</label>
-              <input type="number" id="cr-servings" value="1" min="1" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;font-family:inherit;outline:none">
-            </div>
-            <div>
-              <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Total Weight (g) <span style="font-weight:400;font-size:0.62rem">optional</span></label>
-              <input type="number" id="cr-total-weight" placeholder="auto-calc" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;font-family:inherit;outline:none">
-            </div>
-          </div>
-
-          <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Add Ingredients</label>
-          <div style="display:flex;gap:8px;margin:8px 0 4px">
-            <input type="text" id="cr-ing-name" placeholder="Ingredient name" style="flex:2;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.84rem;font-family:inherit;outline:none">
-            <input type="number" id="cr-ing-grams" placeholder="g" style="width:70px;padding:10px 8px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.84rem;font-family:inherit;outline:none;text-align:center">
-            <button id="cr-ing-add-btn" onclick="addCRIngredient()" style="padding:10px 14px;background:rgba(212,165,32,0.15);border:1px solid rgba(212,165,32,0.3);border-radius:8px;color:#D4A520;font-weight:700;font-size:0.78rem;cursor:pointer;white-space:nowrap">+ ADD</button>
-          </div>
-          <div style="font-size:0.65rem;color:var(--dim);margin-bottom:12px;padding-left:2px">Each ingredient is looked up in the USDA database for verified macros</div>
-
-          <div id="cr-ingredient-list" style="background:var(--card);border-radius:10px;padding:0 12px;margin-bottom:16px"></div>
-
-          <label style="font-size:0.72rem;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Notes <span style="font-weight:400;font-size:0.62rem">optional</span></label>
-          <textarea id="cr-notes" placeholder="Cooking instructions, tips..." rows="2" style="width:100%;margin-top:6px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.84rem;font-family:inherit;outline:none;resize:vertical"></textarea>
-        </div>
-        <div style="padding:14px 20px;border-top:1px solid var(--border)">
-          <button onclick="saveNewRecipe()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:#000;font-weight:700;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px">SAVE RECIPE</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PROGRESS -->
-    <div class="view" id="view-progress">
-      <div class="page-header"><div class="page-title">PROGRESS</div><div class="page-sub">Your stats over time</div></div>
-
-      <!-- STAT STRIP -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-        <div class="prog-card" style="padding:14px;text-align:center">
-          <div class="sbox-val" id="stat-streak">0</div><div class="sbox-label">Streak</div>
-        </div>
-        <div class="prog-card" style="padding:14px;text-align:center">
-          <div class="sbox-val" id="stat-workouts">0</div><div class="sbox-label">This Month</div>
-        </div>
-        <div class="prog-card" style="padding:14px;text-align:center">
-          <div class="sbox-val" id="stat-lbs-lost" style="font-size:1.2rem">—</div><div class="sbox-label" id="stat-lbs-label">Lbs Lost</div>
-        </div>
-        <div class="prog-card" style="padding:14px;text-align:center">
-          <div class="sbox-val" id="stat-avg-pro">—</div><div class="sbox-label">Avg Protein</div>
-        </div>
-      </div>
-
-      <!-- WEIGHT CHART -->
-      <div class="prog-card" style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div class="pc-title">BODY WEIGHT</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <input type="number" id="weight-log-input" placeholder="lbs" step="0.1" min="50" max="600"
-              style="width:80px;padding:8px 10px;background:var(--dark);border:1px solid var(--border2);border-radius:8px;font-size:0.95rem;color:var(--white);outline:none;text-align:center"
-              onkeydown="if(event.key==='Enter')logBodyWeight()">
-            <button onclick="logBodyWeight()" style="padding:8px 14px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:8px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer">LOG</button>
-          </div>
-        </div>
-        <div id="weight-current-display" style="font-size:0.82rem;color:var(--off);margin-bottom:12px"></div>
-        <div id="weight-chart-wrap" style="width:100%;height:160px;position:relative">
-          <div id="weight-chart-empty" style="height:160px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:0.82rem">Log your weight to see your trend</div>
-          <svg id="weight-chart-svg" style="display:none;width:100%;height:160px" viewBox="0 0 400 160" preserveAspectRatio="none"></svg>
-        </div>
-        <div id="weight-history-list" style="margin-top:10px;display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto"></div>
-      </div>
-
-      <!-- WORKOUT STREAK CALENDAR -->
-      <div class="prog-card" style="margin-bottom:14px">
-        <div class="pc-title" style="margin-bottom:12px">WORKOUT HISTORY — <span id="streak-month-label" style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text"></span></div>
-        <div class="streak-cal" id="streak-cal"></div>
-      </div>
-
-      <!-- WORKOUT FREQUENCY CHART -->
-      <div class="prog-card" style="margin-bottom:14px">
-        <div class="pc-title" style="margin-bottom:14px">WORKOUTS PER WEEK (last 8 weeks)</div>
-        <div id="freq-chart-wrap" style="width:100%;height:100px">
-          <svg id="freq-chart-svg" width="100%" height="100" viewBox="0 0 400 100" preserveAspectRatio="none"></svg>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- MY PROGRAM -->
-    <div class="view" id="view-program">
-      <div class="page-header"><div class="page-title">MY PROGRAM</div><div class="page-sub" id="prog-sub">Your personalized plan</div></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
-        <div class="stat-card"><div class="card-label">Plan</div><div class="sc-val" style="font-size:1.1rem;line-height:1.4" id="prog-tier-val">—</div><div class="sc-sub" id="prog-plan-name">—</div></div>
-        <div class="stat-card"><div class="card-label">Progress</div><div class="sc-val" id="prog-fraction">1 / —</div><div class="sc-sub">weeks completed</div><div class="prog-bar"><div class="prog-fill" id="prog-pct-bar" style="width:4%"></div></div></div>
-        <div class="stat-card"><div class="card-label">Gym Days</div><div class="sc-val" style="font-size:0.95rem;line-height:1.5" id="prog-gym-days">—</div><div class="sc-sub" id="prog-days-count">— days/week</div></div>
-      </div>
-      <div id="week-accordion" style="display:flex;flex-direction:column;gap:10px"></div>
-    </div>
-
-    <!-- MY PLAN -->
-    <div class="view" id="view-myplan">
-      <div class="page-header"><div class="page-title">MY PLAN</div><div class="page-sub" id="myplan-sub">Your personalized fitness blueprint</div></div>
-      <div id="myplan-banner" style="margin-bottom:14px"></div>
-      <div id="myplan-body"></div>
-    </div>
-
-    <!-- SETTINGS -->
-    <div class="view" id="view-settings">
-      <div class="page-header"><div class="page-title">SETTINGS</div><div class="page-sub">Manage your plan, targets, and account</div></div>
-      <div style="display:flex;flex-direction:column;gap:14px;max-width:680px">
-        <div class="card">
-          <div class="card-label" style="margin-bottom:16px">Profile</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="settings-grid">
-            <div><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Name</div><input id="s-name" class="settings-input"></div>
-            <div><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Current Weight</div><input id="s-weight" class="settings-input"></div>
-            <div><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Goal Weight</div><input id="s-goal" class="settings-input"></div>
-            <div><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Experience Level</div><input id="s-tier" class="settings-input" readonly></div>
-            <div style="grid-column:1/-1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Body Goals</div><textarea id="s-body-goals" class="settings-input" style="min-height:50px;resize:vertical;font-family:inherit" placeholder="What do you want to achieve?"></textarea></div>
-            <div style="grid-column:1/-1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin-bottom:6px">Injuries / Limitations</div><textarea id="s-injuries" class="settings-input" style="min-height:40px;resize:vertical;font-family:inherit;border-color:rgba(251,146,60,0.3)" placeholder="Any injuries or physical limitations"></textarea></div>
-            <div style="grid-column:1/-1"><div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Personal Rules</div><textarea id="s-rules" class="settings-input" style="min-height:40px;resize:vertical;font-family:inherit" placeholder="e.g. I don't do lunges, I'm lactose intolerant, I workout at 5am"></textarea></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-label" style="margin-bottom:16px">Daily Macro Targets</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-            <div><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--off);margin-bottom:6px;text-align:center">Calories</div><input id="s-cal" type="number" style="width:100%;padding:10px 6px;background:var(--dark);border:1px solid var(--border);border-radius:9px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--white);text-align:center;letter-spacing:1px;outline:none"></div>
-            <div><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;text-align:center">Protein g</div><input id="s-pro" type="number" style="width:100%;padding:10px 6px;background:var(--dark);border:1px solid var(--border);border-radius:9px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#D4A520;text-align:center;letter-spacing:1px;outline:none"></div>
-            <div><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--blue);margin-bottom:6px;text-align:center">Carbs g</div><input id="s-carb" type="number" style="width:100%;padding:10px 6px;background:var(--dark);border:1px solid var(--border);border-radius:9px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--blue);text-align:center;letter-spacing:1px;outline:none"></div>
-            <div><div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:6px;text-align:center">Fat g</div><input id="s-fat" type="number" style="width:100%;padding:10px 6px;background:var(--dark);border:1px solid var(--border);border-radius:9px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--orange);text-align:center;letter-spacing:1px;outline:none"></div>
-          </div>
-        </div>
-        <div class="card"><div class="card-label" style="margin-bottom:16px">Gym Days</div><div style="display:flex;gap:8px;flex-wrap:wrap" id="settings-gym-days"></div></div>
-        <div class="card" style="border-color:rgba(251,146,60,0.2)">
-          <div class="card-label" style="margin-bottom:12px">Subscription</div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div><div style="font-size:0.95rem;font-weight:600;margin-bottom:3px">Blueprint Pro &nbsp;<span style="color:var(--orange);font-size:0.75rem;font-weight:700">● ACTIVE</span></div><div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--dim)">$29.99/month · Cancel anytime</div></div>
-            <button style="padding:9px 18px;border:1px solid var(--border);border-radius:9px;background:none;color:var(--dim);font-family:'Inter',sans-serif;font-size:0.78rem;cursor:pointer">Manage</button>
-          </div>
-        </div>
-        <button id="save-btn" onclick="saveSettings()" style="padding:14px;background:var(--gold);color:var(--black);border:none;border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer">SAVE CHANGES</button>
-
-        <!-- DATA MANAGEMENT -->
-        <div style="margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px">
-          <div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:14px">Data Management</div>
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <button onclick="exportData()" style="padding:12px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Inter',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download Backup
-            </button>
-            <button onclick="importData()" style="padding:12px;background:var(--dark);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Inter',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Restore from Backup
-            </button>
-            <button onclick="clearAllData()" style="padding:12px;background:none;border:1px solid rgba(244,63,94,0.3);border-radius:10px;color:#F43F5E;font-family:'Inter',sans-serif;font-size:0.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              Clear All Data
-            </button>
-          </div>
-          <div style="font-size:0.68rem;color:var(--dim);margin-top:10px;line-height:1.4">Download a backup to protect your data. Your plan, workouts, meals, and progress are stored in your browser — clearing browser data will erase them.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- AI COACH -->
-    <div class="view" id="view-coach">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px">
-        <div><span style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1.5px;color:var(--white)">AI COACH</span></div>
-        <button id="coach-clear-btn" onclick="clearCoachHistory()" style="display:none;padding:5px 12px;background:none;border:1px solid var(--border);border-radius:7px;color:var(--dim);font-family:'DM Mono',monospace;font-size:0.65rem;cursor:pointer;letter-spacing:0.5px">Clear</button>
-      </div>
-      <div id="coach-chat-container" class="coach-chat-container">
-        <div id="coach-messages" class="coach-messages">
-          <div id="coach-starters" class="coach-starters">
-            <div class="coach-welcome">
-              <div class="coach-welcome-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" width="32" height="32"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-              <div class="coach-welcome-title">WHAT CAN I HELP WITH?</div>
-              <div class="coach-welcome-sub">Ask me anything about training, nutrition, or recovery</div>
-            </div>
-            <div class="coach-starter-grid">
-              <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">I had 2 eggs and toast for breakfast</button>
-              <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">What should I eat to hit my protein today?</button>
-              <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">Is my split good for hypertrophy?</button>
-              <button class="coach-starter-btn" onclick="sendCoachStarter(this.textContent)">I missed 3 days — how do I get back on track?</button>
-            </div>
-          </div>
-        </div>
-        <div class="coach-input-bar">
-          <input type="file" id="coach-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleCoachPhoto(this)">
-          <input type="file" id="coach-upload-input" accept="image/*" style="display:none" onchange="handleCoachPhoto(this)">
-          <button class="coach-img-btn" onclick="document.getElementById('coach-photo-input').click()" title="Take photo" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:none;color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          </button>
-          <button class="coach-img-btn" onclick="document.getElementById('coach-upload-input').click()" title="Upload image" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:none;color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          </button>
-          <div id="coach-img-preview" style="display:none;position:relative;flex-shrink:0">
-            <img id="coach-img-thumb" style="width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
-            <button onclick="clearCoachImage()" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#ef4444;border:none;color:white;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
-          </div>
-          <input type="text" id="coach-input" class="coach-text-input" placeholder="Ask your coach..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCoachMessage();}">
-          <button class="coach-send-btn" id="coach-send-btn" onclick="sendCoachMessage()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PROFILE -->
-    <div class="view" id="view-profile">
-      <div class="page-header"><div class="page-title">PROFILE</div><div class="page-sub" id="profile-sub">Your Blueprint hub</div></div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:20px;display:flex;align-items:center;gap:16px">
-        <div style="width:56px;height:56px;border-radius:50%;background:var(--gold-grad);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#0A0A0A;flex-shrink:0" id="profile-avatar">?</div>
-        <div style="flex:1">
-          <div style="font-size:1.15rem;font-weight:700;color:var(--bone)" id="profile-name">You</div>
-          <div style="font-size:0.78rem;color:var(--dim);margin-top:3px" id="profile-tier">Your personalized plan</div>
-          <div style="display:flex;gap:12px;margin-top:8px">
-            <div style="font-size:0.72rem;color:var(--dim)" id="profile-streak"></div>
-            <div style="font-size:0.72rem;color:var(--dim)" id="profile-goal"></div>
-          </div>
-        </div>
-      </div>
-      <div style="font-size:0.65rem;letter-spacing:1.5px;color:var(--dim);font-weight:600;margin-bottom:10px">YOUR BLUEPRINT</div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px">
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer" onclick="dashNav('program')"><div style="display:flex;align-items:center;gap:12px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" width="16" height="16"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg><div style="font-size:0.88rem;color:var(--bone)">Training Plan</div></div><div style="font-size:0.88rem;color:var(--dim)">&#8250;</div></div>
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer" onclick="dashNav('myplan')"><div style="display:flex;align-items:center;gap:12px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" width="16" height="16"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg><div style="font-size:0.88rem;color:var(--bone)">Nutrition Plan</div></div><div style="font-size:0.88rem;color:var(--dim)">&#8250;</div></div>
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="dashNav('settings')"><div style="display:flex;align-items:center;gap:12px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><div style="font-size:0.88rem;color:var(--bone)">Goals & Targets</div></div><div style="font-size:0.88rem;color:var(--dim)">&#8250;</div></div>
-      </div>
-      <div style="font-size:0.65rem;letter-spacing:1.5px;color:var(--dim);font-weight:600;margin-bottom:10px">PROGRESS</div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px">
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer" onclick="dashNav('progress')"><div style="display:flex;align-items:center;gap:12px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" width="16" height="16"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><div style="font-size:0.88rem;color:var(--bone)">Progress & Check-Ins</div></div><div style="font-size:0.88rem;color:var(--dim)">&#8250;</div></div>
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="dashNav('progress')"><div style="display:flex;align-items:center;gap:12px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><div style="font-size:0.88rem;color:var(--bone)">Strength Trends</div></div><div style="font-size:0.88rem;color:var(--dim)">&#8250;</div></div>
-      </div>
-      <div style="font-size:0.65rem;letter-spacing:1.5px;color:var(--dim);font-weight:600;margin-bottom:10px">ACCOUNT</div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px">
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer" onclick="dashNav('settings')"><div style="display:flex;align-items:center;gap:12px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div style="font-size:0.88rem;color:var(--bone)">Settings</div></div><div style="font-size:0.88rem;color:var(--dim)">&#8250;</div></div>
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer"><div style="display:flex;align-items:center;gap:12px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" width="16" height="16"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><div style="font-size:0.88rem;color:var(--bone)">Subscription</div></div><div style="font-size:0.72rem;color:rgba(34,197,94,0.7);font-weight:500">Active</div></div>
-      </div>
-      <div style="text-align:center;padding:16px 0 30px"><div style="font-size:0.72rem;color:rgba(255,255,255,0.15)">Blueprint v1.0</div></div>
-    </div>
-
-  </div>
-</div><!-- end shell -->
-
-  <!-- Mobile Bottom Tab Bar (fixed, outside shell) -->
-  <nav class="mobile-tab-bar" id="mobile-tab-bar">
-    <button class="mob-tab active" id="mob-tab-today" onclick="dashNav('today',this);syncMobTab('today')">
-      <svg class="mob-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span class="mob-tab-label">Today</span>
-    </button>
-    <button class="mob-tab" id="mob-tab-coach" onclick="dashNav('coach',this);syncMobTab('coach')">
-      <svg class="mob-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span class="mob-tab-label">Coach</span>
-    </button>
-    <button class="mob-tab" id="mob-tab-plan" onclick="dashNav('plan',this);syncMobTab('plan')">
-      <svg class="mob-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span class="mob-tab-label">Plan</span>
-    </button>
-    <button class="mob-tab" id="mob-tab-nutrition" onclick="dashNav('nutrition',this);syncMobTab('nutrition')">
-      <svg class="mob-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
-      <span class="mob-tab-label">Nutrition</span>
-    </button>
-    <button class="mob-tab" id="mob-tab-profile" onclick="dashNav('profile',this);syncMobTab('profile')">
-      <svg class="mob-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <span class="mob-tab-label">Profile</span>
-    </button>
-  </nav>
-
-</div><!-- /screen-dash -->
-
-
-<!-- ══════════ WORKOUT ENVIRONMENT ══════════ -->
-<div id="screen-workout" class="screen">
-  <div class="wo-header" style="gap:20px">
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="wo-back" onclick="minimizeWorkout()" title="Minimize — browse the app while your workout stays active" style="display:flex;align-items:center;gap:5px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-        Minimize
-      </button>
-      <button class="wo-back" onclick="if(confirm('Exit workout? Your logged sets are saved.'))exitWorkout()" style="opacity:0.6;font-size:0.72rem;padding:6px 10px">✕ End</button>
-    </div>
-    <div class="wo-title" id="wo-title" style="font-size:1.1rem;letter-spacing:1px">WORKOUT</div>
-    <button id="wo-customize-btn" style="display:none;align-items:center;gap:5px;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--dim);font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:1px;cursor:pointer;flex-shrink:0" title="Switch to custom or AI workout">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      CUSTOMIZE
-    </button>
-    <div class="wo-progress-wrap" style="flex:1">
-      <div class="wo-progress-bar"><div class="wo-progress-fill" id="wo-prog-fill" style="width:0%"></div></div>
-      <div class="wo-progress-label" id="wo-prog-label">0 / 0</div>
-    </div>
-
-  </div>
-  <!-- REST TIMER BAR -->
-  <div id="rest-timer-bar" style="display:flex;align-items:center;gap:0;background:#0d0d0d;border-bottom:1px solid var(--border);flex-shrink:0;height:56px">
-    <button onclick="adjustRest(-15)" style="width:56px;height:56px;border:none;border-right:1px solid var(--border);background:none;color:var(--white);font-size:1.6rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">−</button>
-    <div style="flex:1;position:relative;overflow:hidden;height:56px;cursor:pointer" onclick="toggleRestTimer()">
-      <div id="rest-timer-progress" style="position:absolute;top:0;left:0;height:100%;background:rgba(251,146,60,0.2);width:0%;pointer-events:none;transition:none"></div>
-      <div style="position:relative;z-index:1;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px">
-        <span id="rest-timer-label" style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;color:var(--white)">START REST</span>
-        <span id="rest-timer-secs-display" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--orange)">3:00</span>
-      </div>
-    </div>
-    <button onclick="adjustRest(15)" style="width:56px;height:56px;border:none;border-left:1px solid var(--border);background:none;color:var(--white);font-size:1.6rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">+</button>
-  </div>
-  <div class="wo-body">
-    <!-- LEFT: Exercise List -->
-    <div class="wo-left-panel">
-      <div class="wo-left-header">
-        <div class="wo-left-title" id="wo-day-title">TODAY</div>
-        <div class="wo-left-sub" id="wo-day-subtitle"></div>
-      </div>
-      <div class="wo-ex-sidebar" id="wo-ex-list"></div>
-      <div style="padding:12px">
-        <button class="btn-add-ex" style="width:100%;justify-content:center" onclick="openAddExModal()">+ ADD EXERCISE</button>
-      </div>
-    </div>
-
-    <!-- CENTER: Demo + Sets -->
-    <div class="wo-main elite" id="wo-main">
-      <!-- Warmup Banner (shown before first exercise, dismissible) -->
-      <div id="wo-warmup-banner" style="display:none"></div>
-      <!-- Exercise Header -->
-      <div class="wo-ex-header" id="wo-ex-header-wrap" style="padding:14px 16px 10px">
-        <div id="wo-ex-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:1px;color:var(--white);line-height:1.2">Select an exercise</div>
-        <div id="wo-sets-info" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
-        <div class="ex-muscles-tag" id="wo-muscles-tag" style="display:none"></div>
-      </div>
-      <div id="wo-phase-badge" style="display:none"></div>
-
-      <!-- Form Demo Images — swipe/tap to dismiss -->
-      <div class="ex-demo-wrap" id="wo-demo-wrap" style="position:relative">
-        <button id="wo-video-dismiss" onclick="dismissExVideo()" style="position:absolute;top:8px;right:8px;z-index:10;width:28px;height:28px;border-radius:8px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);color:var(--off);font-size:0.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)">✕</button>
-        <div class="ex-demo-frames" id="wo-demo-frames">
-          <div class="demo-frame"><div class="demo-frame-img-placeholder"><div class="demo-frame-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg></div></div><div class="demo-frame-label">START</div></div>
-          <div class="demo-frame"><div class="demo-frame-img-placeholder"><div class="demo-frame-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 4v6M6 14v6M18 4v6M18 14v6M3 7h6M15 7h6M3 17h6M15 17h6"/></svg></div></div><div class="demo-frame-label">MID</div></div>
-          <div class="demo-frame"><div class="demo-frame-img-placeholder"><div class="demo-frame-icon" style="font-size:1.5rem;opacity:0.5">✓</div></div><div class="demo-frame-label">END</div></div>
-        </div>
-      </div>
-
-      <!-- Sets Logger -->
-      <div class="sets-panel">
-        <div class="sets-header">
-          <div class="sets-title">TRACK YOUR SETS</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button onclick="addSet()" style="padding:6px 12px;background:var(--gold-dim);border:1px solid rgba(212,165,32,0.2);border-radius:7px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:'Bebas Neue',sans-serif;font-size:0.8rem;letter-spacing:1px;cursor:pointer">+ SET</button>
-            <span id="rest-timer-display" style="display:none;color:var(--orange);font-weight:700;font-size:0.9rem"></span>
-          </div>
-        </div>
-
-        <table class="sets-table">
-          <colgroup>
-            <col style="width:55px">
-            <col style="width:90px">
-            <col style="width:75px">
-            <col style="width:44px">
-            <col style="width:36px">
-          </colgroup>
-          <thead><tr><th>Set</th><th>Weight</th><th>Reps</th><th>✓</th><th></th></tr></thead>
-          <tbody id="sets-tbody"></tbody>
-        </table>
-      </div>
-
-    </div>
-  </div>
-  <!-- Nav buttons OUTSIDE scroll area so they're always tappable -->
-  <div class="wo-nav-btns">
-    <button class="btn-prev-ex hidden" id="wo-prev-btn">← BACK</button>
-    <button class="btn-next-ex" id="wo-next-btn">DONE →</button>
-  </div>
-
-</div>
-
-<!-- Unplanned Workout Modal -->
-<div id="unplanned-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:6000;align-items:flex-end;justify-content:center">
-  <div id="unplanned-modal-inner" style="background:var(--dark);border:1px solid var(--border2);border-radius:24px 24px 0 0;width:100%;max-width:600px;padding:24px 20px 40px;max-height:92dvh;overflow-y:auto;transition:max-height 0.3s ease">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1.5px" id="unplanned-modal-title">START A WORKOUT</div>
-      <button onclick="closeUnplannedModal()" style="background:var(--card);border:1px solid var(--border);color:var(--white);font-size:1.2rem;cursor:pointer;padding:6px 12px;border-radius:8px;flex-shrink:0">✕</button>
-    </div>
-    <div style="font-size:0.82rem;color:var(--dim);margin-bottom:24px" id="unplanned-modal-day"></div>
-
-    <!-- Main options -->
-    <div id="unplanned-options">
-      <div onclick="startAIWorkout()" style="background:var(--gold-dim);border:1px solid rgba(212,165,32,0.3);border-radius:16px;padding:20px 22px;margin-bottom:12px;cursor:pointer;transition:opacity 0.15s" onmousedown="this.style.opacity=0.7" onmouseup="this.style.opacity=1">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1.5px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">AI-GENERATED WORKOUT</div>
-        <div style="font-size:0.78rem;color:var(--off);margin-top:4px">A smart workout built for your fitness level and goals</div>
-      </div>
-      <div onclick="showCustomBuilder()" style="background:var(--card);border:1px solid var(--border2);border-radius:16px;padding:20px 22px;cursor:pointer;transition:opacity 0.15s" onmousedown="this.style.opacity=0.7" onmouseup="this.style.opacity=1">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1.5px;color:var(--white)">BUILD CUSTOM WORKOUT</div>
-        <div style="font-size:0.78rem;color:var(--dim);margin-top:4px">Choose exercises from the library and set your own sets, reps & rest</div>
-      </div>
-    </div>
-
-    <!-- AI: Generating spinner -->
-    <div id="ai-workout-loading" style="display:none;text-align:center;padding:40px 0">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px">GENERATING YOUR WORKOUT</div>
-      <div style="font-size:0.8rem;color:var(--dim)">Personalised to your level and goals...</div>
-    </div>
-
-    <!-- AI: Workout preview (shown before starting) -->
-    <div id="ai-workout-preview" style="display:none">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;color:var(--dim);margin-bottom:14px" id="ai-preview-label"></div>
-      <div id="ai-debug-status" style="display:none;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--orange);background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.2);border-radius:8px;padding:8px 12px;margin-bottom:12px;word-break:break-all;max-height:80px;overflow-y:auto"></div>
-      <div id="ai-preview-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px"></div>
-      <button onclick="launchAIWorkout()" style="width:100%;padding:16px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:12px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
-      <button onclick="regenerateAIWorkout()" style="width:100%;padding:12px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--dim);font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;cursor:pointer;margin-top:8px">↺ GENERATE ANOTHER</button>
-    </div>
-
-    <!-- Custom builder -->
-    <div id="custom-builder" style="display:none;margin-top:4px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1px;margin-bottom:10px;color:var(--off)">SELECT EXERCISES</div>
-      <input id="custom-ex-search" type="text" placeholder="Search exercises..." oninput="renderCustomExList()"
-        style="width:100%;box-sizing:border-box;padding:11px 14px;background:var(--card);border:1px solid var(--border2);border-radius:10px;color:var(--white);font-size:0.88rem;outline:none;margin-bottom:10px">
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px" id="custom-cat-filters"></div>
-      <div id="custom-ex-list" style="max-height:45dvh;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
-      <div id="custom-selected" style="margin-top:16px;display:none">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px">SELECTED — CONFIGURE SETS</div>
-        <div id="custom-selected-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
-        <button onclick="launchCustomWorkout()" style="width:100%;padding:16px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:12px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Food Search Modal -->
-<!-- Barcode Modal -->
-<div id="barcode-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;flex-direction:column">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:1px">SCAN BARCODE</div>
-    <button onclick="closeBarcodeModal()" style="background:none;border:none;color:var(--off);font-size:1.4rem;cursor:pointer">&#10005;</button>
-  </div>
-  <div style="padding:20px;border-bottom:1px solid var(--border)">
-    <div style="font-size:0.78rem;color:var(--dim);margin-bottom:10px;text-align:center">Enter the barcode number from the package</div>
-    <div style="display:flex;gap:10px">
-      <input id="barcode-input" type="number" inputmode="numeric" placeholder="e.g. 049000042566"
-        style="flex:1;padding:14px 16px;background:var(--card);border:1px solid var(--border2);border-radius:10px;font-family:'DM Mono',monospace;font-size:1.1rem;color:var(--white);outline:none;text-align:center;letter-spacing:1px"
-        onkeydown="if(event.key==='Enter')submitBarcode()">
-      <button onclick="submitBarcode()"
-        style="padding:14px 24px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;cursor:pointer;font-weight:700;white-space:nowrap">LOOK UP</button>
-    </div>
-    <div id="barcode-lookup-status" style="font-size:0.72rem;margin-top:8px;color:var(--dim);text-align:center"></div>
-  </div>
-  <div style="flex:1;position:relative;overflow:hidden;background:#000">
-    <video id="barcode-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
-    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-      <div style="width:260px;height:140px;border:2px solid var(--gold);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.55)"></div>
-    </div>
-    <div id="barcode-scan-status" style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:0.78rem;color:var(--off)"></div>
-  </div>
-  <div style="padding:12px 20px;border-top:1px solid var(--border);text-align:center">
-    <button onclick="closeBarcodeModal()"
-      style="padding:12px 32px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--off);font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer">CANCEL</button>
-  </div>
-</div>
-
-<div class="food-modal" id="food-modal">
-  <div class="food-modal-header">
-    <button class="food-modal-close" onclick="closeFoodModal()">✕</button>
-    <div class="food-modal-title">ADD TO <span id="food-modal-cat-label">BREAKFAST</span></div>
-  </div>
-  <div class="food-modal-search-row">
-    <input type="text" class="food-modal-input" id="food-modal-search-input"
-      placeholder="Search 500k+ foods..."
-      onkeydown="if(event.key==='Enter')searchFoodModal()">
-    <button class="btn-food-modal-scan" onclick="openBarcodeScanner(activeFoodCat)" title="Scan barcode"><svg viewBox="0 0 32 20" width="18" height="12" fill="currentColor"><rect x="0" y="0" width="2" height="20"/><rect x="4" y="0" width="1" height="20"/><rect x="7" y="0" width="3" height="20"/><rect x="12" y="0" width="1" height="20"/><rect x="15" y="0" width="2" height="20"/><rect x="19" y="0" width="1" height="20"/><rect x="22" y="0" width="3" height="20"/><rect x="27" y="0" width="1" height="20"/><rect x="30" y="0" width="2" height="20"/></svg></button>
-    <button class="btn-food-modal-search" onclick="searchFoodModal()">SEARCH</button>
-  </div>
-  <div class="food-modal-tabs">
-    <div class="fmt-tab active" data-tab="search" onclick="showFoodModalTab('search')">Search</div>
-    <div class="fmt-tab" data-tab="recent" onclick="showFoodModalTab('recent')">Recent</div>
-    <div class="fmt-tab" data-tab="custom" onclick="showFoodModalTab('custom')">My Foods</div>
-  </div>
-  <div class="food-modal-results" id="food-modal-results">
-    <div class="food-modal-empty">Search above or scan a barcode to find foods</div>
-  </div>
-</div>
-
-<!-- Manual Food Entry Modal -->
-<div class="serving-modal" id="manual-food-modal">
-  <div class="serving-card" style="max-width:420px">
-    <div class="serving-food-name">CREATE CUSTOM FOOD</div>
-    <div style="font-size:0.75rem;color:var(--dim);margin-bottom:16px">Saved to "My Foods" for future use</div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-      <input id="mf-name" placeholder="Food name *" style="padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;">
-      <input id="mf-serving" placeholder="Serving size (e.g. 1 cup, 100g)" style="padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><div style="font-size:0.65rem;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;margin-bottom:4px">CALORIES</div><input id="mf-cal" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
-        <div><div style="font-size:0.65rem;color:#60a5fa;font-weight:700;margin-bottom:4px">PROTEIN (g)</div><input id="mf-pro" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
-        <div><div style="font-size:0.65rem;color:var(--orange);font-weight:700;margin-bottom:4px">CARBS (g)</div><input id="mf-carb" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
-        <div><div style="font-size:0.65rem;color:#f472b6;font-weight:700;margin-bottom:4px">FAT (g)</div><input id="mf-fat" type="number" placeholder="0" style="width:100%;padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box"></div>
-      </div>
-    </div>
-    <div class="serving-actions">
-      <button class="btn-cancel-serving" onclick="closeManualFoodModal()">Cancel</button>
-      <button class="btn-confirm-log" onclick="saveManualFood()">SAVE & LOG</button>
-    </div>
-  </div>
-</div>
-
-<!-- Serving Size Modal -->
-<div class="serving-modal" id="serving-modal">
-  <div class="serving-card">
-    <div class="serving-food-name" id="sm-food-name">Food Name</div>
-    <div style="font-size:0.78rem;color:var(--dim);margin-bottom:12px" id="sm-food-brand"></div>
-    
-    <!-- Quick serving buttons -->
-    <div id="sm-quick-servings" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap"></div>
-
-    <!-- Macro display -->
-    <div class="serving-macro-row">
-      <div class="sm-chip"><div class="sm-val" id="sm-cal" style="background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">0</div><div class="sm-label">Cal</div></div>
-      <div class="sm-chip"><div class="sm-val" id="sm-pro" style="color:#60a5fa">0g</div><div class="sm-label">Protein</div></div>
-      <div class="sm-chip"><div class="sm-val" id="sm-carb" style="color:var(--orange)">0g</div><div class="sm-label">Carbs</div></div>
-      <div class="sm-chip"><div class="sm-val" id="sm-fat" style="color:#f472b6">0g</div><div class="sm-label">Fat</div></div>
-    </div>
-    <div style="font-size:0.7rem;color:var(--dim);text-align:center;margin-bottom:12px;font-family:'DM Mono',monospace" id="sm-per-note">Values shown for current amount</div>
-
-    <!-- Custom amount -->
-    <div style="font-size:0.72rem;color:var(--dim);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Custom Amount</div>
-    <div class="serving-size-row">
-      <input type="number" class="serving-size-input" id="sm-grams" value="100" min="0.1" step="0.1" oninput="updateServingCalc()" style="flex:1">
-      <select id="sm-unit" onchange="updateServingCalc()" style="padding:9px 10px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-family:'Inter',sans-serif;font-size:0.82rem;color:var(--white);outline:none;cursor:pointer">
-        <option value="g">grams</option>
-        <option value="oz">oz</option>
-        <option value="ml">ml</option>
-        <option value="serving">serving</option>
-      </select>
-    </div>
-    <div class="serving-actions">
-      <button class="btn-cancel-serving" onclick="closeServingModal()">Cancel</button>
-      <button class="btn-confirm-log" onclick="confirmLogFood()">LOG IT</button>
-    </div>
-  </div>
-</div>
-
-<!-- Add Exercise Modal -->
-<div class="add-ex-modal" id="add-ex-modal">
-  <div class="add-ex-sheet" style="position:relative;overflow:hidden">
-    <div class="aes-header">
-      <div class="aes-title">ADD EXERCISE</div>
-      <button class="aes-close" onclick="closeAddExModal()">✕</button>
-    </div>
-    <div class="aes-search">
-      <input type="text" id="aes-search-input" placeholder="Search exercises..." oninput="filterExModal()">
-    </div>
-    <div class="aes-cats" id="aes-cats">
-      <div class="aes-cat active" data-cat="All" onclick="selectExCat(this)">All</div>
-    </div>
-    <div class="aes-list" id="aes-list"></div>
-  </div>
-</div>
-
-<!-- Dashboard Exercise Picker (Substitute / Add Superset) -->
-<div class="add-ex-modal" id="dash-ex-picker-modal">
-  <div class="add-ex-sheet">
-    <div class="aes-header">
-      <div class="aes-title" id="dash-ex-picker-title">CHOOSE EXERCISE</div>
-      <button class="aes-close" onclick="closeDashExPicker()">✕</button>
-    </div>
-    <div class="aes-search">
-      <input type="text" id="dash-ex-picker-search" placeholder="Search exercises..." oninput="filterDashExPicker()">
-    </div>
-    <div class="aes-filters" id="dash-ex-picker-filters">
-      <button class="aes-filter-btn" id="aes-filter-muscle-btn" onclick="toggleAesDropdown('muscle',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
-        <span id="aes-filter-muscle-label">MUSCLE GROUP</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <button class="aes-filter-btn" id="aes-filter-equip-btn" onclick="toggleAesDropdown('equip',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="11" y="5" width="2" height="14" rx="1"/><rect x="7" y="3" width="4" height="8" rx="1"/><rect x="13" y="3" width="4" height="8" rx="1"/><rect x="2" y="4" width="5" height="6" rx="1.5"/><rect x="17" y="4" width="5" height="6" rx="1.5"/></svg>
-        <span id="aes-filter-equip-label">EQUIPMENT</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-    </div>
-    <div class="aes-list" id="dash-ex-picker-list"></div>
-    <!-- Build mode: selected tray + begin button -->
-    <div id="aes-build-tray" style="display:none;border-top:1px solid var(--border);padding:14px 16px;background:var(--dark)">
-      <div id="aes-build-selected" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;min-height:28px"></div>
-      <button onclick="beginCustomWorkoutFromPicker()" id="aes-begin-btn" style="display:none;width:100%;padding:13px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">BEGIN WORKOUT →</button>
-    </div>
-
-    <!-- Quick config overlay — sets/reps/rest before adding to list -->
-    <div id="aes-config-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.92);border-radius:inherit;z-index:10;flex-direction:column;align-items:center;justify-content:center;padding:28px 24px">
-      <div style="width:100%;max-width:320px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;color:var(--white);margin-bottom:4px" id="aes-config-name">EXERCISE</div>
-        <div style="font-size:0.72rem;color:var(--dim);margin-bottom:22px" id="aes-config-muscles"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
-          <div>
-            <div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:7px">SETS</div>
-            <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)">
-              <button onclick="adjustAesConfig('sets',-1)" style="width:38px;height:44px;background:none;border:none;color:var(--white);font-size:1.3rem;cursor:pointer">−</button>
-              <input id="aes-config-sets" type="number" min="1" max="10" style="flex:1;text-align:center;background:none;border:none;color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:1.4rem;outline:none;width:0;padding:0">
-              <button onclick="adjustAesConfig('sets',1)" style="width:38px;height:44px;background:none;border:none;color:var(--white);font-size:1.3rem;cursor:pointer">+</button>
-            </div>
-          </div>
-          <div>
-            <div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:7px">REPS</div>
-            <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)">
-              <button onclick="adjustAesConfig('reps',-1)" style="width:38px;height:44px;background:none;border:none;color:var(--white);font-size:1.3rem;cursor:pointer">−</button>
-              <input id="aes-config-reps" type="number" min="1" max="50" style="flex:1;text-align:center;background:none;border:none;color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:1.4rem;outline:none;width:0;padding:0">
-              <button onclick="adjustAesConfig('reps',1)" style="width:38px;height:44px;background:none;border:none;color:var(--white);font-size:1.3rem;cursor:pointer">+</button>
-            </div>
-          </div>
-        </div>
-        <div style="margin-bottom:22px">
-          <div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:7px">REST (seconds)</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <button onclick="adjustAesConfig('rest',-15)" style="flex:1;padding:10px 0;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;cursor:pointer">−15s</button>
-            <div id="aes-config-rest-display" style="min-width:52px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--white)">90s</div>
-            <input id="aes-config-rest" type="hidden" value="90">
-            <button onclick="adjustAesConfig('rest',15)" style="flex:1;padding:10px 0;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:0.9rem;cursor:pointer">+15s</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px">
-          <button onclick="closeAesConfig()" style="flex:1;padding:13px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--dim);font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:1px;cursor:pointer">CANCEL</button>
-          <button onclick="confirmAesConfig()" style="flex:2;padding:13px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">ADD TO WORKOUT</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Rest Timer Overlay -->
-<div class="rest-overlay" id="rest-overlay">
-  <div class="rest-card">
-    <div class="rest-label">REST TIME</div>
-    <div class="rest-countdown" id="rest-countdown">90</div>
-    <div class="rest-sub">seconds remaining</div>
-    <button class="btn-skip-rest" onclick="skipRest()">Skip Rest →</button>
-  </div>
-</div>
-
-<!-- ── SETS/REPS EDITOR MODAL ── -->
-<div id="setrepedit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9500;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeSetRepEditor()">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px 22px;width:100%;max-width:340px" onclick="event.stopPropagation()">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;color:var(--white)" id="sre-ex-name">EXERCISE</div>
-      <button onclick="closeSetRepEditor()" style="background:none;border:none;color:var(--dim);font-size:1.2rem;cursor:pointer;padding:2px 6px">✕</button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
-      <div>
-        <div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:7px">SETS</div>
-        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--dark)">
-          <button onclick="adjustSRE('sets',-1)" style="width:38px;height:44px;background:none;border:none;color:var(--white);font-size:1.3rem;cursor:pointer;flex-shrink:0">−</button>
-          <input id="sre-sets" type="number" min="1" max="10" style="flex:1;text-align:center;background:none;border:none;color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;outline:none;width:0;padding:0">
-          <button onclick="adjustSRE('sets',1)" style="width:38px;height:44px;background:none;border:none;color:var(--white);font-size:1.3rem;cursor:pointer;flex-shrink:0">+</button>
-        </div>
-      </div>
-      <div>
-        <div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:7px">REPS</div>
-        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--dark)">
-          <button onclick="adjustSRE('reps',-1)" style="width:38px;height:44px;background:none;border:none;color:var(--white);font-size:1.3rem;cursor:pointer;flex-shrink:0">−</button>
-          <input id="sre-reps" type="number" min="1" max="50" style="flex:1;text-align:center;background:none;border:none;color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;outline:none;width:0;padding:0">
-          <button onclick="adjustSRE('reps',1)" style="width:38px;height:44px;background:none;border:none;color:var(--white);font-size:1.3rem;cursor:pointer;flex-shrink:0">+</button>
-        </div>
-      </div>
-    </div>
-    <div style="margin-bottom:18px">
-      <div style="font-size:0.6rem;font-weight:700;letter-spacing:2px;color:var(--dim);margin-bottom:7px">REST (seconds)</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button onclick="adjustSRE('rest',-15)" style="padding:8px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:1rem;cursor:pointer">−15s</button>
-        <div id="sre-rest-display" style="flex:1;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1px;color:var(--white)">90s</div>
-        <input id="sre-rest" type="hidden" value="90">
-        <button onclick="adjustSRE('rest',15)" style="padding:8px 14px;background:var(--dark);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:1rem;cursor:pointer">+15s</button>
-      </div>
-    </div>
-    <button onclick="applySetRepEdit()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:10px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">APPLY</button>
-  </div>
-</div>
-
-<!-- Modular JS -->
-<script src="js/storage.js"></script>
-<script src="js/app.js"></script>
-<script src="js/scoring.js"></script>
-<script src="js/nutrition.js"></script>
-<script src="js/progress.js"></script>
-<script src="js/workout.js"></script>
-<script src="js/logger.js"></script>
-<script src="js/coach.js"></script>
-<script>_bootApp();</script>
-<script>
-// Register service worker for offline support
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/sw.js').then(function(reg) {
-      console.log('[SW] Registered:', reg.scope);
-      // Notify user when a new version is available
-      reg.addEventListener('updatefound', function() {
-        var newWorker = reg.installing;
-        if (newWorker) {
-          newWorker.addEventListener('statechange', function() {
-            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-              if (typeof showToast === 'function') showToast('App updated — refresh for latest version.', 'info', 5000);
-            }
-          });
-        }
-      });
-    }).catch(function(err) {
-      console.log('[SW] Registration failed:', err);
-    });
-  });
-
-  // Show offline/online status
-  window.addEventListener('offline', function() {
-    if (typeof showToast === 'function') showToast('You\'re offline. Workouts still work — AI features need internet.', 'warning', 4000);
-  });
-  window.addEventListener('online', function() {
-    if (typeof showToast === 'function') showToast('Back online.', 'success', 2000);
-  });
-}
-</script>
-
-<!-- WORKOUT PREVIEW MODAL -->
-<div id="workout-preview-modal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.7);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeWorkoutPreview()">
-  <div class="wpr-sheet" style="background:var(--card);border:1px solid var(--border);border-radius:24px 24px 0 0;width:100%;max-width:600px;padding:0 0 calc(env(safe-area-inset-bottom,0px) + 16px);transform:translateY(100%);transition:transform 0.28s cubic-bezier(0.34,1.1,0.64,1);max-height:88vh;display:flex;flex-direction:column">
-    <!-- Handle -->
-    <div style="display:flex;justify-content:center;padding:12px 0 4px"><div style="width:36px;height:4px;border-radius:2px;background:var(--border)"></div></div>
-    <!-- Header -->
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:12px 20px 16px">
-      <div>
-        <div id="wpr-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:1.5px;color:var(--white);line-height:1"></div>
-        <div id="wpr-day" style="font-size:0.72rem;font-weight:700;letter-spacing:1px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-top:4px"></div>
-      </div>
-      <button onclick="closeWorkoutPreview()" style="background:none;border:none;color:var(--dim);font-size:1.3rem;cursor:pointer;padding:4px;line-height:1">✕</button>
-    </div>
-    <!-- Exercise list -->
-    <div id="wpr-ex-list" style="flex:1;overflow-y:auto;padding:0 20px;display:flex;flex-direction:column;gap:10px"></div>
-    <!-- Actions -->
-    <div style="display:flex;gap:10px;padding:16px 20px 0">
-      <button id="wpr-start-btn" style="flex:1;padding:14px;background:linear-gradient(135deg,#B8900B,#D4A520,#F0D060,#D4A520,#B8900B);border:none;border-radius:12px;color:#111;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;cursor:pointer">START WORKOUT</button>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
