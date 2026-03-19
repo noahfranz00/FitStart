@@ -799,43 +799,36 @@ Respond with ONLY this JSON, no explanation:
 {"calories":NUMBER,"protein":NUMBER,"fat":NUMBER,"carbs":NUMBER,"mode":"lose|gain|maintain","weeklyChange":"NUMBER","tdee":NUMBER,"reasoning":"1 sentence explaining why these specific numbers for this person"}`;
 
   let nutrition;
-  // Try AI twice before falling back
-  for (let _attempt = 0; _attempt < 2; _attempt++) {
-    try {
-      const nutritionRaw = await callClaude(
-        [{ role: 'user', content: nutritionPrompt }],
-        { system: 'You are a sports nutritionist. Respond ONLY with valid JSON. No markdown, no explanation.', max_tokens: 500, timeout: 30000 }
-      );
-      let clean = nutritionRaw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
-      const jsonStart = clean.search(/\{/);
-      if (jsonStart > 0) clean = clean.substring(jsonStart);
-      const aiNutrition = JSON.parse(clean);
-      if (aiNutrition.calories && aiNutrition.protein && aiNutrition.fat && aiNutrition.carbs) {
-        nutrition = {
-          calories: Math.round(aiNutrition.calories),
-          protein: Math.round(aiNutrition.protein),
-          fat: Math.round(aiNutrition.fat),
-          carbs: Math.round(aiNutrition.carbs),
-          mode: aiNutrition.mode || modeHint.replace('fat loss','lose').replace('muscle gain','gain'),
-          weeklyChange: String(aiNutrition.weeklyChange || '0'),
-          tdee: Math.round(aiNutrition.tdee || aiNutrition.calories),
-          reasoning: aiNutrition.reasoning || '',
-          source: 'ai'
-        };
-        console.log('[Nutrition] AI-determined (attempt ' + (_attempt+1) + '):', nutrition.calories + 'cal', nutrition.protein + 'g pro', '—', nutrition.reasoning);
-        break;
-      } else {
-        throw new Error('Missing fields');
-      }
-    } catch (e) {
-      console.warn('[Nutrition] AI attempt ' + (_attempt+1) + ' failed:', e.message);
-      if (_attempt === 1) {
-        // Final fallback — simple formula, but use goal weight for protein
-        console.warn('[Nutrition] Using formula fallback');
-        nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
-        nutrition.source = 'formula';
-      }
+  // Try AI once with short timeout, fall back to formula immediately if it fails
+  try {
+    const nutritionRaw = await callClaude(
+      [{ role: 'user', content: nutritionPrompt }],
+      { system: 'You are a sports nutritionist. Respond ONLY with valid JSON. No markdown, no explanation.', max_tokens: 500, timeout: 12000 }
+    );
+    let clean = nutritionRaw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
+    const jsonStart = clean.search(/\{/);
+    if (jsonStart > 0) clean = clean.substring(jsonStart);
+    const aiNutrition = JSON.parse(clean);
+    if (aiNutrition.calories && aiNutrition.protein && aiNutrition.fat && aiNutrition.carbs) {
+      nutrition = {
+        calories: Math.round(aiNutrition.calories),
+        protein: Math.round(aiNutrition.protein),
+        fat: Math.round(aiNutrition.fat),
+        carbs: Math.round(aiNutrition.carbs),
+        mode: aiNutrition.mode || modeHint.replace('fat loss','lose').replace('muscle gain','gain'),
+        weeklyChange: String(aiNutrition.weeklyChange || '0'),
+        tdee: Math.round(aiNutrition.tdee || aiNutrition.calories),
+        reasoning: aiNutrition.reasoning || '',
+        source: 'ai'
+      };
+      console.log('[Nutrition] AI-determined:', nutrition.calories + 'cal', nutrition.protein + 'g pro', '—', nutrition.reasoning);
+    } else {
+      throw new Error('Missing fields');
     }
+  } catch (e) {
+    console.warn('[Nutrition] AI failed, using formula:', e.message);
+    nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
+    nutrition.source = 'formula';
   }
 
   USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, bodyGoals, personalRules, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
