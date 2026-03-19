@@ -709,13 +709,13 @@ function calcNutrition(weightLbs, goalLbs, weeks, gender, age, heightCm, activit
   let proteinRefWeight, proteinPerLb;
   if (mode === 'lose') {
     proteinRefWeight = goalLbs; // use goal weight, not current
-    proteinPerLb = 0.8;
+    proteinPerLb = 1.0;
   } else if (mode === 'gain') {
-    proteinRefWeight = weightLbs;
-    proteinPerLb = 0.9;
+    proteinRefWeight = weightLbs; // use current weight for bulking
+    proteinPerLb = 1.1; // bulking needs more protein to support muscle growth
   } else {
     proteinRefWeight = weightLbs;
-    proteinPerLb = 0.85;
+    proteinPerLb = 1.0;
   }
   const protein = Math.round(proteinRefWeight * proteinPerLb);
 
@@ -786,7 +786,11 @@ YOUR JOB: Set calories, protein, carbs, and fat that are RIGHT FOR THIS SPECIFIC
 CRITICAL RULES:
 - Calculate TDEE using Mifflin-St Jeor with their actual stats.
 - For ${modeHint}: set an appropriate caloric ${weight > goal ? 'deficit. Safe rate: 0.5-1% bodyweight loss per week. Never below 1500cal for men or 1200cal for women.' : weight < goal ? 'surplus. Lean bulk: 200-500cal over TDEE.' : 'intake at TDEE.'}
-- PROTEIN: Base on their GOAL WEIGHT and LEAN BODY MASS, NOT current weight. A ${weight}lb person at ${heightStr} who wants to ${modeHint} does NOT need ${weight}g+ of protein. Estimate their lean mass and use 0.7-1.0g per pound of lean mass. For significantly overweight individuals, using goal weight is standard practice.
+- PROTEIN: Set based on the person's goal and body composition context.
+  * For MUSCLE GAIN / BULKING: 1.0-1.2g per pound of CURRENT body weight. A ${weight}lb person bulking needs ${Math.round(weight * 1.1)}g+ protein, not less. More muscle requires more protein.
+  * For FAT LOSS: Use GOAL WEIGHT as the reference, not current weight. 0.8-1.0g per pound of goal weight. A 300lb person targeting 250lbs needs ~200-250g, not 300g+.
+  * For MAINTENANCE: 0.85-1.0g per pound of current body weight.
+  * Never set protein below 130g for any adult male or 100g for any adult female regardless of goal.
 - Consider their STARTING POINT. A ${currentTier} at ${weight}lbs probably eats far less protein than an advanced lifter. Set a target that stretches them but is achievable. The program phases can progressively increase targets later.
 - Fat: 25-30% of calories for hormonal health. Never below 20%.
 - Carbs: remainder after protein and fat are set. Primary fuel for training.
@@ -1409,6 +1413,35 @@ function loadFromStorage() {
   const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
   const wd = lsGet(LS.wktDone);  if (wd) wktDone = new Set(wd);
   const tg = lsGet(LS.targets);  if (tg) TARGETS = tg;
+  // Reload plan from localStorage (critical for coach-modified plans)
+  const savedPlan = lsGet('fs_plan');
+  if (savedPlan && savedPlan.weekly_schedule) {
+    generatedPlan = savedPlan;
+    // Rebuild DAY_WORKOUTS from updated plan
+    GYM_DAYS = [];
+    DAY_WORKOUTS = {};
+    var _banList = (USER && USER.personalRules) ? _parseBannedExercises(USER.personalRules) : [];
+    generatedPlan.weekly_schedule.forEach(function(d, i) {
+      if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
+        // Filter banned exercises at load time
+        var filtered = d.exercises.filter(function(ex) {
+          var exLower = ex.name.toLowerCase();
+          for (var bi = 0; bi < _banList.length; bi++) {
+            if (exLower.includes(_banList[bi])) {
+              console.log('[LoadFilter] Removed "' + ex.name + '" - matches ban on "' + _banList[bi] + '"');
+              return false;
+            }
+          }
+          return true;
+        });
+        GYM_DAYS.push(i);
+        DAY_WORKOUTS[i] = { name: d.badge, focus: (d.workout || '').slice(0, 80), exercises: filtered };
+      }
+    });
+  }
+  // Reload user data
+  const savedUser = lsGet('fs_user');
+  if (savedUser && savedUser.name) USER = savedUser;
   // Calculate current training week from program start date
   const startDate = lsGet('fs_program_start');
   if (startDate) {
