@@ -246,7 +246,8 @@ If that day is a rest day, use new_exercises to assign a full workout. NEVER sub
   }
 
   // Return final response — same shape as before so client code works
-  const out = { content: resp.content, model: resp.model, stop_reason: resp.stop_reason, usage: resp.usage };
+  const out = { content: resp.content || [], model: resp.model, stop_reason: resp.stop_reason, usage: resp.usage };
+  if (resp.error) out.error = resp.error;
   if (changed) out._sync_pull = true;
   return json(out);
 }
@@ -257,7 +258,12 @@ async function claude(body, key) {
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify(body)
   });
-  return r.json();
+  const data = await r.json();
+  if (!r.ok || data.error) {
+    console.log('[Claude API Error]', r.status, JSON.stringify(data.error || data));
+    return { content: [{ type: 'text', text: '' }], stop_reason: 'error', error: data.error || { message: 'API error ' + r.status } };
+  }
+  return data;
 }
 
 // ═══ TOOL DISPATCH ═══
