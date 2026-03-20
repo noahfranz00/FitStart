@@ -766,70 +766,8 @@ async function generatePlan() {
   }
 
   const heightCm = Math.round((heightFt * 12 + heightIn) * 2.54);
-  
-  // AI determines macros — not a formula. The AI sees the full picture.
-  const heightStr = heightFt + "'" + heightIn + '"';
-  const modeHint = weight > goal ? 'fat loss' : weight < goal ? 'muscle gain' : 'maintenance';
-  const nutritionPrompt = `You are an elite sports nutritionist creating a personalized nutrition plan. This is NOT a bodybuilding calculator. You must consider the WHOLE PERSON.
-
-CLIENT PROFILE:
-- ${age}yo ${gender}, ${heightStr} (${heightCm}cm)
-- Current weight: ${weight}lbs, Goal weight: ${goal}lbs
-- Activity level: ${activity}, Experience: ${currentTier}
-- Training: ${selDays.length} days/week, ${duration} sessions
-- Timeline: ${selectedWeeks === 0 ? 'Ongoing' : selectedWeeks + ' weeks'}
-${bodyGoals ? '- Their goals in their own words: "' + bodyGoals + '"' : ''}
-${injuries ? '- Injuries/limitations: ' + injuries : ''}
-
-YOUR JOB: Set calories, protein, carbs, and fat that are RIGHT FOR THIS SPECIFIC PERSON.
-
-CRITICAL RULES:
-- Calculate TDEE using Mifflin-St Jeor with their actual stats.
-- For ${modeHint}: set an appropriate caloric ${weight > goal ? 'deficit. Safe rate: 0.5-1% bodyweight loss per week. Never below 1500cal for men or 1200cal for women.' : weight < goal ? 'surplus. Lean bulk: 200-500cal over TDEE.' : 'intake at TDEE.'}
-- PROTEIN: Set based on the person's goal and body composition context.
-  * For MUSCLE GAIN / BULKING: 1.0-1.2g per pound of CURRENT body weight. A ${weight}lb person bulking needs ${Math.round(weight * 1.1)}g+ protein, not less. More muscle requires more protein.
-  * For FAT LOSS: Use GOAL WEIGHT as the reference, not current weight. 0.8-1.0g per pound of goal weight. A 300lb person targeting 250lbs needs ~200-250g, not 300g+.
-  * For MAINTENANCE: 0.85-1.0g per pound of current body weight.
-  * Never set protein below 130g for any adult male or 100g for any adult female regardless of goal.
-- Consider their STARTING POINT. A ${currentTier} at ${weight}lbs probably eats far less protein than an advanced lifter. Set a target that stretches them but is achievable. The program phases can progressively increase targets later.
-- Fat: 25-30% of calories for hormonal health. Never below 20%.
-- Carbs: remainder after protein and fat are set. Primary fuel for training.
-
-Respond with ONLY this JSON, no explanation:
-{"calories":NUMBER,"protein":NUMBER,"fat":NUMBER,"carbs":NUMBER,"mode":"lose|gain|maintain","weeklyChange":"NUMBER","tdee":NUMBER,"reasoning":"1 sentence explaining why these specific numbers for this person"}`;
-
-  let nutrition;
-  // Try AI once with short timeout, fall back to formula immediately if it fails
-  try {
-    const nutritionRaw = await callClaude(
-      [{ role: 'user', content: nutritionPrompt }],
-      { system: 'You are a sports nutritionist. Respond ONLY with valid JSON. No markdown, no explanation.', max_tokens: 500, timeout: 12000 }
-    );
-    let clean = nutritionRaw.replace(/^```json\n?|^```\n?|```$/gm, '').trim();
-    const jsonStart = clean.search(/\{/);
-    if (jsonStart > 0) clean = clean.substring(jsonStart);
-    const aiNutrition = JSON.parse(clean);
-    if (aiNutrition.calories && aiNutrition.protein && aiNutrition.fat && aiNutrition.carbs) {
-      nutrition = {
-        calories: Math.round(aiNutrition.calories),
-        protein: Math.round(aiNutrition.protein),
-        fat: Math.round(aiNutrition.fat),
-        carbs: Math.round(aiNutrition.carbs),
-        mode: aiNutrition.mode || modeHint.replace('fat loss','lose').replace('muscle gain','gain'),
-        weeklyChange: String(aiNutrition.weeklyChange || '0'),
-        tdee: Math.round(aiNutrition.tdee || aiNutrition.calories),
-        reasoning: aiNutrition.reasoning || '',
-        source: 'ai'
-      };
-      console.log('[Nutrition] AI-determined:', nutrition.calories + 'cal', nutrition.protein + 'g pro', '—', nutrition.reasoning);
-    } else {
-      throw new Error('Missing fields');
-    }
-  } catch (e) {
-    console.warn('[Nutrition] AI failed, using formula:', e.message);
-    nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
-    nutrition.source = 'formula';
-  }
+  const nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
+  nutrition.source = 'formula';
 
   USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, bodyGoals, personalRules, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
 
