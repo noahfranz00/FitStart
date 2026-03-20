@@ -394,143 +394,13 @@ function getExerciseData(name) {
 // wger image URL builder — returns array of image URLs for an exercise
 function getExerciseImages(wgerId) {
   if (!wgerId) return null;
+  // wger hosts exercise images at this pattern
   return {
     start: `https://wger.de/en/exercise/${wgerId}/view/exercise`,
+    // Use wger's exerciseimage API for actual images
     api: `https://wger.de/api/v2/exerciseimage/?exercise=${wgerId}&format=json`
   };
 }
-
-// ═══════════════════════════════════════════
-// EXERCISE IMAGE CACHE — lazy-fetches wger thumbnails
-// Throttled to 2 concurrent requests. Uses exerciseinfo endpoint.
-// Failed fetches retry after 6 hours (not cached permanently).
-// ═══════════════════════════════════════════
-var _exImgCache = {};   // { wgerId: { url: string|null, ts: number } }
-var _exImgPending = {};
-var _exImgQueue = [];
-var _exImgActive = 0;
-var _EX_IMG_MAX_CONCURRENT = 2;
-var _EX_IMG_RETRY_MS = 6 * 60 * 60 * 1000; // 6 hours
-
-(function _loadImgCache() {
-  try {
-    // Clear old v1 cache (was caching null permanently)
-    localStorage.removeItem('fs_ex_img_cache');
-    var stored = localStorage.getItem('fs_ex_img_cache_v2');
-    if (stored) _exImgCache = JSON.parse(stored);
-  } catch(e) { _exImgCache = {}; }
-})();
-
-function _saveImgCache() {
-  try { localStorage.setItem('fs_ex_img_cache_v2', JSON.stringify(_exImgCache)); } catch(e) {}
-}
-
-function getExerciseThumb(exerciseName) {
-  var db = getExerciseData(exerciseName);
-  var wid = db && db.wgerId;
-  if (!wid) return null;
-  var cached = _exImgCache[wid];
-  if (cached && cached.url) return cached.url; // got an image
-  if (cached && cached.url === null && cached.ts && (Date.now() - cached.ts < _EX_IMG_RETRY_MS)) return null; // failed recently, don't retry yet
-  // Queue a fetch
-  if (!_exImgPending[wid]) {
-    _exImgPending[wid] = true;
-    _exImgQueue.push(wid);
-    _drainImgQueue();
-  }
-  return null;
-}
-
-function _drainImgQueue() {
-  while (_exImgActive < _EX_IMG_MAX_CONCURRENT && _exImgQueue.length > 0) {
-    var wid = _exImgQueue.shift();
-    _exImgActive++;
-    _fetchExImage(wid).finally(function() {
-      _exImgActive--;
-      _drainImgQueue();
-    });
-  }
-}
-
-async function _fetchExImage(wgerId) {
-  // Strategy: try exerciseinfo endpoint (returns images embedded), then fall back to exerciseimage search
-  var endpoints = [
-    'https://wger.de/api/v2/exerciseinfo/' + wgerId + '/?format=json',
-    'https://wger.de/api/v2/exerciseimage/?exercise_base=' + wgerId + '&format=json',
-    'https://wger.de/api/v2/exerciseimage/?exercise=' + wgerId + '&format=json'
-  ];
-  for (var i = 0; i < endpoints.length; i++) {
-    try {
-      var controller = new AbortController();
-      var timer = setTimeout(function() { controller.abort(); }, 10000);
-      var resp = await fetch(endpoints[i], { signal: controller.signal });
-      clearTimeout(timer);
-      if (!resp.ok) continue;
-      var data = await resp.json();
-      var imgUrl = null;
-      // exerciseinfo endpoint returns { images: [{ image: url, ... }] }
-      if (data.images && data.images.length > 0) {
-        // Prefer main image
-        var main = data.images.find(function(img) { return img.is_main; });
-        imgUrl = (main || data.images[0]).image;
-      }
-      // exerciseimage endpoint returns { results: [{ image: url }] }
-      if (!imgUrl && data.results && data.results.length > 0) {
-        imgUrl = data.results[0].image;
-      }
-      if (imgUrl) {
-        // Ensure full URL
-        if (imgUrl.startsWith('/')) imgUrl = 'https://wger.de' + imgUrl;
-        _exImgCache[wgerId] = { url: imgUrl, ts: Date.now() };
-        _saveImgCache();
-        // Re-render visible lists
-        if (typeof renderTodayWorkout === 'function') renderTodayWorkout();
-        if (typeof renderEcList === 'function' && typeof woWorkout !== 'undefined' && woWorkout) renderEcList();
-        return;
-      }
-    } catch(e) {
-      // timeout or network error — try next endpoint
-      console.log('[ExImg] Endpoint ' + i + ' failed for ' + wgerId + ':', e.message);
-    }
-  }
-  // All endpoints failed — cache as null with timestamp (will retry after _EX_IMG_RETRY_MS)
-  _exImgCache[wgerId] = { url: null, ts: Date.now() };
-  _saveImgCache();
-  console.log('[ExImg] All endpoints failed for wgerId=' + wgerId);
-}
-
-function buildExThumbHtml(name, size) {
-  var sz = size || 'normal';
-  var cls = sz === 'small' ? 'wo-ex-sidebar-thumb' : 'ex-thumb';
-  var url = getExerciseThumb(name);
-  if (url) {
-    return '<div class="' + cls + '"><img src="' + url + '" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=ex-thumb-placeholder>' + _getMuscleBadge(name) + '</div>\'"></div>';
-  }
-  return '<div class="' + cls + '"><div class="ex-thumb-placeholder">' + _getMuscleBadge(name) + '</div></div>';
-}
-
-function _getMuscleBadge(name) {
-  var db = getExerciseData(name);
-  var m = (db && db.muscles) ? db.muscles.split(',')[0].trim() : '';
-  var map = { 'Chest':'CHEST', 'Lats':'BACK', 'Back':'BACK', 'Quads':'LEGS', 'Hamstrings':'HAMS', 'Glutes':'GLTS', 'Shoulders':'SHLD', 'Biceps':'ARMS', 'Triceps':'ARMS', 'Core':'CORE', 'Calves':'CALV', 'Forearms':'ARMS', 'Traps':'TRAP', 'Abs':'CORE' };
-  for (var key in map) { if (m.toLowerCase().includes(key.toLowerCase())) return map[key]; }
-  return m.substring(0, 4).toUpperCase() || 'EX';
-}
-
-// ═══════════════════════════════════════════
-// THEME TOGGLE — Light/Dark mode
-// ═══════════════════════════════════════════
-function initTheme() {
-  var saved = localStorage.getItem('fs_theme');
-  if (saved === 'light') document.body.classList.add('light-theme');
-}
-function toggleTheme() {
-  var isLight = document.body.classList.toggle('light-theme');
-  localStorage.setItem('fs_theme', isLight ? 'light' : 'dark');
-  var cb = document.getElementById('theme-toggle-cb');
-  if (cb) cb.checked = isLight;
-}
-initTheme();
 
 // ═══════════════════════════════════════════
 // ONBOARDING STATE
@@ -699,20 +569,16 @@ function calcNutrition(weightLbs, goalLbs, weeks, gender, age, heightCm, activit
   }
 
   // Evidence-based protein targets
-  // For fat loss: use GOAL weight, not current weight — standard recommendation
-  // for overweight individuals (Helms et al., 2014). Using current weight at 300+ lbs
-  // produces absurd targets that discourage beginners.
-  // Cutting: 1.0g/lb of goal weight (preserves muscle in deficit)
-  // Bulking: 0.9g/lb of current weight (sufficient for hypertrophy)
-  // Maintenance: 0.85g/lb of current weight
-  // Fallback formula — only used if AI fails twice
+  // Cutting: use GOAL weight (not current) at 1.0g/lb
+  // Bulking: use CURRENT weight at 1.1g/lb to support muscle growth
+  // Maintenance: 1.0g/lb of current weight
   let proteinRefWeight, proteinPerLb;
   if (mode === 'lose') {
-    proteinRefWeight = goalLbs; // use goal weight, not current
+    proteinRefWeight = goalLbs;
     proteinPerLb = 1.0;
   } else if (mode === 'gain') {
-    proteinRefWeight = weightLbs; // use current weight for bulking
-    proteinPerLb = 1.1; // bulking needs more protein to support muscle growth
+    proteinRefWeight = weightLbs;
+    proteinPerLb = 1.1;
   } else {
     proteinRefWeight = weightLbs;
     proteinPerLb = 1.0;
@@ -723,7 +589,7 @@ function calcNutrition(weightLbs, goalLbs, weeks, gender, age, heightCm, activit
   const fat = Math.round(calories * 0.27 / 9);
 
   // Carbs: fill remaining calories — primary fuel for training performance
-  const carbs = Math.max(50, Math.round((calories - protein * 4 - fat * 9) / 4));
+  const carbs = Math.round((calories - protein * 4 - fat * 9) / 4);
 
   return { calories, protein, fat, carbs, weeklyChange, tdee, deficit, surplus, mode, bmr: Math.round(bmr), multiplier };
 }
@@ -767,8 +633,6 @@ async function generatePlan() {
 
   const heightCm = Math.round((heightFt * 12 + heightIn) * 2.54);
   const nutrition = calcNutrition(weight, goal, selectedWeeks, gender, age, heightCm, activity);
-  nutrition.source = 'formula';
-
   USER = { name: name || 'You', age, gender, weight, goal, heightCm, heightFt, heightIn, activity, injuries, bodyGoals, personalRules, equipment, selDays, duration, tier: currentTier, weeks: selectedWeeks, split: selectedSplit, nutrition };
 
   // Auto-calculate water goal: half bodyweight in oz, capped at 128oz (1 gallon)
@@ -1021,7 +885,7 @@ function renderResults(plan) {
   if (myplanBanner) myplanBanner.innerHTML = `<div class="results-banner" style="border-radius:14px;margin-bottom:0"><div><h2>${plan.name}</h2><p>${plan.tagline}</p></div><div class="results-tier-badge">${USER.tier.charAt(0).toUpperCase()+USER.tier.slice(1)}</div></div>`;
   document.getElementById('results-grid').innerHTML = [
     { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', title:'YOUR GOAL', html:`<ul style="margin-top:4px;margin-left:14px"><li>Current weight: <strong>${USER.weight} lbs</strong></li><li>Goal weight: <strong>${USER.goal} lbs</strong></li><li>Timeline: <strong>${plan.timeline}</strong></li>${n.mode==='maintain'?'<li>Maintaining current weight</li>':`<li>${n.mode==='gain'?'Gaining':'Losing'} <strong>${Math.abs(parseFloat(n.weeklyChange))} lbs/week</strong></li>`}</ul>` },
-    { icon:'🥩', title:'NUTRITION TARGETS', html:`<p><strong>${plan.calorie_target}</strong> daily calories</p><p><strong>${plan.protein_target}</strong> protein</p><p style="margin-top:6px;color:var(--dim);font-size:0.83rem">Carbs: ${USER.nutrition.carbs}g · Fat: ${USER.nutrition.fat}g${USER.nutrition.tdee ? ' · TDEE: ' + USER.nutrition.tdee + ' cal' : ''}</p>${USER.nutrition.reasoning ? '<p style="margin-top:8px;color:var(--off);font-size:0.82rem;font-style:italic">' + USER.nutrition.reasoning + '</p>' : ''}` },
+    { icon:'🥩', title:'NUTRITION TARGETS', html:`<p><strong>${plan.calorie_target}</strong> daily calories</p><p><strong>${plan.protein_target}</strong> protein</p><p style="margin-top:6px;color:var(--dim);font-size:0.83rem">Carbs: ${USER.nutrition.carbs}g · Fat: ${USER.nutrition.fat}g · TDEE: ${USER.nutrition.tdee} cal</p>` },
     { icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', title:'TRAINING APPROACH', html:`<ul style="margin-top:4px;margin-left:14px">${(plan.workout_philosophy||plan.philosophy||'Personalized program built for your goals.').split('. ').filter(s=>s.trim()).map(s=>`<li style="margin-bottom:6px">${s.trim().replace(/\.$/,'')}</li>`).join('')}</ul>` },
   ].map(c=>`<div class="r-card"><div class="r-card-icon">${c.icon}</div><h3>${c.title}</h3>${c.html}</div>`).join('');
 
@@ -1057,7 +921,6 @@ Level: ${USER.tier}, ${USER.selDays.length} days/week, ${USER.duration} sessions
 PROGRAM: "${plan.name}" — ${selectedWeeks} weeks
 Phases: ${phaseOverview}
 Macros: ${n.calories}cal, ${n.protein}g protein, ${n.carbs}g carbs, ${n.fat}g fat (${n.mode} mode, ${n.weeklyChange}lbs/week)
-${n.reasoning ? 'Nutrition rationale: ' + n.reasoning : ''}
 
 Paragraph 1 (3-4 sentences): What this program is and why it fits their goals${USER.injuries ? ' (mention how you adapted for their injuries)' : ''}
 Paragraph 2 (3-4 sentences): Why these specific macro targets — calories, protein amount, the reasoning
@@ -1344,24 +1207,19 @@ function loadFromStorage() {
   const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
   const wd = lsGet(LS.wktDone);  if (wd) wktDone = new Set(wd);
   const tg = lsGet(LS.targets);  if (tg) TARGETS = tg;
-  // Reload plan from localStorage (critical for coach-modified plans)
+  // Reload plan from localStorage (picks up coach-modified plans)
   const savedPlan = lsGet('fs_plan');
   if (savedPlan && savedPlan.weekly_schedule) {
     generatedPlan = savedPlan;
-    // Rebuild DAY_WORKOUTS from updated plan
     GYM_DAYS = [];
     DAY_WORKOUTS = {};
     var _banList = (USER && USER.personalRules) ? _parseBannedExercises(USER.personalRules) : [];
     generatedPlan.weekly_schedule.forEach(function(d, i) {
       if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
-        // Filter banned exercises at load time
         var filtered = d.exercises.filter(function(ex) {
           var exLower = ex.name.toLowerCase();
           for (var bi = 0; bi < _banList.length; bi++) {
-            if (exLower.includes(_banList[bi])) {
-              console.log('[LoadFilter] Removed "' + ex.name + '" - matches ban on "' + _banList[bi] + '"');
-              return false;
-            }
+            if (exLower.includes(_banList[bi])) return false;
           }
           return true;
         });
@@ -1370,8 +1228,7 @@ function loadFromStorage() {
       }
     });
   }
-  // Reload user data
-  const savedUser = lsGet('fs_user');
+  var savedUser = lsGet('fs_user');
   if (savedUser && savedUser.name) USER = savedUser;
   // Calculate current training week from program start date
   const startDate = lsGet('fs_program_start');
@@ -1582,25 +1439,13 @@ function initDashboard() {
   // Build DAY_WORKOUTS from plan
   GYM_DAYS = [];
   DAY_WORKOUTS = {};
-  // Apply personal rules ban filter on every load (not just generation)
-  var _loadBanned = _parseBannedExercises(USER.personalRules || '');
   generatedPlan.weekly_schedule.forEach((d, i) => {
     if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
       GYM_DAYS.push(i);
-      var filteredExes = d.exercises.filter(function(ex) {
-        var exLower = ex.name.toLowerCase();
-        for (var bi = 0; bi < _loadBanned.length; bi++) {
-          if (exLower.includes(_loadBanned[bi])) {
-            console.log('[LoadFilter] Removed "' + ex.name + '" — matches ban on "' + _loadBanned[bi] + '"');
-            return false;
-          }
-        }
-        return true;
-      });
       DAY_WORKOUTS[i] = {
         name: d.badge,
         focus: d.workout.slice(0,80),
-        exercises: filteredExes
+        exercises: d.exercises
       };
     }
   });
@@ -1628,9 +1473,6 @@ function initDashboard() {
   document.getElementById('s-pro').value    = TARGETS.pro;
   document.getElementById('s-carb').value   = TARGETS.carb;
   document.getElementById('s-fat').value    = TARGETS.fat;
-
-  var _themeCb = document.getElementById('theme-toggle-cb');
-  if (_themeCb) _themeCb.checked = document.body.classList.contains('light-theme');
 
   // Progress (null-safe - elements may not exist in all views)
   const pwCur = document.getElementById('pw-current');
@@ -1667,7 +1509,6 @@ function initDashboard() {
     renderNutritionChart();
     renderFreqChart();
     renderNutritionChart();
-    if (typeof renderTimeline === 'function') renderTimeline();
     renderProgram();
     renderSettingsGymDays();
     renderMyPlan(generatedPlan);
