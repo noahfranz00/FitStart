@@ -247,8 +247,19 @@ If that day is a rest day, use new_exercises to assign a full workout. NEVER sub
 
   // Return final response — same shape as before so client code works
   const out = { content: resp.content || [], model: resp.model, stop_reason: resp.stop_reason, usage: resp.usage };
-  if (resp.error) out.error = resp.error;
   if (changed) out._sync_pull = true;
+
+  // Surface API errors as real HTTP errors so the client can display them
+  if (resp.error) {
+    out.error = resp.error;
+    const msg = resp.error.message || 'AI service error';
+    const status = msg.includes('credit') || msg.includes('billing') ? 402
+      : msg.includes('rate') ? 429
+      : msg.includes('overloaded') ? 503
+      : 502;
+    return json(out, status);
+  }
+
   return json(out);
 }
 
