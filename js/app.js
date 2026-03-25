@@ -568,22 +568,12 @@ function calcNutrition(weightLbs, goalLbs, weeks, gender, age, heightCm, activit
     weeklyChange = '0';
   }
 
-  // Evidence-based protein targets
-  // Cutting: use GOAL weight (not current) at 1.0g/lb
-  // Bulking: use CURRENT weight at 1.1g/lb to support muscle growth
-  // Maintenance: 1.0g/lb of current weight
-  let proteinRefWeight, proteinPerLb;
-  if (mode === 'lose') {
-    proteinRefWeight = goalLbs;
-    proteinPerLb = 1.0;
-  } else if (mode === 'gain') {
-    proteinRefWeight = weightLbs;
-    proteinPerLb = 1.1;
-  } else {
-    proteinRefWeight = weightLbs;
-    proteinPerLb = 1.0;
-  }
-  const protein = Math.round(proteinRefWeight * proteinPerLb);
+  // Evidence-based protein targets (Helms et al., 2014; Morton et al., 2018)
+  // Cutting: 1.0-1.2g/lb to preserve muscle in deficit
+  // Bulking: 0.8-1.0g/lb sufficient for hypertrophy
+  // Maintenance: 0.85g/lb
+  const proteinPerLb = mode === 'lose' ? 1.1 : mode === 'gain' ? 0.9 : 0.85;
+  const protein = Math.round(weightLbs * proteinPerLb);
 
   // Fat: minimum 20% of calories for hormonal health, target 25-30%
   const fat = Math.round(calories * 0.27 / 9);
@@ -1204,56 +1194,9 @@ async function callClaude(messages, opts = {}) {
 }
 
 function loadFromStorage() {
-  // ── WEEKLY RESET: clear per-week data when a new week starts ──
-  var now = new Date();
-  var dayJS = now.getDay(); // 0=Sun, 1=Mon...6=Sat
-  // Compute Monday of this week as "YYYY-MM-DD"
-  var daysFromMon = dayJS === 0 ? 6 : dayJS - 1;
-  var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMon);
-  var weekId = monday.toISOString().split('T')[0];
-  var prevWeek = lsGet('fs_week_id');
-  if (prevWeek && prevWeek !== weekId) {
-    // New week — archive last week's meals, clear weekly trackers
-    try {
-      var oldMeals = lsGet(LS.mealLogs);
-      if (oldMeals && Object.keys(oldMeals).length > 0) {
-        lsSet('fs_mealLogs_' + prevWeek, oldMeals); // archive
-      }
-    } catch(e) {}
-    lsSet(LS.mealLogs, {});
-    lsSet(LS.wktDone, []);
-    mealLogs = {};
-    wktDone = new Set();
-    console.log('[Blueprint] New week detected (' + weekId + '). Cleared meal logs & workout status.');
-  }
-  lsSet('fs_week_id', weekId);
-
   const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
   const wd = lsGet(LS.wktDone);  if (wd) wktDone = new Set(wd);
   const tg = lsGet(LS.targets);  if (tg) TARGETS = tg;
-  // Reload plan from localStorage (picks up coach-modified plans)
-  const savedPlan = lsGet('fs_plan');
-  if (savedPlan && savedPlan.weekly_schedule) {
-    generatedPlan = savedPlan;
-    GYM_DAYS = [];
-    DAY_WORKOUTS = {};
-    var _banList = (USER && USER.personalRules) ? _parseBannedExercises(USER.personalRules) : [];
-    generatedPlan.weekly_schedule.forEach(function(d, i) {
-      if (d.type === 'workout' && d.exercises && d.exercises.length > 0) {
-        var filtered = d.exercises.filter(function(ex) {
-          var exLower = ex.name.toLowerCase();
-          for (var bi = 0; bi < _banList.length; bi++) {
-            if (exLower.includes(_banList[bi])) return false;
-          }
-          return true;
-        });
-        GYM_DAYS.push(i);
-        DAY_WORKOUTS[i] = { name: d.badge, focus: (d.workout || '').slice(0, 80), exercises: filtered };
-      }
-    });
-  }
-  var savedUser = lsGet('fs_user');
-  if (savedUser && savedUser.name) USER = savedUser;
   // Calculate current training week from program start date
   const startDate = lsGet('fs_program_start');
   if (startDate) {
