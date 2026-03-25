@@ -1204,6 +1204,30 @@ async function callClaude(messages, opts = {}) {
 }
 
 function loadFromStorage() {
+  // ── WEEKLY RESET: clear per-week data when a new week starts ──
+  var now = new Date();
+  var dayJS = now.getDay(); // 0=Sun, 1=Mon...6=Sat
+  // Compute Monday of this week as "YYYY-MM-DD"
+  var daysFromMon = dayJS === 0 ? 6 : dayJS - 1;
+  var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMon);
+  var weekId = monday.toISOString().split('T')[0];
+  var prevWeek = lsGet('fs_week_id');
+  if (prevWeek && prevWeek !== weekId) {
+    // New week — archive last week's meals, clear weekly trackers
+    try {
+      var oldMeals = lsGet(LS.mealLogs);
+      if (oldMeals && Object.keys(oldMeals).length > 0) {
+        lsSet('fs_mealLogs_' + prevWeek, oldMeals); // archive
+      }
+    } catch(e) {}
+    lsSet(LS.mealLogs, {});
+    lsSet(LS.wktDone, []);
+    mealLogs = {};
+    wktDone = new Set();
+    console.log('[Blueprint] New week detected (' + weekId + '). Cleared meal logs & workout status.');
+  }
+  lsSet('fs_week_id', weekId);
+
   const ml = lsGet(LS.mealLogs); if (ml) mealLogs = ml;
   const wd = lsGet(LS.wktDone);  if (wd) wktDone = new Set(wd);
   const tg = lsGet(LS.targets);  if (tg) TARGETS = tg;
