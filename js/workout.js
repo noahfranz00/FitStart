@@ -169,11 +169,8 @@ function exitWorkout() {
 }
 
 function finishWorkout() {
-  recordWorkoutDate(); // Always records TODAY's date correctly
-  // Mark the actual performed day (today), not just the schedule slot
-  wktDone.add(TODAY_IDX);
-  // Also mark the schedule slot so the week view shows it was covered
-  if (woDay !== TODAY_IDX) wktDone.add(woDay);
+  recordWorkoutDate();
+  wktDone.add(woDay);
   saveToStorage();
   stopRestTimer();
   lsSet('fs_rest_timer', null);
@@ -1532,8 +1529,8 @@ function _warmChimeAudio() {
   } catch(e) {}
 }
 
-// Audio warm is now done on-demand (startRestTimerSecs, toggleRestTimer)
-// NOT on every touch — that was causing iOS to duck the user's music.
+document.addEventListener('touchstart', _warmChimeAudio, { passive: true });
+document.addEventListener('click', _warmChimeAudio, { passive: true });
 
 // Clear stale timer on page load
 (function() { try { localStorage.removeItem('fs_rest_timer'); } catch(e) {} })();
@@ -1644,9 +1641,8 @@ function restoreRestTimerIfActive() {
   var saved = lsGet('fs_rest_timer');
   if (!saved || !saved.endAt) return;
   var remaining = Math.ceil((saved.endAt - Date.now()) / 1000);
-  if (remaining <= 2) {
-    // Expired or about to — clear it silently, no chime
-    lsSet('fs_rest_timer', null);
+  if (remaining <= 0) {
+    lsSet('fs_rest_timer', null); // expired — just clear, no chime
     return;
   }
   _chimePlayedForCurrentTimer = false;
