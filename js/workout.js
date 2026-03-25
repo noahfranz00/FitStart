@@ -1532,8 +1532,8 @@ function _warmChimeAudio() {
   } catch(e) {}
 }
 
-document.addEventListener('touchstart', _warmChimeAudio, { passive: true });
-document.addEventListener('click', _warmChimeAudio, { passive: true });
+// Audio warm is now done on-demand (startRestTimerSecs, toggleRestTimer)
+// NOT on every touch — that was causing iOS to duck the user's music.
 
 // Clear stale timer on page load
 (function() { try { localStorage.removeItem('fs_rest_timer'); } catch(e) {} })();
@@ -1644,8 +1644,9 @@ function restoreRestTimerIfActive() {
   var saved = lsGet('fs_rest_timer');
   if (!saved || !saved.endAt) return;
   var remaining = Math.ceil((saved.endAt - Date.now()) / 1000);
-  if (remaining <= 0) {
-    lsSet('fs_rest_timer', null); // expired — just clear, no chime
+  if (remaining <= 2) {
+    // Expired or about to — clear it silently, no chime
+    lsSet('fs_rest_timer', null);
     return;
   }
   _chimePlayedForCurrentTimer = false;
