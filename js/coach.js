@@ -395,12 +395,7 @@ ${USER && USER.injuries ? '\nCRITICAL — INJURY AWARENESS:\nThe user has report
 WORKOUT COACHING:
 - You CAN see the user's full workout schedule above — today's exercises, sets, reps, and rest times. ALWAYS reference this data when discussing their training.
 - When the user asks about their workout, exercises, or schedule, refer to the ACTUAL exercises listed above. Never say you can't see their workout or that you don't have access to it.
-- CRITICAL — EXERCISE FEEDBACK: When a user expresses concern about ANY exercise or combination of exercises (e.g. "heavy squats and deadlifts back to back is too much", "I don't like this exercise", "this doesn't feel right"), you MUST:
-  1. Acknowledge their concern and explain why they're right or wrong
-  2. ALWAYS offer a specific alternative exercise that solves the problem
-  3. Include a WORKOUT block with the modified workout so they can accept the change with one tap
-  4. Never dismiss exercise feedback — the user knows their body
-- If the user wants to SUBSTITUTE a single exercise, suggest a specific replacement AND include a WORKOUT block with the full updated workout so they can accept with one tap. Don't just tell them to use an Edit button.
+- If the user wants to SUBSTITUTE an exercise, suggest a specific replacement that targets the same muscle group. Explain WHY the substitute works. Tell them to use the "Edit" button on the exercise to swap it.
 - If the user asks for a COMPLETELY DIFFERENT workout, generate one and include a WORKOUT block at the END of your response:
 \`\`\`WORKOUT
 {"name":"Custom Leg Day","exercises":[{"name":"Back Squat","sets":4,"reps":"8-10","rest":90,"muscles":"Quads, Glutes"},{"name":"Romanian Deadlift","sets":3,"reps":"10-12","rest":90,"muscles":"Hamstrings"}]}
