@@ -418,6 +418,13 @@ window.addEventListener('fs:user-changed', function (event) {
 const DAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const DAYS_FULL  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const TODAY_IDX  = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+function todayDateStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function dateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 
 const tierConfig = {
   beginner: {
@@ -1475,7 +1482,7 @@ function initDashboard() {
     renderWeightHistory();
     renderNutritionChart();
     renderFreqChart();
-    renderNutritionChart();
+    renderStrengthTrends();
     renderProgram();
     renderSettingsGymDays();
     renderMyPlan(generatedPlan);
@@ -1744,6 +1751,42 @@ document.addEventListener('click', function(e) {
 
 // Session restore happens only when user explicitly clicks "Enter App"
 // Auto-redirect removed to allow users to regenerate their plan
+
+function renderProgram() {
+  var acc = document.getElementById('week-accordion');
+  if (!acc || !generatedPlan || !generatedPlan.weekly_schedule) return;
+  var html = '';
+  for (var w = 1; w <= TOTAL_WEEKS; w++) {
+    var ph = getPhaseExerciseModifier(w);
+    var isCurrent = w === CURRENT_WEEK;
+    var isDone = w < CURRENT_WEEK;
+    var deload = isDeloadWeek(w);
+    var phaseTag = deload ? '⚡ DELOAD' : ph.label;
+    var borderColor = isCurrent ? 'rgba(212,165,32,0.5)' : 'var(--border)';
+    var bgColor = isCurrent ? 'rgba(212,165,32,0.06)' : 'var(--card)';
+    var statusDot = isDone ? '<span style="color:#22c55e">✓</span>' : isCurrent ? '<span style="color:var(--gold)">●</span>' : '<span style="color:var(--dim)">○</span>';
+    html += '<div style="background:' + bgColor + ';border:1px solid ' + borderColor + ';border-radius:12px;overflow:hidden">';
+    html += '<div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'" style="padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">';
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;letter-spacing:1px;color:var(--white);min-width:60px">WEEK ' + w + '</div>';
+    html += '<div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:5px;background:rgba(255,255,255,0.06);color:var(--off)">' + phaseTag + '</div>';
+    html += '<div style="margin-left:auto;font-size:0.85rem">' + statusDot + '</div>';
+    html += '</div>';
+    html += '<div style="display:' + (isCurrent ? 'block' : 'none') + ';padding:0 16px 14px">';
+    generatedPlan.weekly_schedule.forEach(function(d, i) {
+      var dayLabel = DAYS_SHORT[i];
+      var isRest = d.type !== 'workout';
+      var exNames = (!isRest && d.exercises) ? d.exercises.slice(0,3).map(function(e){return e.name}).join(', ') : '';
+      if (d.exercises && d.exercises.length > 3) exNames += ' +' + (d.exercises.length - 3) + ' more';
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
+      html += '<div style="width:30px;font-family:\'DM Mono\',monospace;font-size:0.68rem;font-weight:600;color:var(--dim)">' + dayLabel + '</div>';
+      html += '<div style="flex:1;min-width:0"><div style="font-size:0.82rem;font-weight:600;color:' + (isRest ? 'var(--dim)' : 'var(--white)') + '">' + (isRest ? 'Rest' : (d.badge || 'Training')) + '</div>';
+      if (exNames) html += '<div style="font-size:0.68rem;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + exNames + '</div>';
+      html += '</div></div>';
+    });
+    html += '</div></div>';
+  }
+  acc.innerHTML = html;
+}
 
 function renderMyPlan(plan) {
   const body = document.getElementById('myplan-body');
