@@ -12,26 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="description" content="AI-powered fitness plans, workout tracking, and nutrition logging.">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Inline service worker for offline caching
-    const swCode = `
-self.addEventListener('install', e => self.skipWaiting());
-self.addEventListener('activate', e => e.waitUntil(clients.claim()));
-self.addEventListener('fetch', e => {
-  if (e.request.mode === 'navigate') {
-    e.respondWith(fetch(e.request).catch(() => caches.match('/')));
-  }
-});
-`;
-    const blob = new Blob([swCode], {type: 'application/javascript'});
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl, {scope: '/'}).catch(() => {});
-  });
-}
-</script>
+<link rel="stylesheet" href="styles.css">
 <script>
 // Use Blueprint B logo as PWA icon
 (function() {
@@ -574,8 +555,6 @@ self.addEventListener('fetch', e => {
         </button>
       </div>
       <div id="meal-categories"></div>
-        </button>
-      </div>
     </div>
 
     <!-- RECIPE BOOK MODAL -->
@@ -1256,14 +1235,14 @@ self.addEventListener('fetch', e => {
 </div>
 
 <!-- Modular JS -->
-<script src="js/storage.js"></script>
-<script src="js/app.js"></script>
-<script src="js/scoring.js"></script>
-<script src="js/nutrition.js"></script>
-<script src="js/progress.js"></script>
-<script src="js/workout.js"></script>
-<script src="js/logger.js"></script>
-<script src="js/coach.js"></script>
+<script src="storage.js"></script>
+<script src="app.js"></script>
+<script src="scoring.js"></script>
+<script src="nutrition.js"></script>
+<script src="progress.js"></script>
+<script src="workout.js"></script>
+<script src="logger.js"></script>
+<script src="coach.js"></script>
 <script>_bootApp();</script>
 <script>
 // Register service worker for offline support
