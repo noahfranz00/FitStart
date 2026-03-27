@@ -7,14 +7,14 @@ var CACHE_NAME = 'blueprint-v1';
 var APP_SHELL = [
   '/',
   '/index.html',
-  '/js/storage.js',
-  '/js/app.js',
-  '/js/scoring.js',
-  '/js/nutrition.js',
-  '/js/progress.js',
-  '/js/workout.js',
-  '/js/logger.js',
-  '/js/coach.js',
+  '/storage.js',
+  '/app.js',
+  '/scoring.js',
+  '/nutrition.js',
+  '/progress.js',
+  '/workout.js',
+  '/logger.js',
+  '/coach.js',
   '/styles.css'
 ];
 
