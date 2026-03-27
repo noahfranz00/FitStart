@@ -1,611 +1,357 @@
 // ═══════════════════════════════════════════
-// PROGRESS.JS — Timeline, Weight Tracking, Streak,
-//   Frequency Chart, Strength Trends, Retroactive Logging
+// PROGRESS.JS — Progress View: Weight, Streaks,
+//   Workout Frequency, Nutrition Chart, Strength Trends
 // ═══════════════════════════════════════════
-// Dependencies: USER, TARGETS, GYM_DAYS, DAY_WORKOUTS, TODAY_IDX,
-//   CURRENT_WEEK, TOTAL_WEEKS, lsGet(), lsSet(), getExLogs(),
-//   showToast(), DAYS_FULL, DAYS_SHORT
+// Dependencies: USER, TARGETS, CURRENT_WEEK, TOTAL_WEEKS, GYM_DAYS,
+//   todayDateStr, dateStr, lsGet, lsSet, wktDone, mealLogs, getExLogs,
+//   showToast, getTrainingPhase, isDeloadWeek
 
-// ═══ UTILITY ═══
-function todayDateStr() {
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-
-function _dateStr(d) {
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-
-function _dayOfWeekIdx(d) {
-  // Mon=0, Sun=6
-  return d.getDay() === 0 ? 6 : d.getDay() - 1;
-}
-
-// ═══ WORKOUT DATES ═══
-function getWorkoutDates() {
-  return new Set(lsGet('fs_workout_dates') || []);
-}
+// ── RECORD WORKOUT DATE ──
+// Called by finishWorkout() in workout.js
 
 function recordWorkoutDate() {
   var dates = lsGet('fs_workout_dates') || [];
   var today = todayDateStr();
-  if (dates.indexOf(today) === -1) dates.push(today);
-  lsSet('fs_workout_dates', dates);
+  if (dates.indexOf(today) < 0) {
+    dates.push(today);
+    lsSet('fs_workout_dates', dates);
+  }
 }
 
-// ═══ WEIGHT LOG ═══
-function getWeightLog() {
-  return lsGet('fs_weightLog') || [];
-}
+// ── BODY WEIGHT ──
 
 function logBodyWeight() {
   var input = document.getElementById('weight-log-input');
   if (!input) return;
-  var lbs = parseFloat(input.value);
-  if (!lbs || lbs < 50 || lbs > 600) { showToast('Enter a valid weight.', 'warning'); return; }
-  var log = getWeightLog();
+  var val = parseFloat(input.value);
+  if (!val || val < 50 || val > 600) {
+    if (typeof showToast === 'function') showToast('Enter a valid weight (50–600 lbs).', 'warning');
+    return;
+  }
+  var log = lsGet('fs_weightLog') || [];
   var today = todayDateStr();
-  log = log.filter(function(e) { return e.date !== today; });
-  log.push({ date: today, lbs: lbs });
-  log.sort(function(a, b) { return a.date < b.date ? -1 : 1; });
+  // Replace today's entry if already logged
+  var existing = log.findIndex(function(e) { return e.date === today; });
+  if (existing >= 0) {
+    log[existing].weight = val;
+  } else {
+    log.push({ date: today, weight: val });
+  }
+  // Sort by date ascending
+  log.sort(function(a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
   lsSet('fs_weightLog', log);
   input.value = '';
-  if (USER) { USER.weight = lbs; lsSet('fs_user', USER); }
-  showToast('Logged ' + lbs + ' lbs', 'success');
+  // Update user's current weight
+  if (typeof USER !== 'undefined' && USER) {
+    USER.weight = val;
+    lsSet('fs_user', USER);
+  }
+  if (typeof showToast === 'function') showToast('Weight logged: ' + val + ' lbs', 'success');
   renderWeightHistory();
-  renderTimeline();
+  _updateProgressStats();
 }
 
-// ═══ STRENGTH SCORE FOR A DATE ═══
-function _scoreForDate(dateStr) {
-  var exlogs = getExLogs();
-  var rawScore = 0;
-  for (var exName in exlogs) {
-    var sessions = exlogs[exName];
-    for (var i = 0; i < sessions.length; i++) {
-      if (sessions[i].date === dateStr && sessions[i].sets) {
-        sessions[i].sets.forEach(function(s) {
-          if (s && s.weight && s.reps) rawScore += s.weight * s.reps;
-        });
-      }
-    }
-  }
-  if (rawScore === 0) return 0;
-  var bw = (USER && USER.weight) ? parseFloat(USER.weight) : 160;
-  var tier = (USER && USER.tier) || 'beginner';
-  var tierMult = tier === 'advanced' ? 1.8 : tier === 'intermediate' ? 1.3 : 1.0;
-  var maxBaseline = Math.max(5000, bw * 5 * 4 * 10 * tierMult);
-  return Math.round(Math.min(1000, (rawScore / maxBaseline) * 1000));
-}
-
-// ═══ EXERCISES LOGGED ON A DATE ═══
-function _exercisesForDate(dateStr) {
-  var exlogs = getExLogs();
-  var result = [];
-  for (var exName in exlogs) {
-    var sessions = exlogs[exName];
-    for (var i = 0; i < sessions.length; i++) {
-      if (sessions[i].date === dateStr && sessions[i].sets) {
-        var bestWeight = 0, bestReps = 0, setCount = 0;
-        sessions[i].sets.forEach(function(s) {
-          if (s && s.weight) {
-            setCount++;
-            if (s.weight > bestWeight) { bestWeight = s.weight; bestReps = s.reps; }
-          }
-        });
-        if (setCount > 0) result.push({ name: exName, bestWeight: bestWeight, bestReps: bestReps, sets: setCount });
-      }
-    }
-  }
-  return result;
-}
-
-// ═══ SCHEDULED WORKOUT FOR A DATE ═══
-function _scheduledForDate(d) {
-  var dayIdx = _dayOfWeekIdx(d);
-  var workout = DAY_WORKOUTS[dayIdx];
-  if (!workout || !workout.exercises || workout.exercises.length === 0) return null;
-  return workout;
-}
-
-// ═══ RENDER TIMELINE — past 14 days + next 7 days ═══
-function renderTimeline() {
-  var container = document.getElementById('workout-timeline');
-  if (!container) return;
-  var workoutDates = getWorkoutDates();
-  var now = new Date();
-  var today = todayDateStr();
-
-  // Build day list: past 14 + today + next 6
-  var days = [];
-  for (var i = 14; i >= 0; i--) {
-    var d = new Date(now); d.setDate(now.getDate() - i);
-    days.push(d);
-  }
-  for (var j = 1; j <= 6; j++) {
-    var d2 = new Date(now); d2.setDate(now.getDate() + j);
-    days.push(d2);
-  }
-
-  var html = '';
-  var currentMonth = '';
-
-  for (var k = 0; k < days.length; k++) {
-    var day = days[k];
-    var ds = _dateStr(day);
-    var dayIdx = _dayOfWeekIdx(day);
-    var isPast = ds < today;
-    var isToday = ds === today;
-    var isFuture = ds > today;
-    var didWorkout = workoutDates.has(ds);
-    var scheduled = _scheduledForDate(day);
-    var isRestDay = !scheduled;
-    var dayName = DAYS_SHORT[dayIdx];
-    var dateNum = day.getDate();
-
-    // Month header
-    var monthLabel = day.toLocaleString('default', { month: 'long', year: 'numeric' });
-    if (monthLabel !== currentMonth) {
-      currentMonth = monthLabel;
-      html += '<div class="tl-month">' + monthLabel.toUpperCase() + '</div>';
-    }
-
-    // Skip past rest days (only show days with workouts or scheduled workouts)
-    if (isPast && isRestDay && !didWorkout) continue;
-
-    var cls = 'tl-day';
-    if (isToday) cls += ' tl-today';
-    if (isFuture) cls += ' tl-future';
-    if (didWorkout) cls += ' tl-done';
-
-    html += '<div class="' + cls + '" data-date="' + ds + '" onclick="_openDayDetail(\'' + ds + '\')">';
-
-    // Left: date pill
-    html += '<div class="tl-date"><div class="tl-date-name">' + dayName + '</div><div class="tl-date-num">' + dateNum + '</div></div>';
-
-    // Center: workout info
-    html += '<div class="tl-info">';
-
-    if (didWorkout) {
-      // Completed workout
-      var exercises = _exercisesForDate(ds);
-      var score = _scoreForDate(ds);
-      var workoutName = scheduled ? scheduled.name : 'Workout';
-      html += '<div class="tl-name">' + workoutName + '</div>';
-      if (exercises.length > 0) {
-        html += '<div class="tl-exercises">' + exercises.slice(0, 3).map(function(e) { return e.name; }).join(' · ');
-        if (exercises.length > 3) html += ' +' + (exercises.length - 3);
-        html += '</div>';
-      }
-      if (score > 0) {
-        html += '<div class="tl-score">';
-        html += '<div class="tl-score-bar"><div class="tl-score-fill" style="width:' + (score / 10) + '%"></div></div>';
-        html += '<span class="tl-score-num">' + score + '</span>';
-        html += '</div>';
-      }
-    } else if (isToday && scheduled) {
-      html += '<div class="tl-name">' + scheduled.name + '</div>';
-      html += '<div class="tl-exercises">' + scheduled.exercises.map(function(e) { return e.name; }).join(' · ') + '</div>';
-      html += '<div class="tl-status tl-status-today">TODAY</div>';
-    } else if (isFuture && scheduled) {
-      html += '<div class="tl-name">' + scheduled.name + '</div>';
-      html += '<div class="tl-exercises">' + scheduled.exercises.map(function(e) { return e.name; }).join(' · ') + '</div>';
-      html += '<div class="tl-status tl-status-upcoming">UPCOMING</div>';
-    } else if (isFuture && isRestDay) {
-      html += '<div class="tl-name tl-rest">Rest Day</div>';
-    } else if (isPast && !didWorkout && scheduled) {
-      html += '<div class="tl-name tl-missed">' + scheduled.name + '</div>';
-      html += '<div class="tl-status tl-status-missed">MISSED</div>';
-    }
-
-    html += '</div>'; // tl-info
-
-    // Right: chevron
-    html += '<div class="tl-chevron">›</div>';
-
-    html += '</div>'; // tl-day
-  }
-
-  container.innerHTML = html;
-}
-
-// ═══ DAY DETAIL MODAL — click a day to see full breakdown or log retroactively ═══
-function _openDayDetail(dateStr) {
-  var workoutDates = getWorkoutDates();
-  var didWorkout = workoutDates.has(dateStr);
-  var d = new Date(dateStr + 'T12:00:00');
-  var dayIdx = _dayOfWeekIdx(d);
-  var dayName = DAYS_FULL[dayIdx];
-  var today = todayDateStr();
-  var isPast = dateStr < today;
-  var isFuture = dateStr > today;
-  var scheduled = _scheduledForDate(d);
-
-  var m = document.getElementById('day-detail-modal');
-  if (!m) {
-    m = document.createElement('div');
-    m.id = 'day-detail-modal';
-    m.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;animation:fadeIn 0.15s ease';
-    m.innerHTML = '<div id="day-detail-inner" style="background:var(--card-solid,#151515);border:1px solid var(--border2);border-radius:18px;padding:24px;width:92%;max-width:400px;max-height:80vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.5)"></div>';
-    m.addEventListener('click', function(e) { if (e.target === m) _closeDayDetail(); });
-    document.body.appendChild(m);
-  }
-  m.style.display = 'flex';
-  var inner = document.getElementById('day-detail-inner');
-  var html = '';
-
-  // Header
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">';
-  html += '<div>';
-  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.15rem;letter-spacing:1.5px;color:var(--bone)">' + dayName.toUpperCase() + ' · ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</div>';
-  html += '<div style="font-size:0.68rem;color:var(--dim);font-family:\'DM Mono\',monospace">' + dateStr + '</div>';
-  html += '</div>';
-  html += '<button onclick="_closeDayDetail()" style="background:none;border:none;color:var(--dim);font-size:1.3rem;cursor:pointer;padding:4px 8px">✕</button>';
-  html += '</div>';
-
-  if (didWorkout) {
-    // Show completed workout details
-    var exercises = _exercisesForDate(dateStr);
-    var score = _scoreForDate(dateStr);
-
-    if (score > 0) {
-      html += '<div style="background:rgba(200,162,61,0.08);border:1px solid rgba(200,162,61,0.2);border-radius:12px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:14px">';
-      html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:2rem;color:var(--bone)">' + score + '</div>';
-      html += '<div><div style="font-size:0.68rem;font-weight:700;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase">Strength Score</div>';
-      html += '<div style="width:120px;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin-top:4px"><div style="height:100%;background:var(--gold-grad);border-radius:3px;width:' + (score / 10) + '%"></div></div>';
-      html += '</div></div>';
-    }
-
-    if (exercises.length > 0) {
-      html += '<div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;color:var(--dim);margin-bottom:8px;text-transform:uppercase">Exercises Logged</div>';
-      for (var i = 0; i < exercises.length; i++) {
-        var ex = exercises[i];
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">';
-        html += '<div style="font-size:0.85rem;color:var(--off)">' + ex.name + '</div>';
-        html += '<div style="font-family:\'DM Mono\',monospace;font-size:0.75rem;color:var(--bone)">' + ex.bestWeight + 'lbs × ' + ex.bestReps + ' <span style="color:var(--dim)">(' + ex.sets + ' sets)</span></div>';
-        html += '</div>';
-      }
-    } else {
-      html += '<div style="padding:14px 0;color:var(--dim);font-size:0.85rem">Workout logged but no set data recorded.</div>';
-    }
-  } else if (isFuture && scheduled) {
-    // Show upcoming workout
-    html += '<div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;color:var(--dim);margin-bottom:8px;text-transform:uppercase">Scheduled — ' + scheduled.name + '</div>';
-    for (var j = 0; j < scheduled.exercises.length; j++) {
-      var se = scheduled.exercises[j];
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">';
-      html += '<div style="font-size:0.85rem;color:var(--off)">' + se.name + '</div>';
-      html += '<div style="font-family:\'DM Mono\',monospace;font-size:0.75rem;color:var(--dim)">' + se.sets + '×' + se.reps + '</div>';
-      html += '</div>';
-    }
-  } else if (isPast && scheduled) {
-    html += '<div style="padding:14px 0;color:var(--orange);font-size:0.85rem">Scheduled: ' + scheduled.name + ' — not completed.</div>';
-  } else {
-    html += '<div style="padding:14px 0;color:var(--dim);font-size:0.85rem">Rest day — no workout scheduled.</div>';
-  }
-
-  // Retroactive log section for past days
-  if (isPast) {
-    html += '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">';
-    html += '<div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;color:var(--dim);margin-bottom:10px;text-transform:uppercase">Edit This Day</div>';
-
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
-    html += '<div style="font-size:0.85rem;color:var(--off)">Workout completed</div>';
-    html += '<label class="theme-switch" style="width:48px;height:26px"><input type="checkbox" id="retro-wkt-cb" ' + (didWorkout ? 'checked' : '') + '><span class="slider"></span></label>';
-    html += '</div>';
-
-    var weightLog = getWeightLog();
-    var existingW = null;
-    for (var w = 0; w < weightLog.length; w++) {
-      if (weightLog[w].date === dateStr) { existingW = weightLog[w].lbs; break; }
-    }
-
-    html += '<div style="font-size:0.72rem;font-weight:700;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;text-transform:uppercase">Bodyweight (lbs)</div>';
-    html += '<input type="number" id="retro-bw-input" inputmode="decimal" value="' + (existingW || '') + '" placeholder="' + (USER ? USER.weight : '') + '" style="width:100%;padding:10px 14px;background:var(--dark);border:1px solid var(--border2);border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;color:var(--bone);letter-spacing:1px;outline:none;text-align:center;margin-bottom:14px">';
-
-    html += '<button onclick="_saveRetroDay(\'' + dateStr + '\')" style="width:100%;padding:12px;background:var(--gold-grad);border:none;border-radius:10px;color:#111;font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem;letter-spacing:1.5px;cursor:pointer;font-weight:700">SAVE</button>';
-    html += '</div>';
-  }
-
-  inner.innerHTML = html;
-}
-
-function _closeDayDetail() {
-  var m = document.getElementById('day-detail-modal');
-  if (m) m.style.display = 'none';
-}
-
-function _saveRetroDay(dateStr) {
-  var cb = document.getElementById('retro-wkt-cb');
-  var bwInput = document.getElementById('retro-bw-input');
-  var saved = false;
-
-  // Workout toggle
-  var dates = lsGet('fs_workout_dates') || [];
-  var had = dates.indexOf(dateStr) !== -1;
-  if (cb && cb.checked && !had) { dates.push(dateStr); lsSet('fs_workout_dates', dates); saved = true; }
-  if (cb && !cb.checked && had) { dates = dates.filter(function(d) { return d !== dateStr; }); lsSet('fs_workout_dates', dates); saved = true; }
-
-  // Bodyweight
-  if (bwInput && bwInput.value) {
-    var lbs = parseFloat(bwInput.value);
-    if (lbs > 0) {
-      var log = getWeightLog();
-      log = log.filter(function(e) { return e.date !== dateStr; });
-      log.push({ date: dateStr, lbs: lbs });
-      log.sort(function(a, b) { return a.date < b.date ? -1 : 1; });
-      lsSet('fs_weightLog', log);
-      saved = true;
-    }
-  }
-
-  _closeDayDetail();
-  if (saved) {
-    showToast('Updated ' + dateStr, 'success');
-    renderTimeline();
-    renderStreak();
-    renderWeightHistory();
-    renderFreqChart();
-  }
-}
-
-// ═══ STREAK STATS ═══
-function renderStreak() {
-  var workoutDates = getWorkoutDates();
-  var now = new Date();
-
-  // Current streak
-  var streak = 0;
-  for (var i = 0; i < 60; i++) {
-    var check = new Date(now); check.setDate(now.getDate() - i);
-    var key = _dateStr(check);
-    if (workoutDates.has(key)) streak++;
-    else if (i > 0) break;
-  }
-  var statStreak = document.getElementById('stat-streak');
-  if (statStreak) statStreak.textContent = streak;
-
-  // This month count
-  var monthCount = 0;
-  var firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  for (var d = new Date(firstOfMonth); d <= now; d.setDate(d.getDate() + 1)) {
-    if (workoutDates.has(_dateStr(d))) monthCount++;
-  }
-  var statMonth = document.getElementById('stat-workouts');
-  if (statMonth) statMonth.textContent = monthCount;
-
-  // Streak calendar
-  var calEl = document.getElementById('streak-cal');
-  if (!calEl) return;
-  var monthLabel = document.getElementById('streak-month-label');
-  if (monthLabel) monthLabel.textContent = now.toLocaleString('default', { month: 'long', year: 'numeric' });
-  var first = new Date(now.getFullYear(), now.getMonth(), 1);
-  var startPad = first.getDay() === 0 ? 6 : first.getDay() - 1; // Mon start
-  var daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  var today = todayDateStr();
-  var html = '';
-  for (var p = 0; p < startPad; p++) html += '<div class="sc-day" style="visibility:hidden"></div>';
-  for (var dd = 1; dd <= daysInMonth; dd++) {
-    var ds = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
-    var cls = 'sc-day';
-    if (ds === today) cls += ' today';
-    else if (workoutDates.has(ds)) cls += ' done';
-    html += '<div class="' + cls + '">' + dd + '</div>';
-  }
-  calEl.innerHTML = html;
-}
-
-// ═══ WEIGHT HISTORY ═══
 function renderWeightHistory() {
-  var log = getWeightLog();
-  var listEl = document.getElementById('weight-history-list');
-  var chartEl = document.getElementById('weight-chart-svg');
+  var log = lsGet('fs_weightLog') || [];
+  var display = document.getElementById('weight-current-display');
   var emptyEl = document.getElementById('weight-chart-empty');
-  var displayEl = document.getElementById('weight-current-display');
+  var svgEl = document.getElementById('weight-chart-svg');
+  var listEl = document.getElementById('weight-history-list');
 
-  if (displayEl && log.length > 0) {
-    var latest = log[log.length - 1];
-    displayEl.textContent = 'Current: ' + latest.lbs + ' lbs (logged ' + latest.date + ')';
+  if (log.length === 0) {
+    if (display) display.textContent = '';
+    if (emptyEl) emptyEl.style.display = 'flex';
+    if (svgEl) svgEl.style.display = 'none';
+    if (listEl) listEl.innerHTML = '';
+    return;
   }
 
-  // Weight change stat
-  var lbsEl = document.getElementById('stat-lbs-lost');
-  var lbsLabel = document.getElementById('stat-lbs-label');
-  if (lbsEl && log.length >= 2) {
-    var diff = log[log.length - 1].lbs - log[0].lbs;
-    lbsEl.textContent = (diff > 0 ? '+' : '') + diff.toFixed(1);
-    if (lbsLabel) lbsLabel.textContent = diff > 0 ? 'Lbs Gained' : 'Lbs Lost';
+  var latest = log[log.length - 1];
+  if (display) {
+    var goalW = (USER && USER.goal) ? parseFloat(USER.goal) : null;
+    var diff = goalW ? (latest.weight - goalW).toFixed(1) : null;
+    display.innerHTML = 'Current: <strong style="color:var(--white)">' + latest.weight + ' lbs</strong>' +
+      (diff !== null ? ' · <span style="color:' + (diff > 0 ? 'var(--orange)' : '#22c55e') + '">' + (diff > 0 ? diff + ' lbs to go' : 'At or below goal!') + '</span>' : '');
+  }
+
+  // Chart
+  if (log.length >= 2 && svgEl) {
+    if (emptyEl) emptyEl.style.display = 'none';
+    svgEl.style.display = 'block';
+    _drawWeightChart(svgEl, log);
+  } else {
+    if (emptyEl) emptyEl.style.display = 'flex';
+    if (svgEl) svgEl.style.display = 'none';
   }
 
   // History list (last 10)
   if (listEl) {
-    listEl.innerHTML = log.slice(-10).reverse().map(function(e) {
-      return '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:0.78rem;border-bottom:1px solid var(--border)">' +
-        '<span style="color:var(--dim);font-family:\'DM Mono\',monospace">' + e.date + '</span>' +
-        '<span style="color:var(--bone);font-family:\'Bebas Neue\',sans-serif;font-size:0.9rem">' + e.lbs + ' lbs</span></div>';
+    var recent = log.slice(-10).reverse();
+    listEl.innerHTML = recent.map(function(e) {
+      return '<div style="display:flex;justify-content:space-between;padding:6px 8px;border-radius:6px;background:var(--dark);font-size:0.78rem">' +
+        '<span style="color:var(--dim)">' + e.date + '</span>' +
+        '<span style="color:var(--white);font-weight:600">' + e.weight + ' lbs</span></div>';
     }).join('');
   }
-
-  // SVG chart
-  if (!chartEl || log.length < 2) {
-    if (emptyEl) emptyEl.style.display = 'flex';
-    if (chartEl) chartEl.style.display = 'none';
-    return;
-  }
-  if (emptyEl) emptyEl.style.display = 'none';
-  chartEl.style.display = 'block';
-
-  var pts = log.slice(-30);
-  var minW = Math.min.apply(null, pts.map(function(p) { return p.lbs; })) - 2;
-  var maxW = Math.max.apply(null, pts.map(function(p) { return p.lbs; })) + 2;
-  var range = maxW - minW || 1;
-  var w = 400, h = 160, pad = 10;
-  var step = (w - pad * 2) / Math.max(1, pts.length - 1);
-
-  var pathD = pts.map(function(p, i) {
-    var x = pad + i * step;
-    var y = h - pad - ((p.lbs - minW) / range) * (h - pad * 2);
-    return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
-  }).join(' ');
-
-  chartEl.innerHTML =
-    '<path d="' + pathD + '" fill="none" stroke="#F2F0EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-    pts.map(function(p, i) {
-      var x = pad + i * step;
-      var y = h - pad - ((p.lbs - minW) / range) * (h - pad * 2);
-      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="#D4A520"/>';
-    }).join('');
 }
 
-// ═══ FREQUENCY CHART — workouts per week, last 8 weeks ═══
+function _drawWeightChart(svg, log) {
+  var W = 400, H = 160, pad = 24;
+  var pts = log.slice(-30); // last 30 entries
+  var weights = pts.map(function(p) { return p.weight; });
+  var minW = Math.min.apply(null, weights) - 2;
+  var maxW = Math.max.apply(null, weights) + 2;
+  if (maxW === minW) maxW = minW + 4;
+  var xStep = pts.length > 1 ? (W - pad * 2) / (pts.length - 1) : 0;
+
+  var pathD = '';
+  var areaD = '';
+  pts.forEach(function(p, i) {
+    var x = pad + i * xStep;
+    var y = H - pad - ((p.weight - minW) / (maxW - minW)) * (H - pad * 2);
+    if (i === 0) {
+      pathD += 'M' + x + ',' + y;
+      areaD += 'M' + x + ',' + (H - pad) + ' L' + x + ',' + y;
+    } else {
+      pathD += ' L' + x + ',' + y;
+      areaD += ' L' + x + ',' + y;
+    }
+    if (i === pts.length - 1) {
+      areaD += ' L' + x + ',' + (H - pad) + ' Z';
+    }
+  });
+
+  var goalY = null;
+  if (USER && USER.goal) {
+    var g = parseFloat(USER.goal);
+    if (g >= minW && g <= maxW) {
+      goalY = H - pad - ((g - minW) / (maxW - minW)) * (H - pad * 2);
+    }
+  }
+
+  svg.innerHTML =
+    '<defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(212,165,32,0.25)"/><stop offset="100%" stop-color="rgba(212,165,32,0)"/></linearGradient></defs>' +
+    '<path d="' + areaD + '" fill="url(#wg)"/>' +
+    '<path d="' + pathD + '" fill="none" stroke="#D4A520" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    (goalY !== null ? '<line x1="' + pad + '" y1="' + goalY + '" x2="' + (W - pad) + '" y2="' + goalY + '" stroke="rgba(34,197,94,0.4)" stroke-width="1" stroke-dasharray="4,4"/>' +
+      '<text x="' + (W - pad) + '" y="' + (goalY - 4) + '" fill="#22c55e" font-size="9" text-anchor="end">Goal</text>' : '') +
+    // Last point dot
+    '<circle cx="' + (pad + (pts.length - 1) * xStep) + '" cy="' + (H - pad - ((pts[pts.length - 1].weight - minW) / (maxW - minW)) * (H - pad * 2)) + '" r="4" fill="#D4A520"/>' +
+    // Axis labels
+    '<text x="' + pad + '" y="12" fill="var(--dim)" font-size="9">' + maxW.toFixed(0) + '</text>' +
+    '<text x="' + pad + '" y="' + (H - 6) + '" fill="var(--dim)" font-size="9">' + minW.toFixed(0) + '</text>';
+}
+
+
+// ── STREAK CALENDAR ──
+
+function renderStreak() {
+  var cal = document.getElementById('streak-cal');
+  var monthLabel = document.getElementById('streak-month-label');
+  if (!cal) return;
+
+  var now = new Date();
+  var year = now.getFullYear();
+  var month = now.getMonth();
+  var months = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+  if (monthLabel) monthLabel.textContent = months[month] + ' ' + year;
+
+  // Collect all workout dates
+  var workoutDates = new Set(lsGet('fs_workout_dates') || []);
+  // Also add from wktDone (day indices for current week)
+  if (typeof wktDone !== 'undefined') {
+    var wkStart = _getWeekStart(now);
+    wktDone.forEach(function(dayIdx) {
+      var d = new Date(wkStart);
+      d.setDate(d.getDate() + dayIdx);
+      workoutDates.add(dateStr(d));
+    });
+  }
+
+  var firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Adjust so Monday=0
+  var startOffset = (firstDay + 6) % 7;
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center">';
+  ['M','T','W','T','F','S','S'].forEach(function(d) {
+    html += '<div style="font-size:0.55rem;color:var(--dim);font-weight:700;padding:2px 0">' + d + '</div>';
+  });
+  for (var i = 0; i < startOffset; i++) {
+    html += '<div></div>';
+  }
+  for (var day = 1; day <= daysInMonth; day++) {
+    var ds = dateStr(new Date(year, month, day));
+    var isToday = ds === todayDateStr();
+    var didWorkout = workoutDates.has(ds);
+    var bg = didWorkout ? 'rgba(212,165,32,0.35)' : 'rgba(255,255,255,0.03)';
+    var border = isToday ? '2px solid var(--gold)' : '1px solid transparent';
+    var color = didWorkout ? 'var(--white)' : 'var(--dim)';
+    html += '<div style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;background:' + bg + ';border:' + border + ';font-size:0.68rem;font-weight:600;color:' + color + '">' + day + '</div>';
+  }
+  html += '</div>';
+  cal.innerHTML = html;
+
+  // Update streak stat
+  _updateProgressStats();
+}
+
+function _getWeekStart(d) {
+  var date = new Date(d);
+  var day = date.getDay();
+  var diff = (day + 6) % 7; // Monday = 0
+  date.setDate(date.getDate() - diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function _computeStreak() {
+  var workoutDates = lsGet('fs_workout_dates') || [];
+  if (workoutDates.length === 0) return 0;
+  var sorted = workoutDates.slice().sort().reverse();
+  // Check consecutive days from today backward (count weeks with at least 1 workout)
+  var streak = 0;
+  var today = new Date();
+  for (var i = 0; i < 365; i++) {
+    var checkDate = new Date(today);
+    checkDate.setDate(checkDate.getDate() - i);
+    var ds = dateStr(checkDate);
+    if (sorted.indexOf(ds) >= 0) {
+      streak++;
+    } else if (i > 0) {
+      break; // Streak broken
+    }
+    // Allow today to not yet have a workout
+    if (i === 0 && sorted.indexOf(ds) < 0) continue;
+  }
+  return streak;
+}
+
+
+// ── WORKOUT FREQUENCY CHART ──
+
 function renderFreqChart() {
   var svg = document.getElementById('freq-chart-svg');
   if (!svg) return;
-  var dates = getWorkoutDates();
+
+  var workoutDates = lsGet('fs_workout_dates') || [];
   var now = new Date();
   var weeks = [];
   for (var w = 7; w >= 0; w--) {
+    var wkStart = new Date(now);
+    wkStart.setDate(wkStart.getDate() - wkStart.getDay() + 1 - w * 7);
+    var wkEnd = new Date(wkStart);
+    wkEnd.setDate(wkEnd.getDate() + 6);
     var count = 0;
-    for (var d = 0; d < 7; d++) {
-      var check = new Date(now); check.setDate(now.getDate() - w * 7 - d);
-      if (dates.has(_dateStr(check))) count++;
-    }
+    workoutDates.forEach(function(d) {
+      if (d >= dateStr(wkStart) && d <= dateStr(wkEnd)) count++;
+    });
     weeks.push(count);
   }
-  var maxCount = Math.max.apply(null, weeks) || 1;
-  var barW = 36, gap = 14, totalW = weeks.length * (barW + gap);
-  var h = 100;
 
-  svg.innerHTML = weeks.map(function(c, i) {
-    var barH = Math.max(4, (c / maxCount) * (h - 30));
-    var x = i * (barW + gap) + 10;
-    var y = h - barH - 16;
-    var label = i === weeks.length - 1 ? 'This wk' : (7 - i) + 'w ago';
-    return '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="4" fill="' + (i === weeks.length - 1 ? '#D4A520' : 'rgba(255,255,255,0.1)') + '"/>' +
-      '<text x="' + (x + barW / 2) + '" y="' + (y - 4) + '" text-anchor="middle" fill="#F2F0EB" font-size="11" font-family="Bebas Neue">' + c + '</text>' +
-      '<text x="' + (x + barW / 2) + '" y="' + (h - 2) + '" text-anchor="middle" fill="#777" font-size="8" font-family="DM Mono">' + label + '</text>';
-  }).join('');
+  var W = 400, H = 100, pad = 20;
+  var maxVal = Math.max.apply(null, weeks.concat([GYM_DAYS ? GYM_DAYS.length : 4]));
+  if (maxVal === 0) maxVal = 4;
+  var barW = (W - pad * 2) / weeks.length - 6;
+
+  var goalLine = GYM_DAYS ? GYM_DAYS.length : 0;
+  var goalY = H - pad - (goalLine / maxVal) * (H - pad * 2);
+
+  var bars = '';
+  weeks.forEach(function(count, i) {
+    var x = pad + i * ((W - pad * 2) / weeks.length) + 3;
+    var barH = (count / maxVal) * (H - pad * 2);
+    var y = H - pad - barH;
+    var fill = count >= goalLine ? '#D4A520' : 'rgba(255,255,255,0.15)';
+    bars += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="3" fill="' + fill + '"/>';
+    bars += '<text x="' + (x + barW / 2) + '" y="' + (H - 4) + '" fill="var(--dim)" font-size="8" text-anchor="middle">' + (i === 7 ? 'This' : '-' + (7 - i)) + '</text>';
+    if (count > 0) {
+      bars += '<text x="' + (x + barW / 2) + '" y="' + (y - 4) + '" fill="var(--off)" font-size="9" text-anchor="middle" font-weight="700">' + count + '</text>';
+    }
+  });
+
+  var goalLineHtml = goalLine > 0 ?
+    '<line x1="' + pad + '" y1="' + goalY + '" x2="' + (W - pad) + '" y2="' + goalY + '" stroke="rgba(212,165,32,0.3)" stroke-width="1" stroke-dasharray="4,4"/>' +
+    '<text x="' + (W - pad) + '" y="' + (goalY - 3) + '" fill="rgba(212,165,32,0.5)" font-size="8" text-anchor="end">Goal: ' + goalLine + '/wk</text>' : '';
+
+  svg.innerHTML = goalLineHtml + bars;
 }
 
-// ═══ NUTRITION CHART (avg protein) ═══
+
+// ── NUTRITION CHART (average macros trend) ──
+
 function renderNutritionChart() {
-  var statPro = document.getElementById('stat-avg-pro');
-  if (!statPro) return;
-  try {
-    var mealLogs = lsGet('fs_mealLogs') || {};
-    var totalPro = 0, days = 0;
-    for (var dayKey in mealLogs) {
-      var dayData = mealLogs[dayKey];
-      var dayPro = 0;
-      for (var cat in dayData) {
-        (dayData[cat] || []).forEach(function(item) { dayPro += item.pro || 0; });
-      }
-      if (dayPro > 0) { totalPro += dayPro; days++; }
-    }
-    statPro.textContent = days > 0 ? Math.round(totalPro / days) + 'g' : '—';
-  } catch (e) { statPro.textContent = '—'; }
+  // Compute average daily protein over recent days for the stat strip
+  var avgPro = _computeAvgProtein(7);
+  var el = document.getElementById('stat-avg-pro');
+  if (el) el.textContent = avgPro > 0 ? avgPro + 'g' : '—';
 }
 
-// ═══ STRENGTH TRENDS (placeholder — uses timeline now) ═══
+function _computeAvgProtein(days) {
+  if (typeof mealLogs === 'undefined') return 0;
+  var totalPro = 0;
+  var counted = 0;
+  for (var i = 0; i < Math.min(days, 7); i++) {
+    var dayEntries = mealLogs[i];
+    if (!dayEntries || !Array.isArray(dayEntries) || dayEntries.length === 0) continue;
+    var dayPro = 0;
+    dayEntries.forEach(function(e) {
+      dayPro += (e.protein || 0);
+    });
+    if (dayPro > 0) {
+      totalPro += dayPro;
+      counted++;
+    }
+  }
+  return counted > 0 ? Math.round(totalPro / counted) : 0;
+}
+
+
+// ── STRENGTH TRENDS ──
+
 function renderStrengthTrends() {
-  // Strength data is now shown per-day in the timeline
+  // This populates the progress stat strip with workout count for current month
+  var workoutDates = lsGet('fs_workout_dates') || [];
+  var now = new Date();
+  var monthStr = dateStr(now).substring(0, 7); // YYYY-MM
+  var thisMonthCount = workoutDates.filter(function(d) { return d.substring(0, 7) === monthStr; }).length;
+  var el = document.getElementById('stat-workouts');
+  if (el) el.textContent = thisMonthCount;
 }
 
-// ═══ MAIN RENDER — called when Progress tab opens ═══
-function renderProgressView() {
-  renderStreak();
-  renderWeightHistory();
-  renderNutritionChart();
-  renderFreqChart();
-  renderStrengthTrends();
-  renderTimeline();
-}
 
-// ═══ RENDER PROGRAM — My Program tab (week accordion) ═══
-function renderProgram() {
-  var el = document.getElementById('week-accordion');
-  if (!el) return;
-  if (typeof generatedPlan === 'undefined' || !generatedPlan || !generatedPlan.weekly_schedule) {
-    el.innerHTML = '<div style="padding:20px;color:var(--dim);text-align:center">No program generated yet.</div>';
-    return;
-  }
-  var sched = generatedPlan.weekly_schedule;
-  el.innerHTML = sched.map(function(day, i) {
-    var isRest = day.type === 'rest' || !day.exercises || day.exercises.length === 0;
-    var isToday = i === TODAY_IDX;
-    var headerStyle = isToday
-      ? 'background:rgba(200,162,61,0.08);border:1px solid rgba(200,162,61,0.2)'
-      : 'background:var(--card);border:1px solid var(--border)';
+// ── PROGRESS STATS STRIP ──
 
-    var html = '<div style="border-radius:var(--radius-md);overflow:hidden;' + headerStyle + '">';
+function _updateProgressStats() {
+  // Streak
+  var streak = _computeStreak();
+  var streakEl = document.getElementById('stat-streak');
+  if (streakEl) streakEl.textContent = streak;
+  var dashStreak = document.getElementById('dash-streak');
+  if (dashStreak) dashStreak.textContent = streak || 1;
 
-    // Header row
-    html += '<div onclick="_toggleProgramDay(' + i + ')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer">';
-    html += '<div style="display:flex;align-items:center;gap:12px">';
-    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:1.5px;color:var(--bone)">' + day.day.toUpperCase() + '</div>';
-    if (!isRest) html += '<div style="font-size:0.68rem;font-family:\'DM Mono\',monospace;color:var(--dim);background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:4px">' + (day.badge || '') + '</div>';
-    if (isToday) html += '<div style="font-size:0.55rem;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase">Today</div>';
-    html += '</div>';
-    if (isRest) {
-      html += '<div style="font-size:0.75rem;color:var(--dim);font-style:italic">Rest</div>';
+  // Lbs lost/gained
+  var log = lsGet('fs_weightLog') || [];
+  var lbsEl = document.getElementById('stat-lbs-lost');
+  var lbsLabel = document.getElementById('stat-lbs-label');
+  if (log.length >= 2 && lbsEl) {
+    var first = log[0].weight;
+    var last = log[log.length - 1].weight;
+    var diff = last - first;
+    if (diff < 0) {
+      lbsEl.textContent = Math.abs(diff).toFixed(1);
+      if (lbsLabel) lbsLabel.textContent = 'Lbs Lost';
+    } else if (diff > 0) {
+      lbsEl.textContent = '+' + diff.toFixed(1);
+      if (lbsLabel) lbsLabel.textContent = 'Lbs Gained';
     } else {
-      html += '<div style="font-size:0.75rem;color:var(--dim)">' + day.exercises.length + ' exercises</div>';
-    }
-    html += '</div>';
-
-    // Expandable exercise list
-    if (!isRest) {
-      html += '<div id="prog-day-' + i + '" style="display:none;padding:0 18px 14px;border-top:1px solid var(--border)">';
-      day.exercises.forEach(function(ex) {
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">';
-        html += '<div style="font-size:0.85rem;color:var(--off)">' + ex.name + '</div>';
-        html += '<div style="font-family:\'DM Mono\',monospace;font-size:0.72rem;color:var(--dim)">' + ex.sets + '×' + ex.reps + ' · ' + (ex.muscles || '') + '</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
-  }).join('');
-}
-
-function _toggleProgramDay(i) {
-  var el = document.getElementById('prog-day-' + i);
-  if (!el) return;
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-// ═══ RENDER PROFILE ═══
-function renderProfile() {
-  var nameEl = document.getElementById('profile-name');
-  var avatarEl = document.getElementById('profile-avatar');
-  var tierEl = document.getElementById('profile-tier');
-  var streakEl = document.getElementById('profile-streak');
-  var goalEl = document.getElementById('profile-goal');
-  if (USER && USER.name) {
-    if (nameEl) nameEl.textContent = USER.name;
-    if (avatarEl) avatarEl.textContent = USER.name.charAt(0).toUpperCase();
-    if (tierEl) {
-      var tierLabel = USER.tier ? USER.tier.charAt(0).toUpperCase() + USER.tier.slice(1) : '';
-      var phaseLabel = '';
-      if (typeof TRAINING_PHASES !== 'undefined' && TRAINING_PHASES && TRAINING_PHASES.length > 0) {
-        var currentPhase = typeof getTrainingPhase === 'function' ? getTrainingPhase(CURRENT_WEEK) : TRAINING_PHASES[0];
-        if (currentPhase && currentPhase.name) phaseLabel = ' · ' + currentPhase.name + ' Phase';
-      }
-      tierEl.textContent = tierLabel + phaseLabel;
+      lbsEl.textContent = '0';
+      if (lbsLabel) lbsLabel.textContent = 'Weight Change';
     }
   }
-  if (streakEl) {
-    var dates = typeof getWorkoutDates === 'function' ? getWorkoutDates() : new Set();
-    var streak = 0;
-    var now = new Date();
-    for (var i = 0; i < 60; i++) {
-      var d = new Date(now); d.setDate(now.getDate() - i);
-      var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-      if (dates.has(ds)) streak++; else if (i > 0) break;
-    }
-    streakEl.innerHTML = '<span style="font-weight:700;color:var(--gold)">' + streak + '</span> day streak';
-  }
-  if (goalEl && USER) goalEl.textContent = USER.weight + ' lbs → ' + USER.goal + ' lbs';
+
+  // This month workouts
+  renderStrengthTrends();
+  // Avg protein
+  renderNutritionChart();
 }
